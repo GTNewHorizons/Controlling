@@ -48,7 +48,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 }
             }
 
-            int i = mcIn.fontRendererObj.getStringWidth(I18n.format(keybinding.getKeyDescription()));
+            int i = mcIn.fontRenderer.getStringWidth(I18n.format(keybinding.getKeyDescription()));
             if (i > this.maxListLabelWidth) {
                 this.maxListLabelWidth = i;
             }
@@ -93,7 +93,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
         public CategoryEntry(String name) {
             this.labelText = I18n.format(name);
-            this.labelWidth = mc.fontRendererObj.getStringWidth(this.labelText);
+            this.labelWidth = mc.fontRenderer.getStringWidth(this.labelText);
             this.name = name;
         }
 
@@ -112,10 +112,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 int mouseX,
                 int mouseY,
                 boolean isSelected) {
-            mc.fontRendererObj.drawString(
+            mc.fontRenderer.drawString(
                     this.labelText,
                     mc.currentScreen.width / 2 - this.labelWidth / 2,
-                    y + slotHeight - mc.fontRendererObj.FONT_HEIGHT - 1,
+                    y + slotHeight - mc.fontRenderer.FONT_HEIGHT - 1,
                     16777215);
         }
 
@@ -163,10 +163,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 int mouseY,
                 boolean isSelected) {
             boolean flag = controlsScreen.buttonId == this.keybinding;
-            mc.fontRendererObj.drawString(
+            mc.fontRenderer.drawString(
                     this.keyDesc,
                     x + 90 - maxListLabelWidth,
-                    y + slotHeight / 2 - mc.fontRendererObj.FONT_HEIGHT / 2,
+                    y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2,
                     16777215);
             this.btnResetKeyBinding.xPosition = x + 190 + 20;
             this.btnResetKeyBinding.yPosition = y;
@@ -199,7 +199,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
 
             if (mouseY >= y && mouseY <= y + slotHeight) {
-                mc.fontRendererObj.drawString(I18n.format(keybinding.getKeyCategory()), mouseX + 10, mouseY, 0xFFFFFF);
+                mc.fontRenderer.drawString(I18n.format(keybinding.getKeyCategory()), mouseX + 10, mouseY, 0xFFFFFF);
             }
         }
 

@@ -52,7 +52,7 @@ public class GuiNewControls extends GuiControls {
      */
     @Override
     public void initGui() {
-        this.screenTitle = StatCollector.translateToLocal("controls.title");
+        this.field_146495_a = StatCollector.translateToLocal("controls.title");
         int i = 0;
 
         for (GameSettings.Options gameOption : OPTIONS_ARR) {
@@ -240,7 +240,7 @@ public class GuiNewControls extends GuiControls {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
         this.keyBindingList.drawScreen(mouseX, mouseY, partialTicks);
-        this.drawCenteredString(this.fontRendererObj, this.screenTitle, this.width / 2, 8, 16777215);
+        this.drawCenteredString(this.fontRendererObj, this.field_146495_a, this.width / 2, 8, 16777215);
         boolean flag = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
@@ -364,7 +364,7 @@ public class GuiNewControls extends GuiControls {
 
                     guibutton = event.button;
                     this.selectedButton = guibutton;
-                    guibutton.playPressSound(this.mc.getSoundHandler());
+                    guibutton.func_146113_a(this.mc.getSoundHandler());
                     this.actionPerformed(guibutton);
 
                     if (this.equals(this.mc.currentScreen)) {
@@ -378,7 +378,7 @@ public class GuiNewControls extends GuiControls {
     }
 
     @Override
-    public void mouseReleased(int mouseX, int mouseY, int state) {
+    public void mouseMovedOrUp(int mouseX, int mouseY, int state) {
         if (state != 0
                 || !this.keyBindingList.func_148181_b(
                         mouseX, mouseY, state)) { // func_148181_b is mouseReleased but still obfuscated in 1.7.10
@@ -405,7 +405,7 @@ public class GuiNewControls extends GuiControls {
             }
 
             this.buttonId = null;
-            this.time = Minecraft.getSystemTime();
+            this.field_152177_g = Minecraft.getSystemTime();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
             if (search.isFocused()) search.textboxKeyTyped(typedChar, keyCode);
