@@ -1,15 +1,16 @@
 package com.blamejared.controlling.client.gui;
 
+import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 
-import java.util.function.Predicate;
-
 public enum DisplayMode {
-    ALL(keyEntry -> true), NONE(keyEntry -> keyEntry.getKeybinding().getKeyCode() == 0), CONFLICTING(keyEntry -> {
+    ALL(keyEntry -> true),
+    NONE(keyEntry -> keyEntry.getKeybinding().getKeyCode() == 0),
+    CONFLICTING(keyEntry -> {
         for (KeyBinding key : Minecraft.getMinecraft().gameSettings.keyBindings) {
-            if (!key.getKeyDescription()
-                .equals(keyEntry.getKeybinding().getKeyDescription()) && key.getKeyCode() != 0) {
+            if (!key.getKeyDescription().equals(keyEntry.getKeybinding().getKeyDescription())
+                    && key.getKeyCode() != 0) {
                 if (key.getKeyCode() == keyEntry.getKeybinding().getKeyCode()) {
                     return true;
                 }

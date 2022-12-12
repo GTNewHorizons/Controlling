@@ -2,6 +2,9 @@ package com.blamejared.controlling.client.gui;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiControls;
@@ -12,10 +15,6 @@ import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.EnumChatFormatting;
 import org.apache.commons.lang3.ArrayUtils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 @SideOnly(Side.CLIENT)
 public class GuiNewKeyBindingList extends GuiKeyBindingList {
@@ -103,23 +102,31 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
 
         @Override
-        public void drawEntry(int slotIndex, int x, int y, int listWidth, int slotHeight, Tessellator tessellator, int mouseX, int mouseY, boolean isSelected) {
+        public void drawEntry(
+                int slotIndex,
+                int x,
+                int y,
+                int listWidth,
+                int slotHeight,
+                Tessellator tessellator,
+                int mouseX,
+                int mouseY,
+                boolean isSelected) {
             mc.fontRendererObj.drawString(
-                this.labelText,
-                mc.currentScreen.width / 2 - this.labelWidth / 2,
-                y + slotHeight - mc.fontRendererObj.FONT_HEIGHT - 1,
-                16777215
-            );
+                    this.labelText,
+                    mc.currentScreen.width / 2 - this.labelWidth / 2,
+                    y + slotHeight - mc.fontRendererObj.FONT_HEIGHT - 1,
+                    16777215);
         }
 
         @Override
-        public boolean mousePressed(int slotIndex, int mouseX, int mouseY, int mouseEvent, int relativeX, int relativeY) {
+        public boolean mousePressed(
+                int slotIndex, int mouseX, int mouseY, int mouseEvent, int relativeX, int relativeY) {
             return false;
         }
 
         @Override
-        public void mouseReleased(int slotIndex, int x, int y, int mouseEvent, int relativeX, int relativeY) {
-        }
+        public void mouseReleased(int slotIndex, int x, int y, int mouseEvent, int relativeX, int relativeY) {}
     }
 
     @SideOnly(Side.CLIENT)
@@ -133,6 +140,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
          * The localized key description for this KeyEntry
          */
         private final String keyDesc;
+
         private final GuiButton btnChangeKeyBinding;
         private final GuiButton btnResetKeyBinding;
 
@@ -144,14 +152,22 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
 
         @Override
-        public void drawEntry(int slotIndex, int x, int y, int listWidth, int slotHeight, Tessellator tessellator, int mouseX, int mouseY, boolean isSelected) {
+        public void drawEntry(
+                int slotIndex,
+                int x,
+                int y,
+                int listWidth,
+                int slotHeight,
+                Tessellator tessellator,
+                int mouseX,
+                int mouseY,
+                boolean isSelected) {
             boolean flag = controlsScreen.buttonId == this.keybinding;
             mc.fontRendererObj.drawString(
                     this.keyDesc,
                     x + 90 - maxListLabelWidth,
                     y + slotHeight / 2 - mc.fontRendererObj.FONT_HEIGHT / 2,
-                    16777215
-            );
+                    16777215);
             this.btnResetKeyBinding.xPosition = x + 190 + 20;
             this.btnResetKeyBinding.yPosition = y;
             this.btnResetKeyBinding.enabled = !(this.keybinding.getKeyCode() == this.keybinding.getKeyCodeDefault());
@@ -173,9 +189,11 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             }
 
             if (flag) {
-                this.btnChangeKeyBinding.displayString = EnumChatFormatting.WHITE + "> " + EnumChatFormatting.YELLOW + this.btnChangeKeyBinding.displayString + EnumChatFormatting.WHITE + " <";
+                this.btnChangeKeyBinding.displayString = EnumChatFormatting.WHITE + "> " + EnumChatFormatting.YELLOW
+                        + this.btnChangeKeyBinding.displayString + EnumChatFormatting.WHITE + " <";
             } else if (flag1) {
-                this.btnChangeKeyBinding.displayString = EnumChatFormatting.RED + this.btnChangeKeyBinding.displayString;
+                this.btnChangeKeyBinding.displayString =
+                        EnumChatFormatting.RED + this.btnChangeKeyBinding.displayString;
             }
 
             this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
@@ -186,7 +204,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
 
         @Override
-        public boolean mousePressed(int slotIndex, int mouseX, int mouseY, int mouseEvent, int relativeX, int relativeY) {
+        public boolean mousePressed(
+                int slotIndex, int mouseX, int mouseY, int mouseEvent, int relativeX, int relativeY) {
             if (this.btnChangeKeyBinding.mousePressed(mc, mouseX, mouseY)) {
                 controlsScreen.buttonId = this.keybinding;
                 return true;

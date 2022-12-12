@@ -12,9 +12,7 @@ public class ClientEventHandler {
         try {
             if (event.gui instanceof GuiControls && !(event.gui instanceof GuiNewControls)) {
                 event.gui = new GuiNewControls(
-                        Minecraft.getMinecraft().currentScreen,
-                        Minecraft.getMinecraft().gameSettings
-                );
+                        Minecraft.getMinecraft().currentScreen, Minecraft.getMinecraft().gameSettings);
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -4,27 +4,21 @@ import com.blamejared.controlling.Controlling;
 import cpw.mods.fml.client.config.GuiCheckBox;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import java.awt.*;
+import java.io.IOException;
+import java.util.*;
+import java.util.List;
+import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
-import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.StatCollector;
 
-import java.awt.*;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
-import java.util.List;
-import java.util.function.Predicate;
-
 @SideOnly(Side.CLIENT)
 public class GuiNewControls extends GuiControls {
-    private static final GameSettings.Options[] OPTIONS_ARR = new GameSettings.Options[]{
-        GameSettings.Options.INVERT_MOUSE,
-        GameSettings.Options.SENSITIVITY,
-        GameSettings.Options.TOUCHSCREEN
+    private static final GameSettings.Options[] OPTIONS_ARR = new GameSettings.Options[] {
+        GameSettings.Options.INVERT_MOUSE, GameSettings.Options.SENSITIVITY, GameSettings.Options.TOUCHSCREEN
     };
 
     private final GuiScreen parentScreen;
@@ -64,19 +58,17 @@ public class GuiNewControls extends GuiControls {
         for (GameSettings.Options gameOption : OPTIONS_ARR) {
             if (gameOption.getEnumFloat()) {
                 this.buttonList.add(new GuiOptionSlider(
-                    gameOption.returnEnumOrdinal(),
-                    this.width / 2 - 155 + i % 2 * 160,
-                    18 + 24 * (i >> 1),
-                    gameOption
-                ));
+                        gameOption.returnEnumOrdinal(),
+                        this.width / 2 - 155 + i % 2 * 160,
+                        18 + 24 * (i >> 1),
+                        gameOption));
             } else {
                 this.buttonList.add(new GuiOptionButton(
-                    gameOption.returnEnumOrdinal(),
-                    this.width / 2 - 155 + i % 2 * 160,
-                    18 + 24 * (i >> 1),
-                    gameOption,
-                    this.options.getKeyBinding(gameOption)
-                ));
+                        gameOption.returnEnumOrdinal(),
+                        this.width / 2 - 155 + i % 2 * 160,
+                        18 + 24 * (i >> 1),
+                        gameOption,
+                        this.options.getKeyBinding(gameOption)));
             }
             ++i;
         }
@@ -84,79 +76,71 @@ public class GuiNewControls extends GuiControls {
         this.keyBindingList = new GuiNewKeyBindingList(this, this.mc);
 
         this.buttonList.add(new GuiButton(
-            1001,
-            this.width / 2 - 155 + 160,
-            this.height - 29,
-            150,
-            20,
-            StatCollector.translateToLocal("gui.done")
-        ));
+                1001,
+                this.width / 2 - 155 + 160,
+                this.height - 29,
+                150,
+                20,
+                StatCollector.translateToLocal("gui.done")));
 
         this.buttonReset = new GuiButton(
-            1002,
-            this.width / 2 - 155,
-            this.height - 29,
-            150,
-            20,
-            StatCollector.translateToLocal("controls.resetAll")
-        );
+                1002,
+                this.width / 2 - 155,
+                this.height - 29,
+                150,
+                20,
+                StatCollector.translateToLocal("controls.resetAll"));
         this.buttonList.add(this.buttonReset);
 
         this.buttonNone = new GuiButton(
-            1003,
-            this.width / 2 - 155 + 160 + 76,
-            this.height - 29 - 24,
-            150 / 2,
-            20,
-            StatCollector.translateToLocal("options.showNone")
-        );
+                1003,
+                this.width / 2 - 155 + 160 + 76,
+                this.height - 29 - 24,
+                150 / 2,
+                20,
+                StatCollector.translateToLocal("options.showNone"));
         this.buttonList.add(this.buttonNone);
 
         this.buttonConflicting = new GuiButton(
-            1004,
-            this.width / 2 - 155 + 160,
-            this.height - 29 - 24,
-            150 / 2,
-            20,
-            StatCollector.translateToLocal("options.showConflicts")
-        );
+                1004,
+                this.width / 2 - 155 + 160,
+                this.height - 29 - 24,
+                150 / 2,
+                20,
+                StatCollector.translateToLocal("options.showConflicts"));
         this.buttonList.add(this.buttonConflicting);
 
         this.search = new GuiTextField(fontRendererObj, this.width / 2 - 154, this.height - 29 - 23, 148, 18);
         search.setCanLoseFocus(true);
 
         this.buttonKey = new GuiCheckBox(
-            1005,
-            this.width / 2 - (155 / 2),
-            this.height - 29 - 37,
-            StatCollector.translateToLocal("options.key"),
-            false
-        );
+                1005,
+                this.width / 2 - (155 / 2),
+                this.height - 29 - 37,
+                StatCollector.translateToLocal("options.key"),
+                false);
         this.buttonList.add(this.buttonKey);
 
         this.buttonCat = new GuiCheckBox(
-            1006,
-            this.width / 2 - (155 / 2),
-            this.height - 29 - 50,
-            StatCollector.translateToLocal("options.category"),
-            false
-        );
+                1006,
+                this.width / 2 - (155 / 2),
+                this.height - 29 - 50,
+                StatCollector.translateToLocal("options.category"),
+                false);
         this.buttonList.add(this.buttonCat);
 
-        this.name = Controlling.PATRON_LIST
-            .stream()
-            .skip(Controlling.PATRON_LIST.isEmpty() ? 0 : new Random().nextInt(Controlling.PATRON_LIST.size()))
-            .findFirst()
-            .orElse("");
+        this.name = Controlling.PATRON_LIST.stream()
+                .skip(Controlling.PATRON_LIST.isEmpty() ? 0 : new Random().nextInt(Controlling.PATRON_LIST.size()))
+                .findFirst()
+                .orElse("");
 
         this.sortOrderButton = new GuiButton(
-            1008,
-            this.width / 2 - 155 + 160 + 76,
-            this.height - 29 - 24 - 24,
-            150 / 2,
-            20,
-            StatCollector.translateToLocal("options.sort")
-        );
+                1008,
+                this.width / 2 - 155 + 160 + 76,
+                this.height - 29 - 24 - 24,
+                150 / 2,
+                20,
+                StatCollector.translateToLocal("options.sort"));
         this.buttonList.add(this.sortOrderButton);
         this.sortOrder = SortOrder.NONE;
         this.lastSearch = "";
@@ -174,7 +158,10 @@ public class GuiNewControls extends GuiControls {
 
     public void filterKeys() {
         lastSearch = search.getText();
-        if (lastSearch.isEmpty() && displayMode == DisplayMode.ALL && sortOrder == SortOrder.NONE && searchType != SearchType.NAME) {
+        if (lastSearch.isEmpty()
+                && displayMode == DisplayMode.ALL
+                && sortOrder == SortOrder.NONE
+                && searchType != SearchType.NAME) {
             return;
         }
 
@@ -183,20 +170,20 @@ public class GuiNewControls extends GuiControls {
 
         switch (searchType) {
             case NAME:
-                filters = filters.and(keyEntry -> keyEntry.getKeyDesc()
-                    .toLowerCase()
-                    .contains(lastSearch.toLowerCase()));
+                filters = filters.and(
+                        keyEntry -> keyEntry.getKeyDesc().toLowerCase().contains(lastSearch.toLowerCase()));
                 break;
             case CATEGORY:
-                filters = filters.and(keyEntry -> StatCollector.translateToLocal(keyEntry.getKeybinding().getKeyCategory())
-                    .toLowerCase()
-                    .contains(lastSearch.toLowerCase()));
+                filters = filters.and(keyEntry -> StatCollector.translateToLocal(
+                                keyEntry.getKeybinding().getKeyCategory())
+                        .toLowerCase()
+                        .contains(lastSearch.toLowerCase()));
                 break;
             case KEY:
-                filters = filters.and(keyEntry -> GameSettings.getKeyDisplayString(keyEntry.getKeybinding()
-                                                                                       .getKeyCode())
-                    .toLowerCase()
-                    .contains(lastSearch.toLowerCase()));
+                filters = filters.and(keyEntry -> GameSettings.getKeyDisplayString(
+                                keyEntry.getKeybinding().getKeyCode())
+                        .toLowerCase()
+                        .contains(lastSearch.toLowerCase()));
                 break;
         }
 
@@ -271,18 +258,17 @@ public class GuiNewControls extends GuiControls {
             buttonReset.displayString = StatCollector.translateToLocal("controls.resetAll");
         }
 
-        for (GuiButton guiButton : (List<GuiButton>)this.buttonList) {
+        for (GuiButton guiButton : (List<GuiButton>) this.buttonList) {
             guiButton.drawButton(mc, mouseX, mouseY);
         }
 
         String text = StatCollector.translateToLocal("options.search");
         drawCenteredString(
-            fontRendererObj,
-            text,
-            this.width / 2 - (155 / 2) - (fontRendererObj.getStringWidth(text)) - 5,
-            this.height - 29 - 42,
-            16777215
-        );
+                fontRendererObj,
+                text,
+                this.width / 2 - (155 / 2) - (fontRendererObj.getStringWidth(text)) - 5,
+                this.height - 29 - 42,
+                16777215);
     }
 
     @Override
@@ -334,7 +320,7 @@ public class GuiNewControls extends GuiControls {
             buttonKey.setIsChecked(false);
             searchType = buttonCat.isChecked() ? SearchType.CATEGORY : SearchType.NAME;
             filterKeys();
-        }else if (button.id == 1008) {
+        } else if (button.id == 1008) {
             sortOrder = sortOrder.cycle();
             button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getName();
             filterKeys();
@@ -348,7 +334,9 @@ public class GuiNewControls extends GuiControls {
             this.buttonId = null;
             KeyBinding.resetKeyBindingArrayAndHash();
             search.setFocused(false);
-        } else if (mb == 0 && !this.keyBindingList.func_148179_a(mx, my, mb)) { // func_148179_a is mouseClicked but still obfuscated in 1.7.10
+        } else if (mb == 0
+                && !this.keyBindingList.func_148179_a(
+                        mx, my, mb)) { // func_148179_a is mouseClicked but still obfuscated in 1.7.10
             try {
                 superSuperMouseClicked(mx, my, mb);
             } catch (IOException e) {
@@ -368,14 +356,11 @@ public class GuiNewControls extends GuiControls {
                 GuiButton guibutton = (GuiButton) this.buttonList.get(i);
 
                 if (guibutton.mousePressed(this.mc, mouseX, mouseY)) {
-                    net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre event = new net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre(
-                        this,
-                        guibutton,
-                        this.buttonList
-                    );
+                    net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre event =
+                            new net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre(
+                                    this, guibutton, this.buttonList);
 
-                    if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event))
-                        break;
+                    if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event)) break;
 
                     guibutton = event.button;
                     this.selectedButton = guibutton;
@@ -383,11 +368,9 @@ public class GuiNewControls extends GuiControls {
                     this.actionPerformed(guibutton);
 
                     if (this.equals(this.mc.currentScreen)) {
-                        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Post(
-                            this,
-                            event.button,
-                            this.buttonList
-                        ));
+                        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                                new net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Post(
+                                        this, event.button, this.buttonList));
                     }
                 }
             }
@@ -396,7 +379,9 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void mouseReleased(int mouseX, int mouseY, int state) {
-        if (state != 0 || !this.keyBindingList.func_148181_b(mouseX, mouseY, state)) { // func_148181_b is mouseReleased but still obfuscated in 1.7.10
+        if (state != 0
+                || !this.keyBindingList.func_148181_b(
+                        mouseX, mouseY, state)) { // func_148181_b is mouseReleased but still obfuscated in 1.7.10
             superSuperMouseReleased(mouseX, mouseY, state);
         }
     }
@@ -423,8 +408,7 @@ public class GuiNewControls extends GuiControls {
             this.time = Minecraft.getSystemTime();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
-            if (search.isFocused())
-                search.textboxKeyTyped(typedChar, keyCode);
+            if (search.isFocused()) search.textboxKeyTyped(typedChar, keyCode);
             else {
                 superSuperKeyTyped(typedChar, keyCode);
             }
