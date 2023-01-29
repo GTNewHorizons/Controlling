@@ -1,10 +1,12 @@
 package com.blamejared.controlling.client.gui;
 
 import java.util.function.Predicate;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 
 public enum DisplayMode {
+
     ALL(keyEntry -> true),
     NONE(keyEntry -> keyEntry.getKeybinding().getKeyCode() == 0),
     CONFLICTING(keyEntry -> {

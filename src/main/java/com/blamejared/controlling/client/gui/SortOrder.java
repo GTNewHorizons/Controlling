@@ -2,19 +2,23 @@ package com.blamejared.controlling.client.gui;
 
 import java.util.Comparator;
 import java.util.List;
+
 import net.minecraft.client.gui.GuiListExtended;
 import net.minecraft.client.resources.I18n;
 
 public enum SortOrder {
+
     NONE(entries -> {}),
     AZ(entries -> {
-        entries.sort(Comparator.comparing(
-                entry -> ((GuiNewKeyBindingList.KeyEntry) entry).getKeybinding().getKeyDescription()));
+        entries.sort(
+                Comparator.comparing(
+                        entry -> ((GuiNewKeyBindingList.KeyEntry) entry).getKeybinding().getKeyDescription()));
     }),
     ZA(entries -> {
-        entries.sort(Comparator.comparing(entry ->
-                        ((GuiNewKeyBindingList.KeyEntry) entry).getKeybinding().getKeyDescription())
-                .reversed());
+        entries.sort(
+                Comparator
+                        .comparing(entry -> ((GuiNewKeyBindingList.KeyEntry) entry).getKeybinding().getKeyDescription())
+                        .reversed());
     });
 
     private final ISort sorter;
