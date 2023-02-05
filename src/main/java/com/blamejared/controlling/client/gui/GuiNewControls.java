@@ -39,7 +39,7 @@ public class GuiNewControls extends GuiControls {
     private GuiButton sortOrderButton;
     private boolean confirmingReset = false;
 
-    //private String name;
+    // private String name;
 
     public GuiNewControls(GuiScreen screen, GameSettings settings) {
         super(screen, settings);
