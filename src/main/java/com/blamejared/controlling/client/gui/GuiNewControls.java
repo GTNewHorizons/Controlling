@@ -131,6 +131,10 @@ public class GuiNewControls extends GuiControls {
                 false);
         this.buttonList.add(this.buttonCat);
 
+        // this.name = Controlling.PATRON_LIST.stream()
+        // .skip(Controlling.PATRON_LIST.isEmpty() ? 0 : new Random().nextInt(Controlling.PATRON_LIST.size()))
+        // .findFirst().orElse("");
+
         this.sortOrderButton = new GuiButton(
                 1008,
                 this.width / 2 - 155 + 160 + 76,
