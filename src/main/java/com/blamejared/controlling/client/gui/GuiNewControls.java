@@ -24,8 +24,6 @@ public class GuiNewControls extends GuiControls {
     private static final GameSettings.Options[] OPTIONS_ARR = new GameSettings.Options[] {
             GameSettings.Options.INVERT_MOUSE, GameSettings.Options.SENSITIVITY, GameSettings.Options.TOUCHSCREEN };
 
-    private static boolean isQwertyLayout = true;
-
     private final GuiScreen parentScreen;
     private final GameSettings options;
     private GuiButton buttonReset;
@@ -42,6 +40,7 @@ public class GuiNewControls extends GuiControls {
     private GuiCheckBox buttonCat;
     private GuiButton sortOrderButton;
     private boolean confirmingReset = false;
+    private boolean isQwertyLayout;
 
     private String name;
 
@@ -49,6 +48,7 @@ public class GuiNewControls extends GuiControls {
         super(screen, settings);
         this.parentScreen = screen;
         this.options = settings;
+        this.isQwertyLayout = !(this.options.keyBindForward.getKeyCode() == Keyboard.KEY_Z);
     }
 
     /**
@@ -454,7 +454,7 @@ public class GuiNewControls extends GuiControls {
      * AZERTY : Go Left -> Q Walk Forward -> Z Drop Item -> A
      */
     private void bindKeysToDefaultKeyboardLayout() {
-        if (isQwertyLayout) {
+        if (this.isQwertyLayout) {
             this.options.keyBindLeft.setKeyCode(this.options.keyBindLeft.getKeyCodeDefault());
             this.options.keyBindForward.setKeyCode(this.options.keyBindForward.getKeyCodeDefault());
             this.options.keyBindDrop.setKeyCode(this.options.keyBindDrop.getKeyCodeDefault());
