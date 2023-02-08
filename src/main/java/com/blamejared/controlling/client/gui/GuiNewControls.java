@@ -1,9 +1,7 @@
 package com.blamejared.controlling.client.gui;
 
-import java.awt.*;
 import java.io.IOException;
 import java.util.*;
-import java.util.List;
 import java.util.function.Predicate;
 
 import net.minecraft.client.Minecraft;
@@ -11,6 +9,8 @@ import net.minecraft.client.gui.*;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.StatCollector;
+
+import org.lwjgl.input.Keyboard;
 
 import cpw.mods.fml.client.config.GuiCheckBox;
 import cpw.mods.fml.relauncher.Side;
@@ -38,11 +38,13 @@ public class GuiNewControls extends GuiControls {
     private GuiCheckBox buttonCat;
     private GuiButton sortOrderButton;
     private boolean confirmingReset = false;
+    private boolean isQwertyLayout;
 
     public GuiNewControls(GuiScreen screen, GameSettings settings) {
         super(screen, settings);
         this.parentScreen = screen;
         this.options = settings;
+        this.isQwertyLayout = !(this.options.keyBindForward.getKeyCode() == Keyboard.KEY_Z);
     }
 
     /**
@@ -73,6 +75,16 @@ public class GuiNewControls extends GuiControls {
             }
             ++i;
         }
+
+        this.buttonList.add(
+                new GuiButton(
+                        999,
+                        this.width / 2 - 155 + i % 2 * 160,
+                        18 + 24 * (i >> 1),
+                        150,
+                        20,
+                        StatCollector.translateToLocal("options.keyboardLayout")
+                                + (this.isQwertyLayout ? "QWERTY" : "AZERTY")));
 
         this.keyBindingList = new GuiNewKeyBindingList(this, this.mc);
 
@@ -270,6 +282,11 @@ public class GuiNewControls extends GuiControls {
         if (button.id < 100 && button instanceof GuiOptionButton) {
             this.options.setOptionValue(((GuiOptionButton) button).returnEnumOptions(), 1);
             button.displayString = this.options.getKeyBinding(GameSettings.Options.getEnumOptions(button.id));
+        } else if (button.id == 999) {
+            this.isQwertyLayout = !this.isQwertyLayout;
+            button.displayString = StatCollector.translateToLocal("options.keyboardLayout")
+                    + (this.isQwertyLayout ? "QWERTY" : "AZERTY");
+            bindKeysToDefaultKeyboardLayout();
         } else if (button.id == 1001) {
             mc.displayGuiScreen(this.parentScreen);
         } else if (button.id == 1002) {
@@ -419,4 +436,27 @@ public class GuiNewControls extends GuiControls {
             }
         }
     }
+
+    /**
+     * When the associated GuiButton is pressed, it will bind the vanilla minecraft keys to the default values for a
+     * QWERTY keyboard. When pressed again it will bind them to the default values for an AZERTY keyboard
+     * <p>
+     * QWERTY : Go Left -> A Walk Forward -> W Drop Item -> Q
+     * <p>
+     * AZERTY : Go Left -> Q Walk Forward -> Z Drop Item -> A
+     */
+    private void bindKeysToDefaultKeyboardLayout() {
+        if (this.isQwertyLayout) {
+            this.options.keyBindLeft.setKeyCode(this.options.keyBindLeft.getKeyCodeDefault());
+            this.options.keyBindForward.setKeyCode(this.options.keyBindForward.getKeyCodeDefault());
+            this.options.keyBindDrop.setKeyCode(this.options.keyBindDrop.getKeyCodeDefault());
+        } else {
+            this.options.keyBindLeft.setKeyCode(Keyboard.KEY_Q);
+            this.options.keyBindForward.setKeyCode(Keyboard.KEY_Z);
+            this.options.keyBindDrop.setKeyCode(Keyboard.KEY_A);
+        }
+        this.options.saveOptions();
+        KeyBinding.resetKeyBindingArrayAndHash();
+    }
+
 }
