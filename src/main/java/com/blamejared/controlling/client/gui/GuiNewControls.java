@@ -42,8 +42,6 @@ public class GuiNewControls extends GuiControls {
     private boolean confirmingReset = false;
     private boolean isQwertyLayout;
 
-    private String name;
-
     public GuiNewControls(GuiScreen screen, GameSettings settings) {
         super(screen, settings);
         this.parentScreen = screen;
@@ -146,10 +144,6 @@ public class GuiNewControls extends GuiControls {
                 StatCollector.translateToLocal("options.category"),
                 false);
         this.buttonList.add(this.buttonCat);
-
-        this.name = Controlling.PATRON_LIST.stream()
-                .skip(Controlling.PATRON_LIST.isEmpty() ? 0 : new Random().nextInt(Controlling.PATRON_LIST.size()))
-                .findFirst().orElse("");
 
         this.sortOrderButton = new GuiButton(
                 1008,
