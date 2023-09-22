@@ -408,29 +408,32 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void keyTyped(char typedChar, int keyCode) {
         if (this.buttonId != null) {
-            if (keyCode == 1) {
-                this.options.setOptionKeyBinding(this.buttonId, 0);
-            } else if (keyCode != 0) {
+            if (keyCode == Keyboard.KEY_ESCAPE) {
+                this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
+            } else if (keyCode != Keyboard.KEY_NONE) {
                 this.options.setOptionKeyBinding(this.buttonId, keyCode);
             } else if (typedChar > 0) {
                 this.options.setOptionKeyBinding(this.buttonId, typedChar + 256);
             }
-
             this.buttonId = null;
             this.field_152177_g = Minecraft.getSystemTime();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
-            if (search.isFocused()) search.textboxKeyTyped(typedChar, keyCode);
-            else {
-                superSuperKeyTyped(typedChar, keyCode);
+            if (this.search.isFocused()) {
+                if (keyCode == Keyboard.KEY_ESCAPE) {
+                    this.search.setFocused(false);
+                } else {
+                    this.search.textboxKeyTyped(typedChar, keyCode);
+                }
+            } else {
+                this.superSuperKeyTyped(typedChar, keyCode);
             }
         }
     }
 
     protected void superSuperKeyTyped(char typedChar, int keyCode) {
-        if (keyCode == 1) {
+        if (keyCode == Keyboard.KEY_ESCAPE) {
             this.mc.displayGuiScreen(null);
-
             if (this.mc.currentScreen == null) {
                 this.mc.setIngameFocus();
             }
