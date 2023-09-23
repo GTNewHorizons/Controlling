@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiControls;
 import net.minecraftforge.client.event.GuiOpenEvent;
 
 import com.blamejared.controlling.client.gui.GuiNewControls;
+
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class ClientEventHandler {
