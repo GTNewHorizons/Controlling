@@ -22,6 +22,15 @@ public class GuiNewControls extends GuiControls {
     private static final GameSettings.Options[] OPTIONS_ARR = new GameSettings.Options[] {
             GameSettings.Options.INVERT_MOUSE, GameSettings.Options.SENSITIVITY, GameSettings.Options.TOUCHSCREEN };
 
+    private static final int KEYBOARD_LAYOUT_BUTTON_ID = 999;
+    private static final int DONE_BUTTON_ID = 1001;
+    private static final int RESET_ALL_KEYS_BUTTON_ID = 1002;
+    private static final int SHOW_UNBOUD_BUTTON_ID = 1003;
+    private static final int SHOW_CONFLICTS_BUTTON_ID = 1004;
+    private static final int SORT_KEYNAME_BUTTON_ID = 1005;
+    private static final int SORT_CATEGORYNAME_BUTTON_ID = 1006;
+    private static final int SORT_TYPE_BUTTON_ID = 1008;
+
     private final GuiScreen parentScreen;
     private final GameSettings options;
     private GuiButton buttonReset;
@@ -78,7 +87,7 @@ public class GuiNewControls extends GuiControls {
 
         this.buttonList.add(
                 new GuiButton(
-                        999,
+                        KEYBOARD_LAYOUT_BUTTON_ID,
                         this.width / 2 - 155 + i % 2 * 160,
                         18 + 24 * (i >> 1),
                         150,
@@ -90,7 +99,7 @@ public class GuiNewControls extends GuiControls {
 
         this.buttonList.add(
                 new GuiButton(
-                        1001,
+                        DONE_BUTTON_ID,
                         this.width / 2 - 155 + 160,
                         this.height - 29,
                         150,
@@ -98,7 +107,7 @@ public class GuiNewControls extends GuiControls {
                         StatCollector.translateToLocal("gui.done")));
 
         this.buttonReset = new GuiButton(
-                1002,
+                RESET_ALL_KEYS_BUTTON_ID,
                 this.width / 2 - 155,
                 this.height - 29,
                 150,
@@ -107,7 +116,7 @@ public class GuiNewControls extends GuiControls {
         this.buttonList.add(this.buttonReset);
 
         this.buttonNone = new GuiButton(
-                1003,
+                SHOW_UNBOUD_BUTTON_ID,
                 this.width / 2 - 155 + 160 + 76,
                 this.height - 29 - 24,
                 150 / 2,
@@ -116,7 +125,7 @@ public class GuiNewControls extends GuiControls {
         this.buttonList.add(this.buttonNone);
 
         this.buttonConflicting = new GuiButton(
-                1004,
+                SHOW_CONFLICTS_BUTTON_ID,
                 this.width / 2 - 155 + 160,
                 this.height - 29 - 24,
                 150 / 2,
@@ -128,7 +137,7 @@ public class GuiNewControls extends GuiControls {
         search.setCanLoseFocus(true);
 
         this.buttonKey = new GuiCheckBox(
-                1005,
+                SORT_KEYNAME_BUTTON_ID,
                 this.width / 2 - (155 / 2),
                 this.height - 29 - 37,
                 StatCollector.translateToLocal("options.key"),
@@ -136,7 +145,7 @@ public class GuiNewControls extends GuiControls {
         this.buttonList.add(this.buttonKey);
 
         this.buttonCat = new GuiCheckBox(
-                1006,
+                SORT_CATEGORYNAME_BUTTON_ID,
                 this.width / 2 - (155 / 2),
                 this.height - 29 - 50,
                 StatCollector.translateToLocal("options.category"),
@@ -144,7 +153,7 @@ public class GuiNewControls extends GuiControls {
         this.buttonList.add(this.buttonCat);
 
         this.sortOrderButton = new GuiButton(
-                1008,
+                SORT_TYPE_BUTTON_ID,
                 this.width / 2 - 155 + 160 + 76,
                 this.height - 29 - 24 - 24,
                 150 / 2,
@@ -282,14 +291,14 @@ public class GuiNewControls extends GuiControls {
         if (button.id < 100 && button instanceof GuiOptionButton) {
             this.options.setOptionValue(((GuiOptionButton) button).returnEnumOptions(), 1);
             button.displayString = this.options.getKeyBinding(GameSettings.Options.getEnumOptions(button.id));
-        } else if (button.id == 999) {
+        } else if (button.id == KEYBOARD_LAYOUT_BUTTON_ID) {
             this.isQwertyLayout = !this.isQwertyLayout;
             button.displayString = StatCollector.translateToLocal("options.keyboardLayout")
                     + (this.isQwertyLayout ? "QWERTY" : "AZERTY");
             bindKeysToDefaultKeyboardLayout();
-        } else if (button.id == 1001) {
+        } else if (button.id == DONE_BUTTON_ID) {
             mc.displayGuiScreen(this.parentScreen);
-        } else if (button.id == 1002) {
+        } else if (button.id == RESET_ALL_KEYS_BUTTON_ID) {
             if (!confirmingReset) {
                 confirmingReset = true;
                 button.displayString = StatCollector.translateToLocal("options.confirmReset");
@@ -303,7 +312,7 @@ public class GuiNewControls extends GuiControls {
                 keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
             }
             KeyBinding.resetKeyBindingArrayAndHash();
-        } else if (button.id == 1003) {
+        } else if (button.id == SHOW_UNBOUD_BUTTON_ID) {
             if (displayMode == DisplayMode.NONE) {
                 buttonNone.displayString = StatCollector.translateToLocal("options.showNone");
                 displayMode = DisplayMode.ALL;
@@ -313,7 +322,7 @@ public class GuiNewControls extends GuiControls {
                 buttonConflicting.displayString = StatCollector.translateToLocal("options.showConflicts");
             }
             filterKeys();
-        } else if (button.id == 1004) {
+        } else if (button.id == SHOW_CONFLICTS_BUTTON_ID) {
             if (displayMode == DisplayMode.CONFLICTING) {
                 buttonConflicting.displayString = StatCollector.translateToLocal("options.showConflicts");
                 displayMode = DisplayMode.ALL;
@@ -323,15 +332,15 @@ public class GuiNewControls extends GuiControls {
                 buttonNone.displayString = StatCollector.translateToLocal("options.showNone");
             }
             filterKeys();
-        } else if (button.id == 1005) {
+        } else if (button.id == SORT_KEYNAME_BUTTON_ID) {
             buttonCat.setIsChecked(false);
             searchType = buttonKey.isChecked() ? SearchType.KEY : SearchType.NAME;
             filterKeys();
-        } else if (button.id == 1006) {
+        } else if (button.id == SORT_CATEGORYNAME_BUTTON_ID) {
             buttonKey.setIsChecked(false);
             searchType = buttonCat.isChecked() ? SearchType.CATEGORY : SearchType.NAME;
             filterKeys();
-        } else if (button.id == 1008) {
+        } else if (button.id == SORT_TYPE_BUTTON_ID) {
             sortOrder = sortOrder.cycle();
             button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getName();
             filterKeys();
