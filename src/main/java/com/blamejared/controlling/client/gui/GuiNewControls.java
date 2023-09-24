@@ -40,9 +40,11 @@ public class GuiNewControls extends GuiControls {
 
     private final GuiScreen parentScreen;
     private final GameSettings options;
+    private final String guiScreenTitle;
+    private GuiNewKeyBindingList guiNewKeyBindingList;
     private GuiButton buttonReset;
     private String lastSearch = "";
-    private GuiTextField search;
+    private GuiTextField searchTextBox;
 
     private DisplayMode displayMode = DisplayMode.ALL;
     private SearchType searchType = SearchType.NAME;
@@ -59,6 +61,7 @@ public class GuiNewControls extends GuiControls {
         super(screen, settings);
         this.parentScreen = screen;
         this.options = settings;
+        this.guiScreenTitle = StatCollector.translateToLocal("controls.title");
         this.isQwertyLayout = !(this.options.keyBindForward.getKeyCode() == Keyboard.KEY_Z);
     }
 
@@ -68,7 +71,6 @@ public class GuiNewControls extends GuiControls {
      */
     @Override
     public void initGui() {
-        this.field_146495_a = StatCollector.translateToLocal("controls.title");
         int i = 0;
 
         for (GameSettings.Options gameOption : OPTIONS_ARR) {
@@ -101,7 +103,7 @@ public class GuiNewControls extends GuiControls {
                         StatCollector.translateToLocal("options.keyboardLayout")
                                 + (this.isQwertyLayout ? "QWERTY" : "AZERTY")));
 
-        this.keyBindingList = new GuiNewKeyBindingList(this, this.mc);
+        this.guiNewKeyBindingList = new GuiNewKeyBindingList(this, this.mc);
 
         this.buttonList.add(
                 new GuiButton(
@@ -139,8 +141,8 @@ public class GuiNewControls extends GuiControls {
                 StatCollector.translateToLocal("options.showConflicts"));
         this.buttonList.add(this.buttonConflicting);
 
-        this.search = new GuiTextField(fontRendererObj, this.width / 2 - 154, this.height - 29 - 23, 148, 18);
-        search.setCanLoseFocus(true);
+        this.searchTextBox = new GuiTextField(fontRendererObj, this.width / 2 - 154, this.height - 29 - 23, 148, 18);
+        searchTextBox.setCanLoseFocus(true);
 
         this.buttonKey = new GuiCheckBox(
                 SORT_KEYNAME_BUTTON_ID,
@@ -170,19 +172,19 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void updateScreen() {
-        this.search.updateCursorCounter();
-        if (!this.lastSearch.equals(this.search.getText())) {
+        this.searchTextBox.updateCursorCounter();
+        if (!this.lastSearch.equals(this.searchTextBox.getText())) {
             this.filterKeys();
-            this.lastSearch = this.search.getText();
+            this.lastSearch = this.searchTextBox.getText();
         }
     }
 
     private void filterKeys() {
-        this.keyBindingList.scrollBy(-this.keyBindingList.getAmountScrolled());
+        this.guiNewKeyBindingList.scrollBy(-this.guiNewKeyBindingList.getAmountScrolled());
         final Predicate<GuiNewKeyBindingList.KeyEntry> keyFilter = displayMode.getPredicate()
-                .and(searchType.getPredicate(search.getText()));
+                .and(searchType.getPredicate(searchTextBox.getText()));
         final List<GuiNewKeyBindingList.KeyEntry> keysToDisplay = new ArrayList<>();
-        for (GuiListExtended.IGuiListEntry entry : ((GuiNewKeyBindingList) keyBindingList).getAllEntries()) {
+        for (GuiListExtended.IGuiListEntry entry : guiNewKeyBindingList.getAllEntries()) {
             if (entry instanceof GuiNewKeyBindingList.KeyEntry) {
                 GuiNewKeyBindingList.KeyEntry keyEntry = (GuiNewKeyBindingList.KeyEntry) entry;
                 if (keyFilter.test(keyEntry)) {
@@ -200,7 +202,7 @@ public class GuiNewControls extends GuiControls {
             }
             entriesToDisplay.add(key);
         }
-        ((GuiNewKeyBindingList) this.keyBindingList).setDisplayedEntries(entriesToDisplay);
+        this.guiNewKeyBindingList.setDisplayedEntries(entriesToDisplay);
     }
 
     /**
@@ -209,8 +211,8 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
-        this.keyBindingList.drawScreen(mouseX, mouseY, partialTicks);
-        this.drawCenteredString(this.fontRendererObj, this.field_146495_a, this.width / 2, 8, 0xFFFFFF);
+        this.guiNewKeyBindingList.drawScreen(mouseX, mouseY, partialTicks);
+        this.drawCenteredString(this.fontRendererObj, this.guiScreenTitle, this.width / 2, 8, 0xFFFFFF);
         boolean flag = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
@@ -220,7 +222,7 @@ public class GuiNewControls extends GuiControls {
             }
         }
 
-        search.drawTextBox();
+        searchTextBox.drawTextBox();
         this.buttonReset.enabled = flag;
 
         if (!flag) {
@@ -308,8 +310,8 @@ public class GuiNewControls extends GuiControls {
             this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
             this.buttonId = null;
             KeyBinding.resetKeyBindingArrayAndHash();
-            search.setFocused(false);
-        } else if (mb == 0 && !this.keyBindingList.func_148179_a(mx, my, mb)) {
+            searchTextBox.setFocused(false);
+        } else if (mb == 0 && !this.guiNewKeyBindingList.func_148179_a(mx, my, mb)) {
             // func_148179_a is mouseClicked but still obfuscated in 1.7.10
             try {
                 superSuperMouseClicked(mx, my, mb);
@@ -318,9 +320,9 @@ public class GuiNewControls extends GuiControls {
             }
         }
 
-        search.mouseClicked(mx, my, mb);
-        if (search.isFocused() && mb == 1) {
-            search.setText("");
+        searchTextBox.mouseClicked(mx, my, mb);
+        if (searchTextBox.isFocused() && mb == 1) {
+            searchTextBox.setText("");
         }
     }
 
@@ -356,7 +358,7 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void mouseMovedOrUp(int mouseX, int mouseY, int state) {
-        if (state != 0 || !this.keyBindingList.func_148181_b(mouseX, mouseY, state)) {
+        if (state != 0 || !this.guiNewKeyBindingList.func_148181_b(mouseX, mouseY, state)) {
             // func_148181_b is mouseReleased but still obfuscated in 1.7.10
             superSuperMouseReleased(mouseX, mouseY, state);
         }
@@ -383,11 +385,11 @@ public class GuiNewControls extends GuiControls {
             this.field_152177_g = Minecraft.getSystemTime();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
-            if (this.search.isFocused()) {
+            if (this.searchTextBox.isFocused()) {
                 if (keyCode == Keyboard.KEY_ESCAPE) {
-                    this.search.setFocused(false);
+                    this.searchTextBox.setFocused(false);
                 } else {
-                    this.search.textboxKeyTyped(typedChar, keyCode);
+                    this.searchTextBox.textboxKeyTyped(typedChar, keyCode);
                 }
             } else {
                 this.superSuperKeyTyped(typedChar, keyCode);
