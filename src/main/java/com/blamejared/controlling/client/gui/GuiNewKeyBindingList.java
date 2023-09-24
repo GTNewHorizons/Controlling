@@ -148,7 +148,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         @Override
         public void drawEntry(int slotIndex, int x, int y, int listWidth, int slotHeight, Tessellator tessellator,
                 int mouseX, int mouseY, boolean isSelected) {
-            boolean flag = controlsScreen.buttonId == this.keybinding;
+            boolean isKeySelected = controlsScreen.buttonId == this.keybinding;
             mc.fontRenderer.drawString(
                     this.keyDesc,
                     x + 90 - maxListLabelWidth,
@@ -163,26 +163,31 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             this.btnChangeKeyBinding.yPosition = y;
             this.btnChangeKeyBinding.displayString = GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
 
-            boolean flag1 = false;
+            boolean hasConflict = false;
 
             if (this.keybinding.getKeyCode() != 0) {
-                for (KeyBinding keybinding : mc.gameSettings.keyBindings) {
-                    if (keybinding != this.keybinding && this.keybinding.getKeyCode() == keybinding.getKeyCode()) {
-                        flag1 = true;
+                for (KeyBinding key : mc.gameSettings.keyBindings) {
+                    if (key != this.keybinding && this.keybinding.getKeyCode() == key.getKeyCode()) {
+                        hasConflict = true;
                         break;
                     }
                 }
             }
 
-            if (flag) {
-                this.btnChangeKeyBinding.displayString = EnumChatFormatting.WHITE + "> "
-                        + EnumChatFormatting.YELLOW
+            if (isKeySelected) {
+                this.btnChangeKeyBinding.displayString = EnumChatFormatting.YELLOW + "> "
+                        + EnumChatFormatting.RESET
+                        + EnumChatFormatting.UNDERLINE
                         + this.btnChangeKeyBinding.displayString
-                        + EnumChatFormatting.WHITE
+                        + EnumChatFormatting.RESET
+                        + EnumChatFormatting.YELLOW
                         + " <";
-            } else if (flag1) {
-                this.btnChangeKeyBinding.displayString = EnumChatFormatting.RED
-                        + this.btnChangeKeyBinding.displayString;
+            } else if (hasConflict) {
+                this.btnChangeKeyBinding.displayString = EnumChatFormatting.RED + "[ "
+                        + EnumChatFormatting.RESET
+                        + this.btnChangeKeyBinding.displayString
+                        + EnumChatFormatting.RED
+                        + " ]";
             }
 
             this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
