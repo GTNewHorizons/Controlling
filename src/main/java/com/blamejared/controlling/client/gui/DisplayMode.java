@@ -8,7 +8,7 @@ import net.minecraft.client.settings.KeyBinding;
 public enum DisplayMode {
 
     ALL(keyEntry -> true),
-    NONE(keyEntry -> keyEntry.getKeybinding().getKeyCode() == 0),
+    UNBOUND(keyEntry -> keyEntry.getKeybinding().getKeyCode() == 0),
     CONFLICTING(keyEntry -> {
         for (KeyBinding key : Minecraft.getMinecraft().gameSettings.keyBindings) {
             if (!key.getKeyDescription().equals(keyEntry.getKeybinding().getKeyDescription())
