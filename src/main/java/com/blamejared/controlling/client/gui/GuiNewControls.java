@@ -190,9 +190,7 @@ public class GuiNewControls extends GuiControls {
                 }
             }
         }
-        if (sortOrder != SortOrder.VANILLA) {
-            sortOrder.sort(keysToDisplay);
-        }
+        sortOrder.sort(keysToDisplay);
         final List<GuiNewKeyBindingList.IGuiListEntry> entriesToDisplay = new ArrayList<>();
         GuiNewKeyBindingList.CategoryEntry prevCategory = null;
         for (GuiNewKeyBindingList.KeyEntry key : keysToDisplay) {

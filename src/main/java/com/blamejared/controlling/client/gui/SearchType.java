@@ -7,9 +7,9 @@ import net.minecraft.util.StatCollector;
 
 public enum SearchType {
 
-    NAME,
+    CATEGORY,
     KEY,
-    CATEGORY;
+    NAME;
 
     public Predicate<GuiNewKeyBindingList.KeyEntry> getPredicate(String searchText) {
         switch (this) {

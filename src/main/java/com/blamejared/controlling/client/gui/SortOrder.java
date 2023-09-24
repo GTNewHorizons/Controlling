@@ -7,24 +7,25 @@ import net.minecraft.client.resources.I18n;
 
 public enum SortOrder {
 
-    VANILLA(entries -> {}),
-    AZ(entries -> entries.sort(Comparator.comparing(entry -> entry.getKeybinding().getKeyDescription()))),
-    ZA(entries -> entries.sort(
-            Comparator.comparing(entry -> ((GuiNewKeyBindingList.KeyEntry) entry).getKeybinding().getKeyDescription())
-                    .reversed()));
-
-    private final ISort sorter;
-
-    SortOrder(ISort sorter) {
-        this.sorter = sorter;
-    }
+    VANILLA,
+    AZ,
+    ZA;
 
     public SortOrder cycle() {
         return SortOrder.values()[(this.ordinal() + 1) % SortOrder.values().length];
     }
 
     public void sort(List<GuiNewKeyBindingList.KeyEntry> list) {
-        this.sorter.sort(list);
+        switch (this) {
+            case VANILLA:
+                return;
+            case AZ:
+                list.sort(Comparator.comparing(GuiNewKeyBindingList.KeyEntry::getKeyDesc));
+                return;
+            case ZA:
+                list.sort(
+                        Comparator.comparing(entry -> ((GuiNewKeyBindingList.KeyEntry) entry).getKeyDesc()).reversed());
+        }
     }
 
     public String getName() {
