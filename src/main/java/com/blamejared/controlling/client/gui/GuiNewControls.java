@@ -1,11 +1,18 @@
 package com.blamejared.controlling.client.gui;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Predicate;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.*;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiControls;
+import net.minecraft.client.gui.GuiListExtended;
+import net.minecraft.client.gui.GuiOptionButton;
+import net.minecraft.client.gui.GuiOptionSlider;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.StatCollector;
@@ -34,18 +41,17 @@ public class GuiNewControls extends GuiControls {
     private final GuiScreen parentScreen;
     private final GameSettings options;
     private GuiButton buttonReset;
-    private String lastSearch;
+    private String lastSearch = "";
     private GuiTextField search;
 
-    private DisplayMode displayMode;
-    private SearchType searchType;
-    private SortOrder sortOrder;
+    private DisplayMode displayMode = DisplayMode.ALL;
+    private SearchType searchType = SearchType.NAME;
+    private SortOrder sortOrder = SortOrder.VANILLA;
 
     private GuiButton buttonNone;
     private GuiButton buttonConflicting;
     private GuiCheckBox buttonKey;
     private GuiCheckBox buttonCat;
-    private GuiButton sortOrderButton;
     private boolean confirmingReset = false;
     private boolean isQwertyLayout;
 
@@ -152,100 +158,51 @@ public class GuiNewControls extends GuiControls {
                 false);
         this.buttonList.add(this.buttonCat);
 
-        this.sortOrderButton = new GuiButton(
-                SORT_TYPE_BUTTON_ID,
-                this.width / 2 - 155 + 160 + 76,
-                this.height - 29 - 24 - 24,
-                150 / 2,
-                20,
-                StatCollector.translateToLocal("options.sort"));
-        this.buttonList.add(this.sortOrderButton);
-        this.sortOrder = SortOrder.NONE;
-        this.lastSearch = "";
-        this.displayMode = DisplayMode.ALL;
-        this.searchType = SearchType.NAME;
+        this.buttonList.add(
+                new GuiButton(
+                        SORT_TYPE_BUTTON_ID,
+                        this.width / 2 - 155 + 160 + 76,
+                        this.height - 29 - 24 - 24,
+                        150 / 2,
+                        20,
+                        StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getName()));
     }
 
     @Override
     public void updateScreen() {
         this.search.updateCursorCounter();
-        if (!lastSearch.equals(search.getText())) {
-            filterKeys();
+        if (!this.lastSearch.equals(this.search.getText())) {
+            this.filterKeys();
+            this.lastSearch = this.search.getText();
         }
     }
 
-    public void filterKeys() {
-        lastSearch = search.getText();
-        if (lastSearch.isEmpty() && displayMode == DisplayMode.ALL
-                && sortOrder == SortOrder.NONE
-                && searchType != SearchType.NAME) {
-            return;
-        }
-
+    private void filterKeys() {
         this.keyBindingList.scrollBy(-this.keyBindingList.getAmountScrolled());
-        Predicate<GuiNewKeyBindingList.KeyEntry> filters = displayMode.getPredicate();
-
-        switch (searchType) {
-            case NAME:
-                filters = filters
-                        .and(keyEntry -> keyEntry.getKeyDesc().toLowerCase().contains(lastSearch.toLowerCase()));
-                break;
-            case CATEGORY:
-                filters = filters.and(
-                        keyEntry -> StatCollector.translateToLocal(keyEntry.getKeybinding().getKeyCategory())
-                                .toLowerCase().contains(lastSearch.toLowerCase()));
-                break;
-            case KEY:
-                filters = filters.and(
-                        keyEntry -> GameSettings.getKeyDisplayString(keyEntry.getKeybinding().getKeyCode())
-                                .toLowerCase().contains(lastSearch.toLowerCase()));
-                break;
-        }
-
-        LinkedList<GuiListExtended.IGuiListEntry> workingList = new LinkedList<>();
-
+        final Predicate<GuiNewKeyBindingList.KeyEntry> keyFilter = displayMode.getPredicate()
+                .and(searchType.getPredicate(search.getText()));
+        final List<GuiNewKeyBindingList.KeyEntry> keysToDisplay = new ArrayList<>();
         for (GuiListExtended.IGuiListEntry entry : ((GuiNewKeyBindingList) keyBindingList).getAllEntries()) {
-            if (searchType == SearchType.CATEGORY && sortOrder == SortOrder.NONE && displayMode == DisplayMode.ALL) {
-                if (entry instanceof GuiNewKeyBindingList.KeyEntry) {
-                    GuiNewKeyBindingList.KeyEntry keyEntry = (GuiNewKeyBindingList.KeyEntry) entry;
-                    if (filters.test(keyEntry)) {
-                        workingList.add(entry);
-                    }
-                } else {
-                    workingList.add(entry);
-                }
-            } else {
-                if (entry instanceof GuiNewKeyBindingList.KeyEntry) {
-                    GuiNewKeyBindingList.KeyEntry keyEntry = (GuiNewKeyBindingList.KeyEntry) entry;
-                    if (filters.test(keyEntry)) {
-                        workingList.add(entry);
-                    }
+            if (entry instanceof GuiNewKeyBindingList.KeyEntry) {
+                GuiNewKeyBindingList.KeyEntry keyEntry = (GuiNewKeyBindingList.KeyEntry) entry;
+                if (keyFilter.test(keyEntry)) {
+                    keysToDisplay.add(keyEntry);
                 }
             }
         }
-
-        if (searchType == SearchType.CATEGORY && sortOrder == SortOrder.NONE && displayMode == DisplayMode.ALL) {
-            Set<GuiNewKeyBindingList.CategoryEntry> categories = new LinkedHashSet<>();
-
-            for (GuiListExtended.IGuiListEntry entry : workingList) {
-                if (entry instanceof GuiNewKeyBindingList.CategoryEntry) {
-                    GuiNewKeyBindingList.CategoryEntry categoryEntry = (GuiNewKeyBindingList.CategoryEntry) entry;
-                    categories.add(categoryEntry);
-                    for (GuiListExtended.IGuiListEntry child : workingList) {
-                        if (child instanceof GuiNewKeyBindingList.KeyEntry) {
-                            GuiNewKeyBindingList.KeyEntry childEntry = (GuiNewKeyBindingList.KeyEntry) child;
-                            if (childEntry.getKeybinding().getKeyCategory().equals(categoryEntry.getName())) {
-                                categories.remove(categoryEntry);
-                            }
-                        }
-                    }
-                }
-            }
-
-            workingList.removeAll(categories);
+        if (sortOrder != SortOrder.VANILLA) {
+            sortOrder.sort(keysToDisplay);
         }
-        sortOrder.sort(workingList);
-        ((GuiNewKeyBindingList) keyBindingList).setListEntries(workingList);
+        final List<GuiNewKeyBindingList.IGuiListEntry> entriesToDisplay = new ArrayList<>();
+        GuiNewKeyBindingList.CategoryEntry prevCategory = null;
+        for (GuiNewKeyBindingList.KeyEntry key : keysToDisplay) {
+            if (key.getCategoryEntry() != prevCategory) {
+                prevCategory = key.getCategoryEntry();
+                entriesToDisplay.add(key.getCategoryEntry());
+            }
+            entriesToDisplay.add(key);
+        }
+        ((GuiNewKeyBindingList) this.keyBindingList).setDisplayedEntries(entriesToDisplay);
     }
 
     /**
@@ -255,7 +212,7 @@ public class GuiNewControls extends GuiControls {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
         this.keyBindingList.drawScreen(mouseX, mouseY, partialTicks);
-        this.drawCenteredString(this.fontRendererObj, this.field_146495_a, this.width / 2, 8, 16777215);
+        this.drawCenteredString(this.fontRendererObj, this.field_146495_a, this.width / 2, 8, 0xFFFFFF);
         boolean flag = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
@@ -283,7 +240,7 @@ public class GuiNewControls extends GuiControls {
                 text,
                 this.width / 2 - (155 / 2) - (fontRendererObj.getStringWidth(text)) - 5,
                 this.height - 29 - 42,
-                16777215);
+                0xFFFFFF);
     }
 
     @Override
@@ -313,11 +270,11 @@ public class GuiNewControls extends GuiControls {
             }
             KeyBinding.resetKeyBindingArrayAndHash();
         } else if (button.id == SHOW_UNBOUD_BUTTON_ID) {
-            if (displayMode == DisplayMode.NONE) {
+            if (displayMode == DisplayMode.UNBOUND) {
                 buttonNone.displayString = StatCollector.translateToLocal("options.showNone");
                 displayMode = DisplayMode.ALL;
             } else {
-                displayMode = DisplayMode.NONE;
+                displayMode = DisplayMode.UNBOUND;
                 buttonNone.displayString = StatCollector.translateToLocal("options.showAll");
                 buttonConflicting.displayString = StatCollector.translateToLocal("options.showConflicts");
             }
@@ -354,8 +311,8 @@ public class GuiNewControls extends GuiControls {
             this.buttonId = null;
             KeyBinding.resetKeyBindingArrayAndHash();
             search.setFocused(false);
-        } else if (mb == 0 && !this.keyBindingList.func_148179_a(mx, my, mb)) { // func_148179_a is mouseClicked but
-                                                                                // still obfuscated in 1.7.10
+        } else if (mb == 0 && !this.keyBindingList.func_148179_a(mx, my, mb)) {
+            // func_148179_a is mouseClicked but still obfuscated in 1.7.10
             try {
                 superSuperMouseClicked(mx, my, mb);
             } catch (IOException e) {
@@ -401,8 +358,8 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void mouseMovedOrUp(int mouseX, int mouseY, int state) {
-        if (state != 0 || !this.keyBindingList.func_148181_b(mouseX, mouseY, state)) { // func_148181_b is mouseReleased
-                                                                                       // but still obfuscated in 1.7.10
+        if (state != 0 || !this.keyBindingList.func_148181_b(mouseX, mouseY, state)) {
+            // func_148181_b is mouseReleased but still obfuscated in 1.7.10
             superSuperMouseReleased(mouseX, mouseY, state);
         }
     }
