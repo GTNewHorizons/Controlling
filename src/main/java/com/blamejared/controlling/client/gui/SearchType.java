@@ -7,19 +7,23 @@ import net.minecraft.util.StatCollector;
 
 public enum SearchType {
 
-    CATEGORY,
-    KEY,
-    NAME;
+    ALL,
+    CATEGORY_NAME,
+    KEYBIND_NAME,
+    KEY_NAME;
 
     public Predicate<GuiNewKeyBindingList.KeyEntry> getPredicate(String searchText) {
         switch (this) {
-            case NAME:
-                return keyEntry -> keyEntry.getKeyDesc().toLowerCase().contains(searchText.toLowerCase());
-            case CATEGORY:
-                return keyEntry -> StatCollector.translateToLocal(keyEntry.getKeybinding().getKeyCategory())
-                        .toLowerCase().contains(searchText.toLowerCase());
-            case KEY:
-                return keyEntry -> GameSettings.getKeyDisplayString(keyEntry.getKeybinding().getKeyCode()).toLowerCase()
+            case ALL:
+                return CATEGORY_NAME.getPredicate(searchText).or(KEYBIND_NAME.getPredicate(searchText))
+                        .or(KEY_NAME.getPredicate(searchText));
+            case CATEGORY_NAME:
+                return key -> StatCollector.translateToLocal(key.getKeybinding().getKeyCategory()).toLowerCase()
+                        .contains(searchText.toLowerCase());
+            case KEYBIND_NAME:
+                return key -> key.getKeyDesc().toLowerCase().contains(searchText.toLowerCase());
+            case KEY_NAME:
+                return key -> GameSettings.getKeyDisplayString(key.getKeybinding().getKeyCode()).toLowerCase()
                         .contains(searchText.toLowerCase());
         }
         throw new IllegalStateException();
