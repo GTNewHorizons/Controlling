@@ -17,10 +17,9 @@ public enum DisplayMode {
                 return keyEntry -> true;
             case CONFLICTING:
                 return keyEntry -> {
-                    for (KeyBinding key : Minecraft.getMinecraft().gameSettings.keyBindings) {
-                        if (!key.getKeyDescription().equals(keyEntry.getKeybinding().getKeyDescription())
-                                && key.getKeyCode() != 0) {
-                            if (key.getKeyCode() == keyEntry.getKeybinding().getKeyCode()) {
+                    for (KeyBinding keyBinding : Minecraft.getMinecraft().gameSettings.keyBindings) {
+                        if (keyBinding != keyEntry.getKeybinding() && keyBinding.getKeyCode() != 0) {
+                            if (keyBinding.getKeyCode() == keyEntry.getKeybinding().getKeyCode()) {
                                 return true;
                             }
                         }
