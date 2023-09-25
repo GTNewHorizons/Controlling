@@ -428,4 +428,12 @@ public class GuiNewControls extends GuiControls {
         KeyBinding.resetKeyBindingArrayAndHash();
     }
 
+    public SearchType getSearchType() {
+        return this.searchType;
+    }
+
+    public String getSearchString() {
+        return lastSearch;
+    }
+
 }
