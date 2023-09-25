@@ -47,7 +47,7 @@ public class GuiNewControls extends GuiControls {
     private GuiTextField searchTextBox;
 
     private DisplayMode displayMode = DisplayMode.ALL;
-    private SearchType searchType = SearchType.NAME;
+    private SearchType searchType = SearchType.ALL;
     private SortOrder sortOrder = SortOrder.VANILLA;
 
     private GuiButton buttonNone;
@@ -291,11 +291,11 @@ public class GuiNewControls extends GuiControls {
             filterKeys();
         } else if (button.id == SORT_KEYNAME_BUTTON_ID) {
             buttonCat.setIsChecked(false);
-            searchType = buttonKey.isChecked() ? SearchType.KEY : SearchType.NAME;
+            searchType = buttonKey.isChecked() ? SearchType.KEY_NAME : SearchType.ALL;
             filterKeys();
         } else if (button.id == SORT_CATEGORYNAME_BUTTON_ID) {
             buttonKey.setIsChecked(false);
-            searchType = buttonCat.isChecked() ? SearchType.CATEGORY : SearchType.NAME;
+            searchType = buttonCat.isChecked() ? SearchType.CATEGORY_NAME : SearchType.ALL;
             filterKeys();
         } else if (button.id == SORT_TYPE_BUTTON_ID) {
             sortOrder = sortOrder.cycle();
