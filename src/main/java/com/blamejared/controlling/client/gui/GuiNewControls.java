@@ -167,7 +167,7 @@ public class GuiNewControls extends GuiControls {
                         this.height - 29 - 24 - 24,
                         150 / 2,
                         20,
-                        StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getName()));
+                        StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNameNext()));
     }
 
     @Override
@@ -299,7 +299,7 @@ public class GuiNewControls extends GuiControls {
             filterKeys();
         } else if (button.id == SORT_TYPE_BUTTON_ID) {
             sortOrder = sortOrder.cycle();
-            button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getName();
+            button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNameNext();
             filterKeys();
         }
     }
