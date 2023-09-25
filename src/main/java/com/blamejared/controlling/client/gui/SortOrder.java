@@ -40,4 +40,8 @@ public enum SortOrder {
         throw new IllegalStateException();
     }
 
+    public String getNameNext() {
+        return this.cycle().getName();
+    }
+
 }
