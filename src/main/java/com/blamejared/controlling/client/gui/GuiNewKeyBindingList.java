@@ -104,10 +104,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             final int rectBottom = y + mc.fontRenderer.FONT_HEIGHT;
             Gui.drawRect(rectLeft, y, rectRight, rectBottom, YELLOW_HIGHLIGHT_COLOR);
             mc.fontRenderer.drawStringWithShadow(textStart, x, y, 0xFFFFFF);
-            x += mc.fontRenderer.getStringWidth(textStart);
-            mc.fontRenderer.drawString(textMiddle, x, y, DARK_TEXT_HIGHLIGHT_COLOR);
-            x += mc.fontRenderer.getStringWidth(textMiddle);
-            mc.fontRenderer.drawStringWithShadow(textEnd, x, y, 0xFFFFFF);
+            mc.fontRenderer.drawString(textMiddle, rectLeft, y, DARK_TEXT_HIGHLIGHT_COLOR);
+            mc.fontRenderer.drawStringWithShadow(textEnd, rectRight, y, 0xFFFFFF);
         } else {
             mc.fontRenderer.drawStringWithShadow(text, x, y, 0xFFFFFF);
         }
@@ -237,31 +235,35 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             }
             this.btnChangeKeyBinding.displayString = prefix + this.btnChangeKeyBinding.displayString + suffix;
 
-            String saveStr = null;
             if (highlight) {
-                saveStr = this.btnChangeKeyBinding.displayString;
-                this.btnChangeKeyBinding.displayString = "";
+                this.drawButtonWithHighlightedText(mouseX, mouseY, prefix, textStart, textMiddle, textEnd, suffix);
+            } else {
+                this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
             }
 
+        }
+
+        private void drawButtonWithHighlightedText(int mouseX, int mouseY, String prefix, String textStart,
+                String textMiddle, String textEnd, String suffix) {
+            if (prefix.contains(EnumChatFormatting.UNDERLINE.toString())) {
+                textMiddle = EnumChatFormatting.UNDERLINE + textMiddle;
+                textEnd = EnumChatFormatting.UNDERLINE + textEnd;
+            }
+            final String saveStr = this.btnChangeKeyBinding.displayString;
+            this.btnChangeKeyBinding.displayString = "";
             this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
-
-            if (highlight) {
-                this.btnChangeKeyBinding.displayString = saveStr;
-                int xString = this.btnChangeKeyBinding.xPosition + this.btnChangeKeyBinding.width / 2
-                        - mc.fontRenderer.getStringWidth(this.btnChangeKeyBinding.displayString) / 2;
-                final int yString = this.btnChangeKeyBinding.yPosition + (this.btnChangeKeyBinding.height - 8) / 2;
-                final String drawnTextStart = prefix + textStart;
-                final int rectLeft = xString + mc.fontRenderer.getStringWidth(drawnTextStart);
-                final int rectRight = rectLeft + mc.fontRenderer.getStringWidth(textMiddle);
-                final int rectBottom = yString + mc.fontRenderer.FONT_HEIGHT;
-                Gui.drawRect(rectLeft, yString, rectRight, rectBottom, YELLOW_HIGHLIGHT_COLOR);
-                mc.fontRenderer.drawStringWithShadow(drawnTextStart, xString, yString, 0xFFFFFF);
-                xString += mc.fontRenderer.getStringWidth(drawnTextStart);
-                mc.fontRenderer.drawString(textMiddle, xString, yString, DARK_TEXT_HIGHLIGHT_COLOR);
-                xString += mc.fontRenderer.getStringWidth(textMiddle);
-                mc.fontRenderer.drawStringWithShadow(textEnd + suffix, xString, yString, 0xFFFFFF);
-            }
-
+            this.btnChangeKeyBinding.displayString = saveStr;
+            int xString = this.btnChangeKeyBinding.xPosition + this.btnChangeKeyBinding.width / 2
+                    - mc.fontRenderer.getStringWidth(this.btnChangeKeyBinding.displayString) / 2;
+            final int yString = this.btnChangeKeyBinding.yPosition + (this.btnChangeKeyBinding.height - 8) / 2;
+            final String drawnTextStart = prefix + textStart;
+            final int rectLeft = xString + mc.fontRenderer.getStringWidth(drawnTextStart);
+            final int rectRight = rectLeft + mc.fontRenderer.getStringWidth(textMiddle);
+            final int rectBottom = yString + mc.fontRenderer.FONT_HEIGHT;
+            Gui.drawRect(rectLeft, yString, rectRight, rectBottom, YELLOW_HIGHLIGHT_COLOR);
+            mc.fontRenderer.drawStringWithShadow(drawnTextStart, xString, yString, 0xFFFFFF);
+            mc.fontRenderer.drawString(textMiddle, rectLeft, yString, DARK_TEXT_HIGHLIGHT_COLOR);
+            mc.fontRenderer.drawStringWithShadow(textEnd + suffix, rectRight, yString, 0xFFFFFF);
         }
 
         @Override

@@ -11,7 +11,7 @@ public enum SortOrder {
     AZ,
     ZA;
 
-    public SortOrder cycle() {
+    public SortOrder getNext() {
         return SortOrder.values()[(this.ordinal() + 1) % SortOrder.values().length];
     }
 
@@ -40,8 +40,8 @@ public enum SortOrder {
         throw new IllegalStateException();
     }
 
-    public String getNameNext() {
-        return this.cycle().getName();
+    public String getNextName() {
+        return this.getNext().getName();
     }
 
 }
