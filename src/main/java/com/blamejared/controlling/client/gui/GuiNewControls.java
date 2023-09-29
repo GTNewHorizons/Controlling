@@ -34,8 +34,8 @@ public class GuiNewControls extends GuiControls {
     private static final int RESET_ALL_KEYS_BUTTON_ID = 1002;
     private static final int SHOW_UNBOUD_BUTTON_ID = 1003;
     private static final int SHOW_CONFLICTS_BUTTON_ID = 1004;
-    private static final int SORT_KEYNAME_BUTTON_ID = 1005;
-    private static final int SORT_CATEGORYNAME_BUTTON_ID = 1006;
+    private static final int SEARCH_KEYNAME_BUTTON_ID = 1005;
+    private static final int SEARCH_CATEGORYNAME_BUTTON_ID = 1006;
     private static final int SORT_TYPE_BUTTON_ID = 1008;
 
     private final GuiScreen parentScreen;
@@ -145,7 +145,7 @@ public class GuiNewControls extends GuiControls {
         searchTextBox.setCanLoseFocus(true);
 
         this.buttonKey = new GuiCheckBox(
-                SORT_KEYNAME_BUTTON_ID,
+                SEARCH_KEYNAME_BUTTON_ID,
                 this.width / 2 - (155 / 2),
                 this.height - 29 - 37,
                 StatCollector.translateToLocal("options.key"),
@@ -153,7 +153,7 @@ public class GuiNewControls extends GuiControls {
         this.buttonList.add(this.buttonKey);
 
         this.buttonCat = new GuiCheckBox(
-                SORT_CATEGORYNAME_BUTTON_ID,
+                SEARCH_CATEGORYNAME_BUTTON_ID,
                 this.width / 2 - (155 / 2),
                 this.height - 29 - 50,
                 StatCollector.translateToLocal("options.category"),
@@ -167,7 +167,7 @@ public class GuiNewControls extends GuiControls {
                         this.height - 29 - 24 - 24,
                         150 / 2,
                         20,
-                        StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNameNext()));
+                        StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNextName()));
     }
 
     @Override
@@ -289,17 +289,17 @@ public class GuiNewControls extends GuiControls {
                 buttonNone.displayString = StatCollector.translateToLocal("options.showNone");
             }
             filterKeys();
-        } else if (button.id == SORT_KEYNAME_BUTTON_ID) {
+        } else if (button.id == SEARCH_KEYNAME_BUTTON_ID) {
             buttonCat.setIsChecked(false);
             searchType = buttonKey.isChecked() ? SearchType.KEY_NAME : SearchType.ALL;
             filterKeys();
-        } else if (button.id == SORT_CATEGORYNAME_BUTTON_ID) {
+        } else if (button.id == SEARCH_CATEGORYNAME_BUTTON_ID) {
             buttonKey.setIsChecked(false);
             searchType = buttonCat.isChecked() ? SearchType.CATEGORY_NAME : SearchType.ALL;
             filterKeys();
         } else if (button.id == SORT_TYPE_BUTTON_ID) {
-            sortOrder = sortOrder.cycle();
-            button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNameNext();
+            sortOrder = sortOrder.getNext();
+            button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNextName();
             filterKeys();
         }
     }
