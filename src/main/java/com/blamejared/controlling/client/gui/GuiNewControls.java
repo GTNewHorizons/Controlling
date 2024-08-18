@@ -220,7 +220,7 @@ public class GuiNewControls extends GuiControls {
         boolean flag = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
-            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB) {
+            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding) {
                 if (!((IKeyBinding) keybinding).isSetToDefaultValue()) {
                     flag = true;
                     break;
