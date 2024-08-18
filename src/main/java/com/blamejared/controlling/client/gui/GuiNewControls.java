@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
+import com.blamejared.controlling.Controlling;
+import committee.nova.mkb.api.IKeyBinding;
+import committee.nova.mkb.keybinding.KeyModifier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiControls;
@@ -216,9 +219,16 @@ public class GuiNewControls extends GuiControls {
         boolean flag = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
-            if (keybinding.getKeyCode() != keybinding.getKeyCodeDefault()) {
-                flag = true;
-                break;
+            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB){
+                if (!((IKeyBinding) keybinding).isSetToDefaultValue()) {
+                    flag = true;
+                    break;
+                }
+            } else {
+                if (keybinding.getKeyCode() != keybinding.getKeyCodeDefault()) {
+                    flag = true;
+                    break;
+                }
             }
         }
 
@@ -266,7 +276,11 @@ public class GuiNewControls extends GuiControls {
             button.displayString = StatCollector.translateToLocal("controls.resetAll");
 
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
+                if (Controlling.isModernKeybindingInstalled){
+                    ((IKeyBinding) keyBinding).setToDefault();
+                } else {
+                    keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
+                }
             }
             KeyBinding.resetKeyBindingArrayAndHash();
         } else if (button.id == SHOW_UNBOUD_BUTTON_ID) {
@@ -307,6 +321,9 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void mouseClicked(int mx, int my, int mb) {
         if (this.buttonId != null) {
+            if (Controlling.isModernKeybindingInstalled){
+                ((IKeyBinding) this.buttonId).setKeyModifierAndCode(KeyModifier.getActiveModifier(), -100 + mb);
+            }
             this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
             this.buttonId = null;
             KeyBinding.resetKeyBindingArrayAndHash();
@@ -374,6 +391,17 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void keyTyped(char typedChar, int keyCode) {
         if (this.buttonId != null) {
+            if (Controlling.isModernKeybindingInstalled){
+                IKeyBinding modernKB = ((IKeyBinding) this.buttonId);
+                if (keyCode == Keyboard.KEY_ESCAPE) {
+                    modernKB.setKeyModifierAndCode(KeyModifier.NONE, Keyboard.KEY_NONE);
+                } else if (keyCode != Keyboard.KEY_NONE) {
+                    modernKB.setKeyModifierAndCode(KeyModifier.getActiveModifier(), keyCode);
+                } else if (typedChar > 0) {
+                    modernKB.setKeyModifierAndCode(KeyModifier.getActiveModifier(), typedChar + 256);
+                }
+            }
+
             if (keyCode == Keyboard.KEY_ESCAPE) {
                 this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
             } else if (keyCode != Keyboard.KEY_NONE) {
@@ -381,7 +409,12 @@ public class GuiNewControls extends GuiControls {
             } else if (typedChar > 0) {
                 this.options.setOptionKeyBinding(this.buttonId, typedChar + 256);
             }
-            this.buttonId = null;
+
+            // logic - if modern keybinding is not installed, or the key pressed was not a modifier
+            if (!Controlling.isModernKeybindingInstalled || !KeyModifier.isKeyCodeModifier(keyCode)) {
+                this.buttonId = null;
+            }
+
             this.field_152177_g = Minecraft.getSystemTime();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
