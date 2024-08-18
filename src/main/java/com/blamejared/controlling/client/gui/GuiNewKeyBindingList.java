@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.blamejared.controlling.Controlling;
-import committee.nova.mkb.api.IKeyBinding;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
@@ -17,6 +15,9 @@ import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.EnumChatFormatting;
 
 import org.apache.commons.lang3.ArrayUtils;
+
+import com.blamejared.controlling.Controlling;
+import committee.nova.mkb.api.IKeyBinding;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -128,8 +129,6 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 || controlsScreen.getSearchType() == SearchType.KEY_NAME);
     }
 
-
-
     @SideOnly(Side.CLIENT)
     public class CategoryEntry implements IGuiListEntry {
 
@@ -201,7 +200,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
-            this.btnChangeKeyBinding.displayString = Controlling.isModernKeybindingInstalled ? ((IKeyBinding) keybinding).getDisplayName() : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
+            this.btnChangeKeyBinding.displayString = Controlling.isModernKeybindingInstalled
+                    ? ((IKeyBinding) keybinding).getDisplayName()
+                    : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
 
             boolean hasConflict = false;
             boolean modConflict = true; // less severe form of conflict, like SHIFT conflicting with SHIFT+G
@@ -284,7 +285,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 controlsScreen.buttonId = this.keybinding;
                 return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
-                if (Controlling.isModernKeybindingInstalled){
+                if (Controlling.isModernKeybindingInstalled) {
                     ((IKeyBinding) this.keybinding).setToDefault();
                 } else {
                     this.keybinding.setKeyCode(this.keybinding.getKeyCodeDefault());

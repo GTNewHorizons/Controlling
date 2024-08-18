@@ -5,9 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-import com.blamejared.controlling.Controlling;
-import committee.nova.mkb.api.IKeyBinding;
-import committee.nova.mkb.keybinding.KeyModifier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiControls;
@@ -21,6 +18,10 @@ import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
+
+import com.blamejared.controlling.Controlling;
+import committee.nova.mkb.api.IKeyBinding;
+import committee.nova.mkb.keybinding.KeyModifier;
 
 import cpw.mods.fml.client.config.GuiCheckBox;
 import cpw.mods.fml.relauncher.Side;
@@ -219,7 +220,7 @@ public class GuiNewControls extends GuiControls {
         boolean flag = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
-            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB){
+            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB) {
                 if (!((IKeyBinding) keybinding).isSetToDefaultValue()) {
                     flag = true;
                     break;
@@ -276,7 +277,7 @@ public class GuiNewControls extends GuiControls {
             button.displayString = StatCollector.translateToLocal("controls.resetAll");
 
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                if (Controlling.isModernKeybindingInstalled){
+                if (Controlling.isModernKeybindingInstalled) {
                     ((IKeyBinding) keyBinding).setToDefault();
                 } else {
                     keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
@@ -321,7 +322,7 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void mouseClicked(int mx, int my, int mb) {
         if (this.buttonId != null) {
-            if (Controlling.isModernKeybindingInstalled){
+            if (Controlling.isModernKeybindingInstalled) {
                 ((IKeyBinding) this.buttonId).setKeyModifierAndCode(KeyModifier.getActiveModifier(), -100 + mb);
             }
             this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
@@ -391,7 +392,7 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void keyTyped(char typedChar, int keyCode) {
         if (this.buttonId != null) {
-            if (Controlling.isModernKeybindingInstalled){
+            if (Controlling.isModernKeybindingInstalled) {
                 IKeyBinding modernKB = ((IKeyBinding) this.buttonId);
                 if (keyCode == Keyboard.KEY_ESCAPE) {
                     modernKB.setKeyModifierAndCode(KeyModifier.NONE, Keyboard.KEY_NONE);
