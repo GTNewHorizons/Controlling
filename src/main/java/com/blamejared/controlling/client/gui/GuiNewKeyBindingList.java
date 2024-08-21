@@ -210,10 +210,11 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             if (this.keybinding.getKeyCode() != 0) {
                 for (KeyBinding key : mc.gameSettings.keyBindings) {
                     if (key != this.keybinding) {
-                        if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB
+                        if (Controlling.isModernKeybindingInstalled && key instanceof IKeyBinding modernKB
+                                && keybinding instanceof IKeyBinding modernKB2
                                 && modernKB.conflicts(keybinding)) {
                             hasConflict = true;
-                            modConflict &= modernKB.hasKeyCodeModifierConflict(key);
+                            modConflict &= modernKB2.hasKeyCodeModifierConflict(key);
                         } else if (this.keybinding.getKeyCode() == key.getKeyCode()) {
                             hasConflict = true;
                             break;
