@@ -16,6 +16,9 @@ import net.minecraft.util.EnumChatFormatting;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import com.blamejared.controlling.Controlling;
+import committee.nova.mkb.api.IKeyBinding;
+
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -197,20 +200,30 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
-            this.btnChangeKeyBinding.displayString = GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
+            this.btnChangeKeyBinding.displayString = Controlling.isModernKeybindingInstalled
+                    && keybinding instanceof IKeyBinding modernKB ? modernKB.getDisplayName()
+                            : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
 
             boolean hasConflict = false;
+            boolean modConflict = true; // less severe form of conflict, like SHIFT conflicting with SHIFT+G
 
             if (this.keybinding.getKeyCode() != 0) {
                 for (KeyBinding key : mc.gameSettings.keyBindings) {
-                    if (key != this.keybinding && this.keybinding.getKeyCode() == key.getKeyCode()) {
-                        hasConflict = true;
-                        break;
+                    if (key != this.keybinding) {
+                        if (Controlling.isModernKeybindingInstalled && key instanceof IKeyBinding modernKB
+                                && keybinding instanceof IKeyBinding modernKB2
+                                && modernKB.conflicts(keybinding)) {
+                            hasConflict = true;
+                            modConflict &= modernKB2.hasKeyCodeModifierConflict(key);
+                        } else if (this.keybinding.getKeyCode() == key.getKeyCode()) {
+                            hasConflict = true;
+                            break;
+                        }
                     }
                 }
             }
 
-            final String displayText = GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
+            final String displayText = this.btnChangeKeyBinding.displayString;
             final String searchString = controlsScreen.getSearchString();
             final int index = this.btnChangeKeyBinding.displayString.toLowerCase().indexOf(searchString.toLowerCase());
             final int indexEndHighlight = index + controlsScreen.getSearchString().length();
@@ -230,8 +243,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 prefix = EnumChatFormatting.YELLOW + "> " + EnumChatFormatting.RESET + EnumChatFormatting.UNDERLINE;
                 suffix = EnumChatFormatting.RESET.toString() + EnumChatFormatting.YELLOW + " <";
             } else if (hasConflict) {
-                prefix = EnumChatFormatting.RED + "[ " + EnumChatFormatting.RESET;
-                suffix = EnumChatFormatting.RED + " ]";
+                EnumChatFormatting clr = modConflict ? EnumChatFormatting.GOLD : EnumChatFormatting.RED;
+                prefix = clr + "[ " + EnumChatFormatting.RESET;
+                suffix = clr + " ]";
             }
             this.btnChangeKeyBinding.displayString = prefix + this.btnChangeKeyBinding.displayString + suffix;
 
@@ -273,7 +287,11 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 controlsScreen.buttonId = this.keybinding;
                 return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
-                this.keybinding.setKeyCode(this.keybinding.getKeyCodeDefault());
+                if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB) {
+                    modernKB.setToDefault();
+                } else {
+                    this.keybinding.setKeyCode(this.keybinding.getKeyCodeDefault());
+                }
                 mc.gameSettings.setOptionKeyBinding(this.keybinding, this.keybinding.getKeyCodeDefault());
                 KeyBinding.resetKeyBindingArrayAndHash();
                 return true;
