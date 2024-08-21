@@ -220,8 +220,8 @@ public class GuiNewControls extends GuiControls {
         boolean flag = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
-            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding) {
-                if (!((IKeyBinding) keybinding).isSetToDefaultValue()) {
+            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB) {
+                if (!modernKB.isSetToDefaultValue()) {
                     flag = true;
                     break;
                 }
@@ -277,8 +277,8 @@ public class GuiNewControls extends GuiControls {
             button.displayString = StatCollector.translateToLocal("controls.resetAll");
 
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                if (Controlling.isModernKeybindingInstalled) {
-                    ((IKeyBinding) keyBinding).setToDefault();
+                if (Controlling.isModernKeybindingInstalled && keyBinding instanceof IKeyBinding modernKB) {
+                    modernKB.setToDefault();
                 } else {
                     keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
                 }
@@ -322,8 +322,8 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void mouseClicked(int mx, int my, int mb) {
         if (this.buttonId != null) {
-            if (Controlling.isModernKeybindingInstalled) {
-                ((IKeyBinding) this.buttonId).setKeyModifierAndCode(KeyModifier.getActiveModifier(), -100 + mb);
+            if (Controlling.isModernKeybindingInstalled && this.buttonId instanceof IKeyBinding modernKB) {
+                modernKB.setKeyModifierAndCode(KeyModifier.getActiveModifier(), -100 + mb);
             }
             this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
             this.buttonId = null;
@@ -392,8 +392,7 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void keyTyped(char typedChar, int keyCode) {
         if (this.buttonId != null) {
-            if (Controlling.isModernKeybindingInstalled) {
-                IKeyBinding modernKB = ((IKeyBinding) this.buttonId);
+            if (Controlling.isModernKeybindingInstalled && this.buttonId instanceof IKeyBinding modernKB) {
                 if (keyCode == Keyboard.KEY_ESCAPE) {
                     modernKB.setKeyModifierAndCode(KeyModifier.NONE, Keyboard.KEY_NONE);
                 } else if (keyCode != Keyboard.KEY_NONE) {

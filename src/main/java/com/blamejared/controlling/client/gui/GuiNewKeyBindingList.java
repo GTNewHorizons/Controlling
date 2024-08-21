@@ -201,8 +201,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
             this.btnChangeKeyBinding.displayString = Controlling.isModernKeybindingInstalled
-                    ? ((IKeyBinding) keybinding).getDisplayName()
-                    : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
+                    && keybinding instanceof IKeyBinding modernKB ? modernKB.getDisplayName()
+                            : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
 
             boolean hasConflict = false;
             boolean modConflict = true; // less severe form of conflict, like SHIFT conflicting with SHIFT+G
@@ -210,9 +210,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             if (this.keybinding.getKeyCode() != 0) {
                 for (KeyBinding key : mc.gameSettings.keyBindings) {
                     if (key != this.keybinding) {
-                        if (Controlling.isModernKeybindingInstalled && ((IKeyBinding) key).conflicts(keybinding)) {
+                        if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB
+                                && modernKB.conflicts(keybinding)) {
                             hasConflict = true;
-                            modConflict &= ((IKeyBinding) keybinding).hasKeyCodeModifierConflict(key);
+                            modConflict &= modernKB.hasKeyCodeModifierConflict(key);
                         } else if (this.keybinding.getKeyCode() == key.getKeyCode()) {
                             hasConflict = true;
                             break;
@@ -285,8 +286,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 controlsScreen.buttonId = this.keybinding;
                 return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
-                if (Controlling.isModernKeybindingInstalled) {
-                    ((IKeyBinding) this.keybinding).setToDefault();
+                if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB) {
+                    modernKB.setToDefault();
                 } else {
                     this.keybinding.setKeyCode(this.keybinding.getKeyCodeDefault());
                 }
