@@ -61,6 +61,7 @@ public class GuiNewControls extends GuiControls {
     private boolean confirmingReset = false;
     private boolean isQwertyLayout;
     private KeyModifier selectedModifier = KeyModifier.NONE;
+    private int selectedModifierKeyCode = Keyboard.KEY_NONE;
     private KeyBinding pendingBinding;
     private KeyModifier pendingModifier = KeyModifier.NONE;
     private int pendingKeyCode = Keyboard.KEY_NONE;
@@ -180,6 +181,7 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void updateScreen() {
+        this.captureModifierOnlyBinding();
         this.applyPendingBindingIfReleased();
         this.searchTextBox.updateCursorCounter();
         if (!this.lastSearch.equals(this.searchTextBox.getText())) {
@@ -335,6 +337,7 @@ public class GuiNewControls extends GuiControls {
                 this.field_152177_g = Minecraft.getSystemTime();
             }
             this.selectedModifier = KeyModifier.NONE;
+            this.selectedModifierKeyCode = Keyboard.KEY_NONE;
             KeyBinding.resetKeyBindingArrayAndHash();
             searchTextBox.setFocused(false);
         } else if (mb == 0 && !this.guiNewKeyBindingList.func_148179_a(mx, my, mb)) {
@@ -417,13 +420,16 @@ public class GuiNewControls extends GuiControls {
                 this.pendingModifier = KeyModifier.NONE;
                 this.pendingKeyCode = Keyboard.KEY_NONE;
                 this.selectedModifier = KeyModifier.NONE;
+                this.selectedModifierKeyCode = Keyboard.KEY_NONE;
             } else if (isModifierKey && comboKeyBinding != null) {
                 this.selectedModifier = KeyModifier.fromKeyCode(keyCode);
+                this.selectedModifierKeyCode = keyCode;
                 shouldCloseBindSelection = false;
             } else if (inputKeyCode != Keyboard.KEY_NONE) {
                 if (comboKeyBinding != null) {
                     this.schedulePendingBinding(this.buttonId, inputKeyCode, this.getSelectedModifierForBinding());
                     this.selectedModifier = KeyModifier.NONE;
+                    this.selectedModifierKeyCode = Keyboard.KEY_NONE;
                     shouldCloseBindSelection = false;
                 } else {
                     this.options.setOptionKeyBinding(this.buttonId, inputKeyCode);
@@ -453,6 +459,20 @@ public class GuiNewControls extends GuiControls {
         this.pendingBinding = keyBinding;
         this.pendingKeyCode = keyCode;
         this.pendingModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+    }
+
+    private void captureModifierOnlyBinding() {
+        if (!(this.buttonId instanceof ComboKeyBinding) || this.pendingBinding != null
+                || this.selectedModifier == KeyModifier.NONE
+                || this.selectedModifierKeyCode == Keyboard.KEY_NONE) {
+            return;
+        }
+        if (Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
+            return;
+        }
+        this.schedulePendingBinding(this.buttonId, this.selectedModifierKeyCode, KeyModifier.NONE);
+        this.selectedModifier = KeyModifier.NONE;
+        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
     }
 
     private KeyModifier getSelectedModifierForBinding() {

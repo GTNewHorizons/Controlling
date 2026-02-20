@@ -51,7 +51,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         for (KeyBinding keyBinding : keybindArray) {
             if (keyBinding.getKeyCode() == keyCode) {
                 ((MixinKeyBinding) (Object) keyBinding).pressed = pressed
-                        && controlling$isBindingActiveWithModifier(keyBinding);
+                        && controlling$isBindingActiveWithModifier(keyBinding, keyCode);
             }
         }
         ci.cancel();
@@ -61,7 +61,8 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     private static void controlling$onTick(int keyCode, CallbackInfo ci) {
         if (keyCode != 0) {
             for (KeyBinding keyBinding : keybindArray) {
-                if (keyBinding.getKeyCode() == keyCode && controlling$isBindingActiveWithModifier(keyBinding)) {
+                if (keyBinding.getKeyCode() == keyCode
+                        && controlling$isBindingActiveWithModifier(keyBinding, keyCode)) {
                     ((MixinKeyBinding) (Object) keyBinding).pressTime++;
                 }
             }
@@ -159,13 +160,42 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Override
     public boolean controlling$isModifierActive() {
         if (this.controlling$keyModifier == KeyModifier.NONE) {
-            return !KeyModifier.isAnyModifierActive();
+            if (KeyModifier.isKeyCodeModifier(this.keyCode)) {
+                return KeyModifier.fromKeyCode(this.keyCode).isActive();
+            }
+            return true;
         }
         return this.controlling$keyModifier.isActive();
     }
 
     @Unique
-    private static boolean controlling$isBindingActiveWithModifier(KeyBinding keyBinding) {
-        return !(keyBinding instanceof ComboKeyBinding combo) || combo.controlling$isModifierActive();
+    private static boolean controlling$isBindingActiveWithModifier(KeyBinding keyBinding, int inputKeyCode) {
+        if (!(keyBinding instanceof ComboKeyBinding combo)) {
+            return true;
+        }
+        if (combo.controlling$getKeyModifier() == KeyModifier.NONE && keyBinding.getKeyCode() == inputKeyCode
+                && KeyModifier.isKeyCodeModifier(inputKeyCode)) {
+            return true;
+        }
+        if (combo.controlling$getKeyModifier() == KeyModifier.NONE
+                && controlling$hasActiveModifiedSiblingBinding(keyBinding, inputKeyCode)) {
+            return false;
+        }
+        return combo.controlling$isModifierActive();
+    }
+
+    @Unique
+    private static boolean controlling$hasActiveModifiedSiblingBinding(KeyBinding keyBinding, int inputKeyCode) {
+        for (KeyBinding otherBinding : keybindArray) {
+            if (otherBinding == keyBinding || otherBinding.getKeyCode() != inputKeyCode) {
+                continue;
+            }
+            if (otherBinding instanceof ComboKeyBinding comboKeyBinding
+                    && comboKeyBinding.controlling$getKeyModifier() != KeyModifier.NONE
+                    && comboKeyBinding.controlling$getKeyModifier().isActive()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
