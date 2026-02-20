@@ -55,8 +55,8 @@ public final class ControllingApi {
     }
 
     /**
-     * Sets the default combo modifier for a keybinding.
-     * The default key code still comes from {@link KeyBinding#getKeyCodeDefault()}.
+     * Sets the default combo modifier for a keybinding. The default key code still comes from
+     * {@link KeyBinding#getKeyCodeDefault()}.
      *
      * @return false when the keybinding does not support combos.
      */

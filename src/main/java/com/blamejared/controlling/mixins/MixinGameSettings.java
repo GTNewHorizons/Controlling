@@ -1,14 +1,8 @@
 package com.blamejared.controlling.mixins;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.Map;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 
@@ -22,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
+import com.llamalad7.mixinextras.sugar.Local;
 
 @Mixin(GameSettings.class)
 public abstract class MixinGameSettings {
@@ -35,9 +30,9 @@ public abstract class MixinGameSettings {
     @Shadow
     private File optionsFile;
 
-
-
-    @Inject(method = "loadOptions", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/settings/KeyBinding;setKeyCode(I)V"))
+    @Inject(
+            method = "loadOptions",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/settings/KeyBinding;setKeyCode(I)V"))
     private void controlling$loadOptions(CallbackInfo ci, @Local KeyBinding keybinding, @Local String[] astring) {
         if (astring.length > 2) {
             if (keybinding instanceof ComboKeyBinding comboKeyBinding) {

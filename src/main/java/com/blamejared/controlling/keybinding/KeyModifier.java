@@ -13,7 +13,7 @@ public enum KeyModifier {
     private final int leftKeyCode;
     private final int rightKeyCode;
 
-    KeyModifier( String displayName, int leftKeyCode, int rightKeyCode) {
+    KeyModifier(String displayName, int leftKeyCode, int rightKeyCode) {
         this.displayName = displayName;
         this.leftKeyCode = leftKeyCode;
         this.rightKeyCode = rightKeyCode;
