@@ -55,12 +55,9 @@ public abstract class MixinGameSettings {
     @Unique
     private String controlling$appendModifierToKeyLine(String line) {
         final String[] split = line.split(":", 2);
-        if (split.length < 2) {
-            return line;
-        }
 
         final KeyModifier keyModifier = this.controlling$getModifierForOptionKey(split[0]);
-        if (keyModifier == null) {
+        if (keyModifier == null || keyModifier == KeyModifier.NONE) {
             return line;
         }
         return split[0] + ":" + split[1] + ":" + keyModifier.name();
