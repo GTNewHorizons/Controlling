@@ -5,6 +5,8 @@ import java.util.function.Predicate;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.util.StatCollector;
 
+import com.blamejared.controlling.keybinding.ComboKeyBinding;
+
 public enum SearchType {
 
     ALL,
@@ -23,8 +25,12 @@ public enum SearchType {
             case KEYBIND_NAME:
                 return key -> key.getKeyDesc().toLowerCase().contains(searchText.toLowerCase());
             case KEY_NAME:
-                return key -> GameSettings.getKeyDisplayString(key.getKeybinding().getKeyCode()).toLowerCase()
-                        .contains(searchText.toLowerCase());
+                return key -> {
+                    final String displayName = key.getKeybinding() instanceof ComboKeyBinding comboKeyBinding
+                            ? comboKeyBinding.controlling$getDisplayName()
+                            : GameSettings.getKeyDisplayString(key.getKeybinding().getKeyCode());
+                    return displayName.toLowerCase().contains(searchText.toLowerCase());
+                };
         }
         throw new IllegalStateException();
     }

@@ -16,8 +16,7 @@ import net.minecraft.util.EnumChatFormatting;
 
 import org.apache.commons.lang3.ArrayUtils;
 
-import com.blamejared.controlling.Controlling;
-import committee.nova.mkb.api.IKeyBinding;
+import com.blamejared.controlling.keybinding.ComboKeyBinding;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -195,14 +194,16 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                     shouldHighlightKeybindName());
             this.btnResetKeyBinding.xPosition = x + 190 + 20;
             this.btnResetKeyBinding.yPosition = y;
-            this.btnResetKeyBinding.enabled = !(this.keybinding.getKeyCode() == this.keybinding.getKeyCodeDefault());
+            this.btnResetKeyBinding.enabled = keybinding instanceof ComboKeyBinding comboKeyBinding
+                    ? !comboKeyBinding.controlling$isSetToDefaultValue()
+                    : this.keybinding.getKeyCode() != this.keybinding.getKeyCodeDefault();
             this.btnResetKeyBinding.drawButton(mc, mouseX, mouseY);
 
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
-            this.btnChangeKeyBinding.displayString = Controlling.isModernKeybindingInstalled
-                    && keybinding instanceof IKeyBinding modernKB ? modernKB.getDisplayName()
-                            : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
+            this.btnChangeKeyBinding.displayString = keybinding instanceof ComboKeyBinding comboKeyBinding
+                    ? comboKeyBinding.controlling$getDisplayName()
+                    : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
 
             boolean hasConflict = false;
             boolean modConflict = true; // less severe form of conflict, like SHIFT conflicting with SHIFT+G
@@ -210,11 +211,12 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             if (this.keybinding.getKeyCode() != 0) {
                 for (KeyBinding key : mc.gameSettings.keyBindings) {
                     if (key != this.keybinding) {
-                        if (Controlling.isModernKeybindingInstalled && key instanceof IKeyBinding modernKB
-                                && keybinding instanceof IKeyBinding modernKB2
-                                && modernKB.conflicts(keybinding)) {
-                            hasConflict = true;
-                            modConflict &= modernKB2.hasKeyCodeModifierConflict(key);
+                        if (key instanceof ComboKeyBinding comboKeyBinding
+                                && keybinding instanceof ComboKeyBinding comboKeyBinding2) {
+                            if (comboKeyBinding.controlling$conflicts(keybinding)) {
+                                hasConflict = true;
+                                modConflict &= comboKeyBinding2.controlling$hasKeyCodeModifierConflict(key);
+                            }
                         } else if (this.keybinding.getKeyCode() == key.getKeyCode()) {
                             hasConflict = true;
                             break;
@@ -287,8 +289,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 controlsScreen.buttonId = this.keybinding;
                 return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
-                if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB) {
-                    modernKB.setToDefault();
+                if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
+                    comboKeyBinding.controlling$setToDefault();
                 } else {
                     this.keybinding.setKeyCode(this.keybinding.getKeyCodeDefault());
                 }

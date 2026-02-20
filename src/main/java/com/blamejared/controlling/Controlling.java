@@ -8,17 +8,18 @@ import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 
-@Mod(modid = "controlling", name = "Controlling", version = "GRADLETOKEN_VERSION", acceptableRemoteVersions = "*")
+@Mod(modid = "controlling", name = "Controlling", version = Tags.VERSION, acceptableRemoteVersions = "*")
 public class Controlling {
-
-    public static boolean isModernKeybindingInstalled = false;
 
     @Mod.EventHandler
     private void init(final FMLInitializationEvent event) {
-        if (event.getSide().isClient()) {
-            isModernKeybindingInstalled = Loader.isModLoaded("mkb");
+        if (event.getSide().isServer()) return;
 
-            MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
+        if (Loader.isModLoaded("mkb")) {
+            throw new IllegalStateException(
+                    "Controlling now ships built-in key combo support and is incompatible with ModernKeybinding (mkb).");
         }
+
+        MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
     }
 }

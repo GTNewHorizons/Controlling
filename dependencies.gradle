@@ -1,3 +1,2 @@
 dependencies {
-    compileOnly(rfg.deobf("curse.maven:modern-keybinding-686846:4034361")) { transitive = false }
 }
