@@ -18,10 +18,10 @@ import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 
-import com.blamejared.controlling.Controlling;
-import committee.nova.mkb.api.IKeyBinding;
-import committee.nova.mkb.keybinding.KeyModifier;
+import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.KeyModifier;
 
 import cpw.mods.fml.client.config.GuiCheckBox;
 import cpw.mods.fml.relauncher.Side;
@@ -60,6 +60,11 @@ public class GuiNewControls extends GuiControls {
     private GuiCheckBox buttonCat;
     private boolean confirmingReset = false;
     private boolean isQwertyLayout;
+    private KeyModifier selectedModifier = KeyModifier.NONE;
+    private int selectedModifierKeyCode = Keyboard.KEY_NONE;
+    private KeyBinding pendingBinding;
+    private KeyModifier pendingModifier = KeyModifier.NONE;
+    private int pendingKeyCode = Keyboard.KEY_NONE;
 
     public GuiNewControls(GuiScreen screen, GameSettings settings) {
         super(screen, settings);
@@ -176,6 +181,8 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void updateScreen() {
+        this.captureModifierOnlyBinding();
+        this.applyPendingBindingIfReleased();
         this.searchTextBox.updateCursorCounter();
         if (!this.lastSearch.equals(this.searchTextBox.getText())) {
             this.filterKeys();
@@ -217,26 +224,26 @@ public class GuiNewControls extends GuiControls {
         this.drawDefaultBackground();
         this.guiNewKeyBindingList.drawScreen(mouseX, mouseY, partialTicks);
         this.drawCenteredString(this.fontRendererObj, this.guiScreenTitle, this.width / 2, 8, 0xFFFFFF);
-        boolean flag = false;
+        boolean isModified = false;
 
         for (KeyBinding keybinding : this.options.keyBindings) {
-            if (Controlling.isModernKeybindingInstalled && keybinding instanceof IKeyBinding modernKB) {
-                if (!modernKB.isSetToDefaultValue()) {
-                    flag = true;
+            if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
+                if (!comboKeyBinding.controlling$isSetToDefaultValue()) {
+                    isModified = true;
                     break;
                 }
             } else {
                 if (keybinding.getKeyCode() != keybinding.getKeyCodeDefault()) {
-                    flag = true;
+                    isModified = true;
                     break;
                 }
             }
         }
 
         searchTextBox.drawTextBox();
-        this.buttonReset.enabled = flag;
+        this.buttonReset.enabled = isModified;
 
-        if (!flag) {
+        if (!isModified) {
             confirmingReset = false;
             buttonReset.displayString = StatCollector.translateToLocal("controls.resetAll");
         }
@@ -277,8 +284,8 @@ public class GuiNewControls extends GuiControls {
             button.displayString = StatCollector.translateToLocal("controls.resetAll");
 
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                if (Controlling.isModernKeybindingInstalled && keyBinding instanceof IKeyBinding modernKB) {
-                    modernKB.setToDefault();
+                if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+                    comboKeyBinding.controlling$setToDefault();
                 } else {
                     keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
                 }
@@ -322,11 +329,15 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void mouseClicked(int mx, int my, int mb) {
         if (this.buttonId != null) {
-            if (Controlling.isModernKeybindingInstalled && this.buttonId instanceof IKeyBinding modernKB) {
-                modernKB.setKeyModifierAndCode(KeyModifier.getActiveModifier(), -100 + mb);
+            if (this.buttonId instanceof ComboKeyBinding) {
+                this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());
+            } else {
+                this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
+                this.buttonId = null;
+                this.field_152177_g = Minecraft.getSystemTime();
             }
-            this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
-            this.buttonId = null;
+            this.selectedModifier = KeyModifier.NONE;
+            this.selectedModifierKeyCode = Keyboard.KEY_NONE;
             KeyBinding.resetKeyBindingArrayAndHash();
             searchTextBox.setFocused(false);
         } else if (mb == 0 && !this.guiNewKeyBindingList.func_148179_a(mx, my, mb)) {
@@ -392,26 +403,40 @@ public class GuiNewControls extends GuiControls {
     @Override
     public void keyTyped(char typedChar, int keyCode) {
         if (this.buttonId != null) {
-            if (Controlling.isModernKeybindingInstalled && this.buttonId instanceof IKeyBinding modernKB) {
-                if (keyCode == Keyboard.KEY_ESCAPE) {
-                    modernKB.setKeyModifierAndCode(KeyModifier.NONE, Keyboard.KEY_NONE);
-                } else if (keyCode != Keyboard.KEY_NONE) {
-                    modernKB.setKeyModifierAndCode(KeyModifier.getActiveModifier(), keyCode);
-                } else if (typedChar > 0) {
-                    modernKB.setKeyModifierAndCode(KeyModifier.getActiveModifier(), typedChar + 256);
+            final ComboKeyBinding comboKeyBinding = this.buttonId instanceof ComboKeyBinding
+                    ? (ComboKeyBinding) this.buttonId
+                    : null;
+            final boolean isModifierKey = KeyModifier.isKeyCodeModifier(keyCode);
+            boolean shouldCloseBindSelection = true;
+            final int inputKeyCode = keyCode != Keyboard.KEY_NONE ? keyCode
+                    : typedChar > 0 ? typedChar + 256 : Keyboard.KEY_NONE;
+
+            if (keyCode == Keyboard.KEY_ESCAPE) {
+                if (comboKeyBinding != null) {
+                    comboKeyBinding.controlling$setKeyModifierAndCode(KeyModifier.NONE, Keyboard.KEY_NONE);
+                }
+                this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
+                this.pendingBinding = null;
+                this.pendingModifier = KeyModifier.NONE;
+                this.pendingKeyCode = Keyboard.KEY_NONE;
+                this.selectedModifier = KeyModifier.NONE;
+                this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+            } else if (isModifierKey && comboKeyBinding != null) {
+                this.selectedModifier = KeyModifier.fromKeyCode(keyCode);
+                this.selectedModifierKeyCode = keyCode;
+                shouldCloseBindSelection = false;
+            } else if (inputKeyCode != Keyboard.KEY_NONE) {
+                if (comboKeyBinding != null) {
+                    this.schedulePendingBinding(this.buttonId, inputKeyCode, this.getSelectedModifierForBinding());
+                    this.selectedModifier = KeyModifier.NONE;
+                    this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                    shouldCloseBindSelection = false;
+                } else {
+                    this.options.setOptionKeyBinding(this.buttonId, inputKeyCode);
                 }
             }
 
-            if (keyCode == Keyboard.KEY_ESCAPE) {
-                this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
-            } else if (keyCode != Keyboard.KEY_NONE) {
-                this.options.setOptionKeyBinding(this.buttonId, keyCode);
-            } else if (typedChar > 0) {
-                this.options.setOptionKeyBinding(this.buttonId, typedChar + 256);
-            }
-
-            // logic - if modern keybinding is not installed, or the key pressed was not a modifier
-            if (!Controlling.isModernKeybindingInstalled || !KeyModifier.isKeyCodeModifier(keyCode)) {
+            if (shouldCloseBindSelection) {
                 this.buttonId = null;
             }
 
@@ -428,6 +453,62 @@ public class GuiNewControls extends GuiControls {
                 this.superSuperKeyTyped(typedChar, keyCode);
             }
         }
+    }
+
+    private void schedulePendingBinding(KeyBinding keyBinding, int keyCode, KeyModifier keyModifier) {
+        this.pendingBinding = keyBinding;
+        this.pendingKeyCode = keyCode;
+        this.pendingModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+    }
+
+    private void captureModifierOnlyBinding() {
+        if (!(this.buttonId instanceof ComboKeyBinding) || this.pendingBinding != null
+                || this.selectedModifier == KeyModifier.NONE
+                || this.selectedModifierKeyCode == Keyboard.KEY_NONE) {
+            return;
+        }
+        if (Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
+            return;
+        }
+        this.schedulePendingBinding(this.buttonId, this.selectedModifierKeyCode, KeyModifier.NONE);
+        this.selectedModifier = KeyModifier.NONE;
+        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+    }
+
+    private KeyModifier getSelectedModifierForBinding() {
+        return this.selectedModifier == KeyModifier.NONE ? KeyModifier.getActiveModifier() : this.selectedModifier;
+    }
+
+    private void applyPendingBindingIfReleased() {
+        if (this.pendingBinding == null) {
+            return;
+        }
+        if (this.isPendingInputStillActive()) {
+            return;
+        }
+
+        if (this.pendingBinding instanceof ComboKeyBinding comboKeyBinding) {
+            comboKeyBinding.controlling$setKeyModifierAndCode(this.pendingModifier, this.pendingKeyCode);
+        }
+        this.options.setOptionKeyBinding(this.pendingBinding, this.pendingKeyCode);
+        this.pendingBinding = null;
+        this.pendingModifier = KeyModifier.NONE;
+        this.pendingKeyCode = Keyboard.KEY_NONE;
+        this.buttonId = null;
+        this.field_152177_g = Minecraft.getSystemTime();
+        KeyBinding.resetKeyBindingArrayAndHash();
+    }
+
+    private boolean isPendingInputStillActive() {
+        if (this.pendingModifier != KeyModifier.NONE && this.pendingModifier.isActive()) {
+            return true;
+        }
+        if (this.pendingKeyCode <= -100) {
+            final int mouseButton = this.pendingKeyCode + 100;
+            return mouseButton >= 0 && mouseButton < Mouse.getButtonCount() && Mouse.isButtonDown(mouseButton);
+        }
+        return this.pendingKeyCode > Keyboard.KEY_NONE && this.pendingKeyCode < 256
+                && Keyboard.isKeyDown(this.pendingKeyCode);
     }
 
     protected void superSuperKeyTyped(char typedChar, int keyCode) {

@@ -5,6 +5,8 @@ import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 
+import com.blamejared.controlling.keybinding.ComboKeyBinding;
+
 public enum DisplayMode {
 
     ALL,
@@ -19,7 +21,12 @@ public enum DisplayMode {
                 return keyEntry -> {
                     for (KeyBinding keyBinding : Minecraft.getMinecraft().gameSettings.keyBindings) {
                         if (keyBinding != keyEntry.getKeybinding() && keyBinding.getKeyCode() != 0) {
-                            if (keyBinding.getKeyCode() == keyEntry.getKeybinding().getKeyCode()) {
+                            if (keyBinding instanceof ComboKeyBinding comboKeyBinding
+                                    && keyEntry.getKeybinding() instanceof ComboKeyBinding) {
+                                if (comboKeyBinding.controlling$conflicts(keyEntry.getKeybinding())) {
+                                    return true;
+                                }
+                            } else if (keyBinding.getKeyCode() == keyEntry.getKeybinding().getKeyCode()) {
                                 return true;
                             }
                         }

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8.5-GTNH",
+  "package": "com.blamejared.controlling.mixins",
+  "refmap": "mixins.controlling.refmap.json",
+  "target": "@env(DEFAULT)",
+  "compatibilityLevel": "JAVA_8",
+  "client": [
+    "MixinKeyBinding",
+    "MixinGameSettings"
+  ]
+}
