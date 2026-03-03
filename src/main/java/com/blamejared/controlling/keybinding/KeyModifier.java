@@ -35,9 +35,9 @@ public enum KeyModifier {
 
     public static KeyModifier fromSerializedName(String name) {
         return switch (name) {
-            case "Ctrl" -> CONTROL;
-            case "Shift" -> SHIFT;
-            case "Alt" -> ALT;
+            case "CONTROL" -> CONTROL;
+            case "SHIFT" -> SHIFT;
+            case "ALT" -> ALT;
             default -> NONE;
         };
     }
