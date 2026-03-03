@@ -9,6 +9,8 @@ public enum KeyModifier {
     SHIFT("Shift", Keyboard.KEY_LSHIFT, Keyboard.KEY_RSHIFT),
     ALT("Alt", Keyboard.KEY_LMENU, Keyboard.KEY_RMENU);
 
+    public static final KeyModifier[] VALUES = values();
+
     private final String displayName;
     private final int leftKeyCode;
     private final int rightKeyCode;
@@ -32,7 +34,7 @@ public enum KeyModifier {
     }
 
     public static KeyModifier fromSerializedName(String name) {
-        for (KeyModifier value : values()) {
+        for (KeyModifier value : VALUES) {
             if (value.name().equalsIgnoreCase(name)) {
                 return value;
             }
@@ -41,7 +43,7 @@ public enum KeyModifier {
     }
 
     public static KeyModifier fromKeyCode(int keyCode) {
-        for (KeyModifier value : values()) {
+        for (KeyModifier value : VALUES) {
             if (value.matches(keyCode)) {
                 return value;
             }
