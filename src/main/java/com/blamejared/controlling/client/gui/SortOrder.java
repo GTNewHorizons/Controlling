@@ -11,8 +11,10 @@ public enum SortOrder {
     AZ,
     ZA;
 
+    public static final SortOrder[] VALUES = values();
+
     public SortOrder getNext() {
-        return SortOrder.values()[(this.ordinal() + 1) % SortOrder.values().length];
+        return VALUES[(this.ordinal() + 1) % VALUES.length];
     }
 
     public void sort(List<GuiNewKeyBindingList.KeyEntry> list) {
