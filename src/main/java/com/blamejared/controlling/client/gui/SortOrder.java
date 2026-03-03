@@ -31,15 +31,12 @@ public enum SortOrder {
     }
 
     public String getName() {
-        switch (this) {
-            case VANILLA:
-                return I18n.format("options.sortNone");
-            case AZ:
-                return I18n.format("options.sortAZ");
-            case ZA:
-                return I18n.format("options.sortZA");
-        }
-        throw new IllegalStateException();
+        return switch (this) {
+            case VANILLA -> I18n.format("options.sortNone");
+            case AZ -> I18n.format("options.sortAZ");
+            case ZA -> I18n.format("options.sortZA");
+        };
+
     }
 
     public String getNextName() {

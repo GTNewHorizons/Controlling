@@ -34,21 +34,21 @@ public enum KeyModifier {
     }
 
     public static KeyModifier fromSerializedName(String name) {
-        for (KeyModifier value : VALUES) {
-            if (value.name().equalsIgnoreCase(name)) {
-                return value;
-            }
-        }
-        return NONE;
+        return switch (name) {
+            case "Ctrl" -> CONTROL;
+            case "Shift" -> SHIFT;
+            case "Alt" -> ALT;
+            default -> NONE;
+        };
     }
 
     public static KeyModifier fromKeyCode(int keyCode) {
-        for (KeyModifier value : VALUES) {
-            if (value.matches(keyCode)) {
-                return value;
-            }
-        }
-        return NONE;
+        return switch (keyCode) {
+            case Keyboard.KEY_LCONTROL, Keyboard.KEY_RCONTROL -> CONTROL;
+            case Keyboard.KEY_LSHIFT, Keyboard.KEY_RSHIFT -> SHIFT;
+            case Keyboard.KEY_LMENU, Keyboard.KEY_RMENU -> ALT;
+            default -> NONE;
+        };
     }
 
     public static KeyModifier getActiveModifier() {
