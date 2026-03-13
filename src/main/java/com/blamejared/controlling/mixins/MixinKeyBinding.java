@@ -48,10 +48,12 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Inject(method = "setKeyBindState", at = @At("HEAD"), cancellable = true)
     private static void controlling$setKeyBindState(int keyCode, boolean pressed, CallbackInfo ci) {
-        for (KeyBinding keyBinding : keybindArray) {
-            if (keyBinding.getKeyCode() == keyCode) {
-                ((MixinKeyBinding) (Object) keyBinding).pressed = pressed
-                        && controlling$isBindingActiveWithModifier(keyBinding, keyCode);
+        if (keyCode != 0) {
+            for (KeyBinding keyBinding : keybindArray) {
+                if (keyBinding.getKeyCode() == keyCode) {
+                    ((MixinKeyBinding) (Object) keyBinding).pressed = pressed
+                            && controlling$isBindingActiveWithModifier(keyBinding, keyCode);
+                }
             }
         }
         ci.cancel();
