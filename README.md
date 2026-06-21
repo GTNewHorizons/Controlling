@@ -10,7 +10,7 @@ Controlling is a client-side quality-of-life mod for Minecraft 1.7.10 that repla
 - Sort keybindings in vanilla order, A-Z, or Z-A.
 - Reset individual keybindings or confirm-reset all keybindings.
 - Toggle default movement keys between QWERTY and AZERTY presets.
-- Use combo keybindings with modifier keys (`Ctrl`, `Shift`, `Alt`).
+- Use combo keybindings with modifier keys (`Ctrl`, `Shift`, `Alt`), correctly disambiguated from bare keybindings even while a GUI is open.
 
 
 Incompatible with ModernKeybinding (`mkb`) because combo support is now built in.
