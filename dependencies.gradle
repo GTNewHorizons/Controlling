@@ -1,5 +1,4 @@
 dependencies {
-
-    runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.8.105-GTNH:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.8.105-GTNH:dev")
 
 }
