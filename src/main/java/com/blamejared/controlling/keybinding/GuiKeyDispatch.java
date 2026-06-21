@@ -1,9 +1,8 @@
 package com.blamejared.controlling.keybinding;
 
 /**
- * Tracks the brief window during which a GUI is dispatching a keyboard event
- * (GuiScreen.handleKeyboardInput -> keyTyped). While the window is open,
- * KeyBinding.getKeyCode() is made modifier/sibling-aware so GUI code that matches
+ * Tracks the brief window during which a GUI is dispatching a keyboard event (GuiScreen.handleKeyboardInput ->
+ * keyTyped). While the window is open, KeyBinding.getKeyCode() is made modifier/sibling-aware so GUI code that matches
  * bindings via {@code eventKey == keyBinding.getKeyCode()} disambiguates combos.
  *
  * Single-threaded (client keyboard loop); no synchronization required.
