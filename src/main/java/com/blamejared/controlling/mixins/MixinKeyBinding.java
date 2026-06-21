@@ -94,13 +94,23 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         if (!GuiKeyDispatch.inGuiKeyDispatch()) {
             return original;
         }
+        // The decision below calls getKeyCode() internally; while it runs, those inner calls must see the real keycode
+        // and not re-enter this override (which would recurse infinitely).
+        if (GuiKeyDispatch.isEvaluating()) {
+            return original;
+        }
         if (original != GuiKeyDispatch.guiEventKey()) {
             return original;
         }
-        if (!controlling$isBindingActiveWithModifier((KeyBinding) (Object) this, original)) {
-            return Keyboard.KEY_NONE;
+        GuiKeyDispatch.beginEvaluating();
+        try {
+            if (!controlling$isBindingActiveWithModifier((KeyBinding) (Object) this, original)) {
+                return Keyboard.KEY_NONE;
+            }
+            return original;
+        } finally {
+            GuiKeyDispatch.endEvaluating();
         }
-        return original;
     }
 
     @Override

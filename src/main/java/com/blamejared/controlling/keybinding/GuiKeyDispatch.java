@@ -11,6 +11,7 @@ public final class GuiKeyDispatch {
 
     private static boolean inDispatch = false;
     private static int eventKey = 0;
+    private static boolean evaluating = false;
 
     private GuiKeyDispatch() {}
 
@@ -33,5 +34,22 @@ public final class GuiKeyDispatch {
     /** The LWJGL event key currently being dispatched to the GUI. */
     public static int guiEventKey() {
         return eventKey;
+    }
+
+    /**
+     * True while the modifier/sibling decision is being computed. The decision reads {@code KeyBinding.getKeyCode()}
+     * internally, so the getKeyCode override must return the real keycode (not the disambiguated one) during this
+     * window to avoid infinite recursion.
+     */
+    public static boolean isEvaluating() {
+        return evaluating;
+    }
+
+    public static void beginEvaluating() {
+        evaluating = true;
+    }
+
+    public static void endEvaluating() {
+        evaluating = false;
     }
 }
