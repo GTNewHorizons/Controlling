@@ -16,7 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 import com.blamejared.controlling.keybinding.KeyModifier;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 
 @Mixin(KeyBinding.class)
 public abstract class MixinKeyBinding implements ComboKeyBinding {
@@ -85,6 +87,20 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
             this.pressTime = 0;
             cir.setReturnValue(false);
         }
+    }
+
+    @ModifyReturnValue(method = "getKeyCode", at = @At("RETURN"))
+    private int controlling$adjustKeyCodeInGui(int original) {
+        if (!GuiKeyDispatch.inGuiKeyDispatch()) {
+            return original;
+        }
+        if (original != GuiKeyDispatch.guiEventKey()) {
+            return original;
+        }
+        if (!controlling$isBindingActiveWithModifier((KeyBinding) (Object) this, original)) {
+            return Keyboard.KEY_NONE;
+        }
+        return original;
     }
 
     @Override
@@ -188,7 +204,8 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Unique
     private static boolean controlling$hasActiveModifiedSiblingBinding(KeyBinding keyBinding, int inputKeyCode) {
-        for (KeyBinding otherBinding : keybindArray) {
+        for (int i = 0; i < keybindArray.size(); i++) {
+            KeyBinding otherBinding = keybindArray.get(i);
             if (otherBinding == keyBinding || otherBinding.getKeyCode() != inputKeyCode) {
                 continue;
             }
