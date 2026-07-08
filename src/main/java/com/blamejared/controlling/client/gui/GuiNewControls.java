@@ -262,6 +262,8 @@ public class GuiNewControls extends GuiControls {
 
         if (this.showVisualKeyboard) {
             this.visualKeyboard.draw(this, this.mc, mouseX, mouseY);
+        } else {
+            this.guiNewKeyBindingList.drawHoveredKeyDescriptionTooltip(mouseX, mouseY);
         }
     }
 
@@ -597,6 +599,10 @@ public class GuiNewControls extends GuiControls {
 
     void drawVisualKeyboardTooltip(List<String> lines, int mouseX, int mouseY) {
         this.func_146283_a(lines, mouseX, mouseY);
+    }
+
+    void drawKeyDescriptionTooltip(String text, int mouseX, int mouseY) {
+        this.func_146283_a(java.util.Collections.singletonList(text), mouseX, mouseY);
     }
 
     void showKeyBinding(KeyBinding keyBinding) {

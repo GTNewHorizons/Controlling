@@ -32,6 +32,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private final List<IGuiListEntry> displayedEntries = new ArrayList<>();
     private final List<IGuiListEntry> allEntries = new ArrayList<>();
     private int maxListLabelWidth;
+    private String hoveredKeyDescription;
 
     public GuiNewKeyBindingList(GuiNewControls controls, Minecraft mcIn) {
         super(controls, mcIn);
@@ -68,6 +69,18 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     @Override
     protected int getSize() {
         return this.displayedEntries.size();
+    }
+
+    @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        this.hoveredKeyDescription = null;
+        super.drawScreen(mouseX, mouseY, partialTicks);
+    }
+
+    public void drawHoveredKeyDescriptionTooltip(int mouseX, int mouseY) {
+        if (this.hoveredKeyDescription != null) {
+            this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredKeyDescription, mouseX, mouseY);
+        }
     }
 
     @Override
@@ -202,7 +215,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             boolean isKeySelected = controlsScreen.buttonId == this.keybinding;
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
-            this.drawKeyDescription(x, y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2);
+            this.drawKeyDescription(x, y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2, mouseX, mouseY);
 
             this.btnVisualKeyboard.xPosition = x + 204;
             this.btnVisualKeyboard.yPosition = y;
@@ -314,13 +327,20 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             mc.fontRenderer.drawStringWithShadow(textEnd + suffix, rectRight, yString, 0xFFFFFF);
         }
 
-        private void drawKeyDescription(int x, int y) {
+        private void drawKeyDescription(int x, int y, int mouseX, int mouseY) {
             final int labelLeft = 4;
             final int labelRight = x + 95;
             final int maxWidth = Math.max(0, labelRight - labelLeft);
+            final boolean truncated = mc.fontRenderer.getStringWidth(this.keyDesc) > maxWidth;
             final String label = trimWithEllipsis(this.keyDesc, maxWidth);
             final int labelX = labelRight - mc.fontRenderer.getStringWidth(label);
             drawHighlightedString(label, labelX, y, shouldHighlightKeybindName());
+            if (truncated && mouseX >= labelLeft
+                    && mouseX <= labelRight
+                    && mouseY >= y
+                    && mouseY < y + mc.fontRenderer.FONT_HEIGHT) {
+                hoveredKeyDescription = this.keyDesc;
+            }
         }
 
         private String trimWithEllipsis(String text, int width) {
