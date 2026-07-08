@@ -274,10 +274,12 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             Gui.drawRect(left, top + 8, left + 10, top + 9, color);
             Gui.drawRect(left, top, left + 1, top + 9, color);
             Gui.drawRect(left + 9, top, left + 10, top + 9, color);
-            Gui.drawRect(left + 2, top + 2, left + 4, top + 3, color);
-            Gui.drawRect(left + 5, top + 2, left + 7, top + 3, color);
-            Gui.drawRect(left + 2, top + 4, left + 4, top + 5, color);
-            Gui.drawRect(left + 5, top + 4, left + 7, top + 5, color);
+            Gui.drawRect(left + 2, top + 2, left + 3, top + 3, color);
+            Gui.drawRect(left + 4, top + 2, left + 6, top + 3, color);
+            Gui.drawRect(left + 7, top + 2, left + 8, top + 3, color);
+            Gui.drawRect(left + 2, top + 4, left + 3, top + 5, color);
+            Gui.drawRect(left + 4, top + 4, left + 6, top + 5, color);
+            Gui.drawRect(left + 7, top + 4, left + 8, top + 5, color);
             Gui.drawRect(left + 2, top + 6, left + 8, top + 7, color);
         }
 

@@ -40,6 +40,7 @@ public class GuiVisualKeyboard {
     private int keyboardWidth;
     private int keyGap;
     private int keyHeight;
+    private boolean qwertyLayout = true;
 
     public void draw(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
         this.layout(screen);
@@ -111,6 +112,7 @@ public class GuiVisualKeyboard {
     }
 
     private void layout(GuiNewControls screen) {
+        this.qwertyLayout = screen.isQwertyLayout();
         int maxWidth = Math.max(220, screen.width - 24);
         this.keyboardWidth = Math.min(560, maxWidth - 16);
         int panelWidth = Math.min(screen.width - 8, this.keyboardWidth + 16);
@@ -239,8 +241,8 @@ public class GuiVisualKeyboard {
                 y,
                 unit,
                 key(Keyboard.KEY_TAB, "Tab", 1.5D),
-                key(Keyboard.KEY_Q, "Q", 1.0D),
-                key(Keyboard.KEY_W, "W", 1.0D),
+                key(Keyboard.KEY_Q, "Q", "A", 1.0D),
+                key(Keyboard.KEY_W, "W", "Z", 1.0D),
                 key(Keyboard.KEY_E, "E", 1.0D),
                 key(Keyboard.KEY_R, "R", 1.0D),
                 key(Keyboard.KEY_T, "T", 1.0D),
@@ -249,16 +251,16 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_I, "I", 1.0D),
                 key(Keyboard.KEY_O, "O", 1.0D),
                 key(Keyboard.KEY_P, "P", 1.0D),
-                key(Keyboard.KEY_LBRACKET, "[", 1.0D),
-                key(Keyboard.KEY_RBRACKET, "]", 1.0D),
-                key(Keyboard.KEY_BACKSLASH, "\\", 1.5D));
+                key(Keyboard.KEY_LBRACKET, "[", "^", 1.0D),
+                key(Keyboard.KEY_RBRACKET, "]", "$", 1.0D),
+                key(Keyboard.KEY_BACKSLASH, "\\", "*", 1.5D));
 
         y += this.keyHeight + this.keyGap;
         this.addRow(
                 y,
                 unit,
                 key(Keyboard.KEY_CAPITAL, "Caps", 1.75D),
-                key(Keyboard.KEY_A, "A", 1.0D),
+                key(Keyboard.KEY_A, "A", "Q", 1.0D),
                 key(Keyboard.KEY_S, "S", 1.0D),
                 key(Keyboard.KEY_D, "D", 1.0D),
                 key(Keyboard.KEY_F, "F", 1.0D),
@@ -267,7 +269,7 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_J, "J", 1.0D),
                 key(Keyboard.KEY_K, "K", 1.0D),
                 key(Keyboard.KEY_L, "L", 1.0D),
-                key(Keyboard.KEY_SEMICOLON, ";", 1.0D),
+                key(Keyboard.KEY_SEMICOLON, ";", "M", 1.0D),
                 key(Keyboard.KEY_APOSTROPHE, "'", 1.0D),
                 key(Keyboard.KEY_RETURN, "Enter", 2.25D));
 
@@ -276,16 +278,16 @@ public class GuiVisualKeyboard {
                 y,
                 unit,
                 key(Keyboard.KEY_LSHIFT, "Shift", 2.25D),
-                key(Keyboard.KEY_Z, "Z", 1.0D),
+                key(Keyboard.KEY_Z, "Z", "W", 1.0D),
                 key(Keyboard.KEY_X, "X", 1.0D),
                 key(Keyboard.KEY_C, "C", 1.0D),
                 key(Keyboard.KEY_V, "V", 1.0D),
                 key(Keyboard.KEY_B, "B", 1.0D),
                 key(Keyboard.KEY_N, "N", 1.0D),
-                key(Keyboard.KEY_M, "M", 1.0D),
-                key(Keyboard.KEY_COMMA, ",", 1.0D),
-                key(Keyboard.KEY_PERIOD, ".", 1.0D),
-                key(Keyboard.KEY_SLASH, "/", 1.0D),
+                key(Keyboard.KEY_M, "M", ",", 1.0D),
+                key(Keyboard.KEY_COMMA, ",", ";", 1.0D),
+                key(Keyboard.KEY_PERIOD, ".", ":", 1.0D),
+                key(Keyboard.KEY_SLASH, "/", "!", 1.0D),
                 key(Keyboard.KEY_RSHIFT, "Shift", 2.75D));
 
         y += this.keyHeight + this.keyGap;
@@ -379,6 +381,10 @@ public class GuiVisualKeyboard {
 
     private KeyButton key(int keyCode, String label, double units) {
         return new KeyButton(keyCode, label, units);
+    }
+
+    private KeyButton key(int keyCode, String qwertyLabel, String azertyLabel, double units) {
+        return new KeyButton(keyCode, this.qwertyLayout ? qwertyLabel : azertyLabel, units);
     }
 
     private void addRow(double y, double unitWidth, KeyButton... row) {

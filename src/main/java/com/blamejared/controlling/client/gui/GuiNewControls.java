@@ -482,7 +482,7 @@ public class GuiNewControls extends GuiControls {
         }
 
         if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
-            comboKeyBinding.controlling$setKeyModifierAndCode(this.visualKeyboardModifier, keyCode);
+            comboKeyBinding.controlling$setKeyModifierAndCode(this.getVisualKeyboardModifier(), keyCode);
         }
         this.options.setOptionKeyBinding(this.buttonId, keyCode);
         this.pendingBinding = null;
@@ -496,6 +496,14 @@ public class GuiNewControls extends GuiControls {
     }
 
     private void captureModifierOnlyBinding() {
+        if (this.showVisualKeyboard) {
+            if (this.selectedModifierKeyCode != Keyboard.KEY_NONE
+                    && !Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
+                this.selectedModifier = KeyModifier.NONE;
+                this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+            }
+            return;
+        }
         if (!(this.buttonId instanceof ComboKeyBinding) || this.pendingBinding != null
                 || this.selectedModifier == KeyModifier.NONE
                 || this.selectedModifierKeyCode == Keyboard.KEY_NONE) {
@@ -510,6 +518,9 @@ public class GuiNewControls extends GuiControls {
     }
 
     private KeyModifier getSelectedModifierForBinding() {
+        if (this.showVisualKeyboard) {
+            return this.getVisualKeyboardModifier();
+        }
         return this.selectedModifier == KeyModifier.NONE ? KeyModifier.getActiveModifier() : this.selectedModifier;
     }
 
@@ -589,11 +600,16 @@ public class GuiNewControls extends GuiControls {
     }
 
     KeyModifier getVisualKeyboardModifier() {
-        return this.visualKeyboardModifier;
+        KeyModifier activeModifier = KeyModifier.getActiveModifier();
+        return activeModifier == KeyModifier.NONE ? this.visualKeyboardModifier : activeModifier;
     }
 
     void setVisualKeyboardModifier(KeyModifier visualKeyboardModifier) {
         this.visualKeyboardModifier = visualKeyboardModifier == null ? KeyModifier.NONE : visualKeyboardModifier;
+    }
+
+    boolean isQwertyLayout() {
+        return this.isQwertyLayout;
     }
 
 }
