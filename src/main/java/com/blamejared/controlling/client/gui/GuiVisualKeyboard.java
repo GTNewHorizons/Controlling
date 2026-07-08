@@ -556,7 +556,7 @@ public class GuiVisualKeyboard {
         private List<KeyBinding> getMatchingKeyBindings(Minecraft mc, KeyModifier modifier) {
             List<KeyBinding> bindings = new ArrayList<>();
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                if (keyBinding.getKeyCode() != this.keyCode) {
+                if (keyBinding.getKeyCode() != this.keyCode || keyBinding.getKeyCategory().endsWith(".hidden")) {
                     continue;
                 }
                 KeyModifier bindingModifier = keyBinding instanceof ComboKeyBinding comboKeyBinding
