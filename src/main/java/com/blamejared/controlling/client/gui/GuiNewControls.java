@@ -180,7 +180,7 @@ public class GuiNewControls extends GuiControls {
                         this.height - 29 - 24 - 24,
                         150 / 2,
                         20,
-                        "Key Map"));
+                        StatCollector.translateToLocal("options.keyMap")));
 
         this.buttonList.add(
                 new GuiButton(
@@ -352,6 +352,7 @@ public class GuiNewControls extends GuiControls {
     public void mouseClicked(int mx, int my, int mb) {
         if (this.showVisualKeyboard && this.visualKeyboard.mouseClicked(this, mx, my, mb)) {
             searchTextBox.setFocused(false);
+            return;
         } else if (this.buttonId != null) {
             if (this.buttonId instanceof ComboKeyBinding) {
                 this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());

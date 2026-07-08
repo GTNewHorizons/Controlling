@@ -6,6 +6,7 @@ options.availableKeys=Available Keys
 options.sort=Sort
 options.category=Category
 options.key=Key
+options.keyMap=Key Map
 options.sortNone=Vanilla
 options.sortAZ=A->Z
 options.sortZA=Z->A
