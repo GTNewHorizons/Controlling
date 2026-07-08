@@ -11,9 +11,14 @@ Controlling is a client-side quality-of-life mod for Minecraft 1.7.10 that repla
 - Reset individual keybindings or confirm-reset all keybindings.
 - Toggle default movement keys between QWERTY and AZERTY presets.
 - Use combo keybindings with modifier keys (`Ctrl`, `Shift`, `Alt`).
+- Bind keys from a visual keyboard overlay with main, numpad, and auxiliary key pages.
 
 
 Incompatible with ModernKeybinding (`mkb`) because combo support is now built in.
+
+## Credits
+
+The visual keyboard overlay was inspired by Keyboard Wizard, originally by MrNerdy42 and backported by TachibanaSherry.
 
 ## API
 
