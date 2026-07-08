@@ -200,11 +200,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         public void drawEntry(int slotIndex, int x, int y, int listWidth, int slotHeight, Tessellator tessellator,
                 int mouseX, int mouseY, boolean isSelected) {
             boolean isKeySelected = controlsScreen.buttonId == this.keybinding;
-            drawHighlightedString(
-                    this.keyDesc,
-                    x + 90 - maxListLabelWidth,
-                    y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2,
-                    shouldHighlightKeybindName());
+            this.btnChangeKeyBinding.xPosition = x + 105;
+            this.btnChangeKeyBinding.yPosition = y;
+            this.drawKeyDescription(x, y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2);
+
             this.btnVisualKeyboard.xPosition = x + 204;
             this.btnVisualKeyboard.yPosition = y;
             this.btnVisualKeyboard.drawButton(mc, mouseX, mouseY);
@@ -217,8 +216,6 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                     : this.keybinding.getKeyCode() != this.keybinding.getKeyCodeDefault();
             this.btnResetKeyBinding.drawButton(mc, mouseX, mouseY);
 
-            this.btnChangeKeyBinding.xPosition = x + 105;
-            this.btnChangeKeyBinding.yPosition = y;
             this.btnChangeKeyBinding.displayString = keybinding instanceof ComboKeyBinding comboKeyBinding
                     ? comboKeyBinding.controlling$getDisplayName()
                     : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
@@ -315,6 +312,25 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             mc.fontRenderer.drawStringWithShadow(drawnTextStart, xString, yString, 0xFFFFFF);
             mc.fontRenderer.drawString(textMiddle, rectLeft, yString, DARK_TEXT_HIGHLIGHT_COLOR);
             mc.fontRenderer.drawStringWithShadow(textEnd + suffix, rectRight, yString, 0xFFFFFF);
+        }
+
+        private void drawKeyDescription(int x, int y) {
+            final int labelLeft = 4;
+            final int labelRight = x + 95;
+            final int maxWidth = Math.max(0, labelRight - labelLeft);
+            final String label = trimWithEllipsis(this.keyDesc, maxWidth);
+            final int labelX = labelRight - mc.fontRenderer.getStringWidth(label);
+            drawHighlightedString(label, labelX, y, shouldHighlightKeybindName());
+        }
+
+        private String trimWithEllipsis(String text, int width) {
+            if (mc.fontRenderer.getStringWidth(text) <= width) {
+                return text;
+            }
+            final String ellipsis = "...";
+            final int ellipsisWidth = mc.fontRenderer.getStringWidth(ellipsis);
+            return width <= ellipsisWidth ? mc.fontRenderer.trimStringToWidth(text, width)
+                    : mc.fontRenderer.trimStringToWidth(text, width - ellipsisWidth) + ellipsis;
         }
 
         @Override
