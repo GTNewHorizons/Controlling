@@ -1,7 +1,7 @@
 /*
- * Portions of this file are adapted from Keyboard Wizard / KeyboardWizard-Legacy-Forge-1.7.10.
- * Original project authors listed as MrNerdy42 and Tapio; copyright (c) 2022 MikhailTapio.
- * Keyboard Wizard is licensed under the MIT License; see THIRD_PARTY_NOTICES.md.
+ * Portions of this file are adapted from Keyboard Wizard / KeyboardWizard-Legacy-Forge-1.7.10. Original project authors
+ * listed as MrNerdy42 and Tapio; copyright (c) 2022 MikhailTapio. Keyboard Wizard is licensed under the MIT License;
+ * see THIRD_PARTY_NOTICES.md.
  */
 package com.blamejared.controlling.client.gui;
 
