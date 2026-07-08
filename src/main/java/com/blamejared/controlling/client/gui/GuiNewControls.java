@@ -297,6 +297,7 @@ public class GuiNewControls extends GuiControls {
                     keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
                 }
             }
+            this.options.saveOptions();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else if (button.id == SHOW_UNBOUD_BUTTON_ID) {
             if (displayMode == DisplayMode.UNBOUND) {
@@ -473,7 +474,9 @@ public class GuiNewControls extends GuiControls {
     void selectKeyBinding(KeyBinding keyBinding, boolean showVisualKeyboard) {
         this.buttonId = keyBinding;
         this.showVisualKeyboard = showVisualKeyboard;
-        this.visualKeyboardModifier = KeyModifier.NONE;
+        this.visualKeyboardModifier = showVisualKeyboard && keyBinding instanceof ComboKeyBinding comboKeyBinding
+                ? comboKeyBinding.controlling$getKeyModifier()
+                : KeyModifier.NONE;
     }
 
     void selectVisualKeyboardKey(int keyCode) {
@@ -499,6 +502,7 @@ public class GuiNewControls extends GuiControls {
         if (this.showVisualKeyboard) {
             if (this.selectedModifierKeyCode != Keyboard.KEY_NONE
                     && !Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
+                this.visualKeyboardModifier = KeyModifier.NONE;
                 this.selectedModifier = KeyModifier.NONE;
                 this.selectedModifierKeyCode = Keyboard.KEY_NONE;
             }
