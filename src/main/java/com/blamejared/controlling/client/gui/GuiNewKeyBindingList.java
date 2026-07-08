@@ -94,6 +94,17 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         this.displayedEntries.addAll(displayedEntries);
     }
 
+    public boolean scrollToKeyBinding(KeyBinding keyBinding) {
+        for (int i = 0; i < this.displayedEntries.size(); i++) {
+            if (this.displayedEntries.get(i) instanceof KeyEntry keyEntry && keyEntry.getKeybinding() == keyBinding) {
+                int target = i * this.getSlotHeight() - (this.bottom - this.top) / 2 + this.getSlotHeight() / 2;
+                this.scrollBy(target - this.getAmountScrolled());
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void drawHighlightedString(String text, int x, int y, boolean highlight) {
         final int index = text.toLowerCase().indexOf(controlsScreen.getSearchString().toLowerCase());
         if (highlight && index > -1) {

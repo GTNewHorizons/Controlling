@@ -51,8 +51,10 @@ public class GuiVisualKeyboard {
         String title = I18n.format("options.visualKeyboard");
         mc.fontRenderer.drawStringWithShadow(title, this.panelLeft + 8, this.panelTop + 7, TEXT_COLOR);
 
-        String hint = I18n.format("options.visualKeyboardHint");
-        mc.fontRenderer.drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - 14, MUTED_TEXT_COLOR);
+        if (screen.getSelectedKeyBinding() != null) {
+            String hint = I18n.format("options.visualKeyboardHint");
+            mc.fontRenderer.drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - 14, MUTED_TEXT_COLOR);
+        }
 
         for (RectButton pageButton : this.pageButtons) {
             pageButton.draw(mc, mouseX, mouseY, pageButton.page == this.page);
@@ -108,6 +110,14 @@ public class GuiVisualKeyboard {
 
         for (KeyButton key : this.keys) {
             if (key.contains(mouseX, mouseY) && key.enabled) {
+                if (screen.getSelectedKeyBinding() == null) {
+                    List<KeyBinding> matchingBindings = key
+                            .getMatchingKeyBindings(Minecraft.getMinecraft(), screen.getVisualKeyboardModifier());
+                    if (!matchingBindings.isEmpty()) {
+                        screen.showKeyBinding(matchingBindings.get(0));
+                    }
+                    return true;
+                }
                 screen.selectVisualKeyboardKey(key.keyCode);
                 return true;
             }
@@ -537,6 +547,14 @@ public class GuiVisualKeyboard {
 
         private List<String> getMatchingBindings(Minecraft mc, KeyModifier modifier) {
             List<String> bindings = new ArrayList<>();
+            for (KeyBinding keyBinding : this.getMatchingKeyBindings(mc, modifier)) {
+                bindings.add(I18n.format(keyBinding.getKeyDescription()));
+            }
+            return bindings;
+        }
+
+        private List<KeyBinding> getMatchingKeyBindings(Minecraft mc, KeyModifier modifier) {
+            List<KeyBinding> bindings = new ArrayList<>();
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
                 if (keyBinding.getKeyCode() != this.keyCode) {
                     continue;
@@ -545,7 +563,7 @@ public class GuiVisualKeyboard {
                         ? comboKeyBinding.controlling$getKeyModifier()
                         : KeyModifier.NONE;
                 if (bindingModifier == modifier) {
-                    bindings.add(I18n.format(keyBinding.getKeyDescription()));
+                    bindings.add(keyBinding);
                 }
             }
             return bindings;
