@@ -173,12 +173,14 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         private final CategoryEntry categoryEntry;
 
         private final GuiButton btnChangeKeyBinding;
+        private final GuiButton btnVisualKeyboard;
         private final GuiButton btnResetKeyBinding;
 
         private KeyEntry(final KeyBinding keyBinding, CategoryEntry categoryEntry) {
             this.keybinding = keyBinding;
             this.keyDesc = I18n.format(keyBinding.getKeyDescription());
             this.btnChangeKeyBinding = new GuiButton(2000, 0, 0, 75 + 20, 20, this.keyDesc);
+            this.btnVisualKeyboard = new GuiButton(2002, 0, 0, 18, 20, "");
             this.categoryEntry = categoryEntry;
             this.btnResetKeyBinding = new GuiButton(2001, 0, 0, 50, 20, I18n.format("controls.reset"));
         }
@@ -192,7 +194,12 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                     x + 90 - maxListLabelWidth,
                     y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2,
                     shouldHighlightKeybindName());
-            this.btnResetKeyBinding.xPosition = x + 190 + 20;
+            this.btnVisualKeyboard.xPosition = x + 204;
+            this.btnVisualKeyboard.yPosition = y;
+            this.btnVisualKeyboard.drawButton(mc, mouseX, mouseY);
+            this.drawKeyboardIcon();
+
+            this.btnResetKeyBinding.xPosition = x + 224;
             this.btnResetKeyBinding.yPosition = y;
             this.btnResetKeyBinding.enabled = keybinding instanceof ComboKeyBinding comboKeyBinding
                     ? !comboKeyBinding.controlling$isSetToDefaultValue()
@@ -259,6 +266,21 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
         }
 
+        private void drawKeyboardIcon() {
+            int color = 0xFFFFFFFF;
+            int left = this.btnVisualKeyboard.xPosition + 4;
+            int top = this.btnVisualKeyboard.yPosition + 5;
+            Gui.drawRect(left, top, left + 10, top + 1, color);
+            Gui.drawRect(left, top + 8, left + 10, top + 9, color);
+            Gui.drawRect(left, top, left + 1, top + 9, color);
+            Gui.drawRect(left + 9, top, left + 10, top + 9, color);
+            Gui.drawRect(left + 2, top + 2, left + 4, top + 3, color);
+            Gui.drawRect(left + 5, top + 2, left + 7, top + 3, color);
+            Gui.drawRect(left + 2, top + 4, left + 4, top + 5, color);
+            Gui.drawRect(left + 5, top + 4, left + 7, top + 5, color);
+            Gui.drawRect(left + 2, top + 6, left + 8, top + 7, color);
+        }
+
         private void drawButtonWithHighlightedText(int mouseX, int mouseY, String prefix, String textStart,
                 String textMiddle, String textEnd, String suffix) {
             if (prefix.contains(EnumChatFormatting.UNDERLINE.toString())) {
@@ -286,7 +308,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         public boolean mousePressed(int slotIndex, int mouseX, int mouseY, int mouseEvent, int relativeX,
                 int relativeY) {
             if (this.btnChangeKeyBinding.mousePressed(mc, mouseX, mouseY)) {
-                controlsScreen.buttonId = this.keybinding;
+                controlsScreen.selectKeyBinding(this.keybinding, false);
+                return true;
+            } else if (this.btnVisualKeyboard.mousePressed(mc, mouseX, mouseY)) {
+                controlsScreen.selectKeyBinding(this.keybinding, true);
                 return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
                 if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
@@ -305,6 +330,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         @Override
         public void mouseReleased(int slotIndex, int x, int y, int mouseEvent, int relativeX, int relativeY) {
             this.btnChangeKeyBinding.mouseReleased(x, y);
+            this.btnVisualKeyboard.mouseReleased(x, y);
             this.btnResetKeyBinding.mouseReleased(x, y);
         }
 

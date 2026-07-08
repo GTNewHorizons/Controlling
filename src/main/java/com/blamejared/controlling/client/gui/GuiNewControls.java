@@ -61,6 +61,7 @@ public class GuiNewControls extends GuiControls {
     private boolean confirmingReset = false;
     private boolean isQwertyLayout;
     private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
+    private boolean showVisualKeyboard = false;
     private KeyModifier visualKeyboardModifier = KeyModifier.NONE;
     private KeyModifier selectedModifier = KeyModifier.NONE;
     private int selectedModifierKeyCode = Keyboard.KEY_NONE;
@@ -262,7 +263,7 @@ public class GuiNewControls extends GuiControls {
                 this.height - 29 - 42,
                 0xFFFFFF);
 
-        if (this.buttonId != null) {
+        if (this.buttonId != null && this.showVisualKeyboard) {
             this.visualKeyboard.draw(this, this.mc, mouseX, mouseY);
         }
     }
@@ -334,7 +335,7 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void mouseClicked(int mx, int my, int mb) {
-        if (this.buttonId != null && this.visualKeyboard.mouseClicked(this, mx, my, mb)) {
+        if (this.buttonId != null && this.showVisualKeyboard && this.visualKeyboard.mouseClicked(this, mx, my, mb)) {
             searchTextBox.setFocused(false);
         } else if (this.buttonId != null) {
             if (this.buttonId instanceof ComboKeyBinding) {
@@ -467,6 +468,12 @@ public class GuiNewControls extends GuiControls {
         this.pendingBinding = keyBinding;
         this.pendingKeyCode = keyCode;
         this.pendingModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+    }
+
+    void selectKeyBinding(KeyBinding keyBinding, boolean showVisualKeyboard) {
+        this.buttonId = keyBinding;
+        this.showVisualKeyboard = showVisualKeyboard;
+        this.visualKeyboardModifier = KeyModifier.NONE;
     }
 
     void selectVisualKeyboardKey(int keyCode) {

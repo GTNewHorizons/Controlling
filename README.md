@@ -18,7 +18,7 @@ Incompatible with ModernKeybinding (`mkb`) because combo support is now built in
 
 ## Credits
 
-The visual keyboard overlay was inspired by Keyboard Wizard, originally by MrNerdy42 and backported by TachibanaSherry.
+The visual keyboard overlay was inspired by [Keyboard Wizard](https://github.com/VulpesStella/KeyboardWizard-Legacy), originally by MrNerdy42 and backported by TachibanaSherry.
 
 ## API
 
