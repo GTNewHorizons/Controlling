@@ -1,7 +1,7 @@
 /*
- * Portions of this file are adapted from Keyboard Wizard / KeyboardWizard-Legacy-Forge-1.7.10.
- * Original project authors listed as MrNerdy42 and Tapio; copyright (c) 2022 MikhailTapio.
- * Keyboard Wizard is licensed under the MIT License; see THIRD_PARTY_NOTICES.md.
+ * Portions of this file are adapted from Keyboard Wizard / KeyboardWizard-Legacy-Forge-1.7.10. Original project authors
+ * listed as MrNerdy42 and Tapio; copyright (c) 2022 MikhailTapio. Keyboard Wizard is licensed under the MIT License;
+ * see THIRD_PARTY_NOTICES.md.
  */
 package com.blamejared.controlling.client.gui;
 
@@ -267,8 +267,8 @@ public class GuiVisualKeyboard {
                 y,
                 unit,
                 key(Keyboard.KEY_TAB, "Tab", 1.5D),
-                key(Keyboard.KEY_Q, "Q", "A", 1.0D),
-                key(Keyboard.KEY_W, "W", "Z", 1.0D),
+                key(Keyboard.KEY_Q, "Q", 1.0D),
+                key(Keyboard.KEY_W, "W", 1.0D),
                 key(Keyboard.KEY_E, "E", 1.0D),
                 key(Keyboard.KEY_R, "R", 1.0D),
                 key(Keyboard.KEY_T, "T", 1.0D),
@@ -277,16 +277,16 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_I, "I", 1.0D),
                 key(Keyboard.KEY_O, "O", 1.0D),
                 key(Keyboard.KEY_P, "P", 1.0D),
-                key(Keyboard.KEY_LBRACKET, "[", "^", 1.0D),
-                key(Keyboard.KEY_RBRACKET, "]", "$", 1.0D),
-                key(Keyboard.KEY_BACKSLASH, "\\", "*", 1.5D));
+                key(Keyboard.KEY_LBRACKET, "[", 1.0D),
+                key(Keyboard.KEY_RBRACKET, "]", 1.0D),
+                key(Keyboard.KEY_BACKSLASH, "\\", 1.5D));
 
         y += this.keyHeight + this.keyGap;
         this.addRow(
                 y,
                 unit,
                 key(Keyboard.KEY_CAPITAL, "Caps", 1.75D),
-                key(Keyboard.KEY_A, "A", "Q", 1.0D),
+                key(Keyboard.KEY_A, "A", 1.0D),
                 key(Keyboard.KEY_S, "S", 1.0D),
                 key(Keyboard.KEY_D, "D", 1.0D),
                 key(Keyboard.KEY_F, "F", 1.0D),
@@ -295,7 +295,7 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_J, "J", 1.0D),
                 key(Keyboard.KEY_K, "K", 1.0D),
                 key(Keyboard.KEY_L, "L", 1.0D),
-                key(Keyboard.KEY_SEMICOLON, ";", "M", 1.0D),
+                key(Keyboard.KEY_SEMICOLON, ";", 1.0D),
                 key(Keyboard.KEY_APOSTROPHE, "'", 1.0D),
                 key(Keyboard.KEY_RETURN, "Enter", 2.25D));
 
@@ -304,16 +304,16 @@ public class GuiVisualKeyboard {
                 y,
                 unit,
                 key(Keyboard.KEY_LSHIFT, "Shift", 2.25D),
-                key(Keyboard.KEY_Z, "Z", "W", 1.0D),
+                key(Keyboard.KEY_Z, "Z", 1.0D),
                 key(Keyboard.KEY_X, "X", 1.0D),
                 key(Keyboard.KEY_C, "C", 1.0D),
                 key(Keyboard.KEY_V, "V", 1.0D),
                 key(Keyboard.KEY_B, "B", 1.0D),
                 key(Keyboard.KEY_N, "N", 1.0D),
-                key(Keyboard.KEY_M, "M", ",", 1.0D),
-                key(Keyboard.KEY_COMMA, ",", ";", 1.0D),
-                key(Keyboard.KEY_PERIOD, ".", ":", 1.0D),
-                key(Keyboard.KEY_SLASH, "/", "!", 1.0D),
+                key(Keyboard.KEY_M, "M", 1.0D),
+                key(Keyboard.KEY_COMMA, ",", 1.0D),
+                key(Keyboard.KEY_PERIOD, ".", 1.0D),
+                key(Keyboard.KEY_SLASH, "/", 1.0D),
                 key(Keyboard.KEY_RSHIFT, "Shift", 2.75D));
 
         y += this.keyHeight + this.keyGap;
@@ -407,10 +407,6 @@ public class GuiVisualKeyboard {
 
     private KeyButton key(int keyCode, String label, double units) {
         return new KeyButton(keyCode, this.getKeyLabel(keyCode, label), units);
-    }
-
-    private KeyButton key(int keyCode, String qwertyLabel, String azertyLabel, double units) {
-        return this.key(keyCode, qwertyLabel, units);
     }
 
     private String getKeyLabel(int keyCode, String fallback) {
