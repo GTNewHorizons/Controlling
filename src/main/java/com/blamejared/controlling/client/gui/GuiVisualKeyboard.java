@@ -70,6 +70,17 @@ public class GuiVisualKeyboard {
         for (KeyButton key : this.keys) {
             key.draw(screen, mc, mouseX, mouseY);
         }
+
+        KeyModifier modifier = screen.getVisualKeyboardModifier();
+        for (KeyButton key : this.keys) {
+            if (key.contains(mouseX, mouseY)) {
+                List<String> matchingBindings = key.getMatchingBindings(mc, modifier);
+                if (!matchingBindings.isEmpty()) {
+                    screen.drawVisualKeyboardTooltip(matchingBindings, mouseX, mouseY);
+                }
+                return;
+            }
+        }
     }
 
     public boolean mouseClicked(GuiNewControls screen, int mouseX, int mouseY, int mouseButton) {
@@ -487,7 +498,7 @@ public class GuiVisualKeyboard {
             KeyModifier modifier = screen.getVisualKeyboardModifier();
             this.enabled = !modifier.matches(this.keyCode);
 
-            int bindings = this.countBindings(mc, modifier);
+            int bindings = this.getMatchingBindings(mc, modifier).size();
             int color = KEY_NORMAL_COLOR;
             if (!this.enabled) {
                 color = KEY_DISABLED_COLOR;
@@ -524,8 +535,8 @@ public class GuiVisualKeyboard {
             return modifier == KeyModifier.NONE;
         }
 
-        private int countBindings(Minecraft mc, KeyModifier modifier) {
-            int count = 0;
+        private List<String> getMatchingBindings(Minecraft mc, KeyModifier modifier) {
+            List<String> bindings = new ArrayList<>();
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
                 if (keyBinding.getKeyCode() != this.keyCode) {
                     continue;
@@ -534,10 +545,10 @@ public class GuiVisualKeyboard {
                         ? comboKeyBinding.controlling$getKeyModifier()
                         : KeyModifier.NONE;
                 if (bindingModifier == modifier) {
-                    count++;
+                    bindings.add(I18n.format(keyBinding.getKeyDescription()));
                 }
             }
-            return count;
+            return bindings;
         }
     }
 

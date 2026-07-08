@@ -612,6 +612,10 @@ public class GuiNewControls extends GuiControls {
         this.visualKeyboardModifier = visualKeyboardModifier == null ? KeyModifier.NONE : visualKeyboardModifier;
     }
 
+    void drawVisualKeyboardTooltip(List<String> lines, int mouseX, int mouseY) {
+        this.func_146283_a(lines, mouseX, mouseY);
+    }
+
     boolean isQwertyLayout() {
         return this.isQwertyLayout;
     }
