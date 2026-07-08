@@ -20,6 +20,7 @@ import net.minecraft.util.StatCollector;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
+import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
@@ -196,8 +197,7 @@ public class GuiNewControls extends GuiControls {
                 .and(searchType.getPredicate(searchTextBox.getText()));
         final List<GuiNewKeyBindingList.KeyEntry> keysToDisplay = new ArrayList<>();
         for (GuiListExtended.IGuiListEntry entry : guiNewKeyBindingList.getAllEntries()) {
-            if (entry instanceof GuiNewKeyBindingList.KeyEntry) {
-                GuiNewKeyBindingList.KeyEntry keyEntry = (GuiNewKeyBindingList.KeyEntry) entry;
+            if (entry instanceof GuiNewKeyBindingList.KeyEntry keyEntry) {
                 if (keyFilter.test(keyEntry)) {
                     keysToDisplay.add(keyEntry);
                 }
@@ -248,7 +248,7 @@ public class GuiNewControls extends GuiControls {
             buttonReset.displayString = StatCollector.translateToLocal("controls.resetAll");
         }
 
-        for (GuiButton guiButton : (List<GuiButton>) this.buttonList) {
+        for (GuiButton guiButton : this.buttonList) {
             guiButton.drawButton(mc, mouseX, mouseY);
         }
 
@@ -353,7 +353,7 @@ public class GuiNewControls extends GuiControls {
             try {
                 superSuperMouseClicked(mx, my, mb);
             } catch (IOException e) {
-                e.printStackTrace();
+                Controlling.LOGGER.error("Failed to forward mouse click to keybinding list", e);
             }
         }
 
@@ -366,7 +366,7 @@ public class GuiNewControls extends GuiControls {
     protected void superSuperMouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (mouseButton == 0) {
             for (int i = 0; i < this.buttonList.size(); ++i) {
-                GuiButton guibutton = (GuiButton) this.buttonList.get(i);
+                GuiButton guibutton = this.buttonList.get(i);
 
                 if (guibutton.mousePressed(this.mc, mouseX, mouseY)) {
                     net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre event = new net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre(
