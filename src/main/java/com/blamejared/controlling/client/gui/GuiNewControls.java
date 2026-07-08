@@ -33,7 +33,6 @@ public class GuiNewControls extends GuiControls {
     private static final GameSettings.Options[] OPTIONS_ARR = new GameSettings.Options[] {
             GameSettings.Options.INVERT_MOUSE, GameSettings.Options.SENSITIVITY, GameSettings.Options.TOUCHSCREEN };
 
-    private static final int KEYBOARD_LAYOUT_BUTTON_ID = 999;
     private static final int DONE_BUTTON_ID = 1001;
     private static final int RESET_ALL_KEYS_BUTTON_ID = 1002;
     private static final int SHOW_UNBOUD_BUTTON_ID = 1003;
@@ -60,7 +59,6 @@ public class GuiNewControls extends GuiControls {
     private GuiCheckBox buttonKey;
     private GuiCheckBox buttonCat;
     private boolean confirmingReset = false;
-    private boolean isQwertyLayout;
     private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
     private boolean showVisualKeyboard = false;
     private KeyModifier visualKeyboardModifier = KeyModifier.NONE;
@@ -75,7 +73,6 @@ public class GuiNewControls extends GuiControls {
         this.parentScreen = screen;
         this.options = settings;
         this.guiScreenTitle = StatCollector.translateToLocal("controls.title");
-        this.isQwertyLayout = !(this.options.keyBindForward.getKeyCode() == Keyboard.KEY_Z);
     }
 
     /**
@@ -105,16 +102,6 @@ public class GuiNewControls extends GuiControls {
             }
             ++i;
         }
-
-        this.buttonList.add(
-                new GuiButton(
-                        KEYBOARD_LAYOUT_BUTTON_ID,
-                        this.width / 2 - 155 + i % 2 * 160,
-                        18 + 24 * (i >> 1),
-                        150,
-                        20,
-                        StatCollector.translateToLocal("options.keyboardLayout")
-                                + (this.isQwertyLayout ? "QWERTY" : "AZERTY")));
 
         this.guiNewKeyBindingList = new GuiNewKeyBindingList(this, this.mc);
 
@@ -283,11 +270,6 @@ public class GuiNewControls extends GuiControls {
         if (button.id < 100 && button instanceof GuiOptionButton) {
             this.options.setOptionValue(((GuiOptionButton) button).returnEnumOptions(), 1);
             button.displayString = this.options.getKeyBinding(GameSettings.Options.getEnumOptions(button.id));
-        } else if (button.id == KEYBOARD_LAYOUT_BUTTON_ID) {
-            this.isQwertyLayout = !this.isQwertyLayout;
-            button.displayString = StatCollector.translateToLocal("options.keyboardLayout")
-                    + (this.isQwertyLayout ? "QWERTY" : "AZERTY");
-            bindKeysToDefaultKeyboardLayout();
         } else if (button.id == DONE_BUTTON_ID) {
             mc.displayGuiScreen(this.parentScreen);
         } else if (button.id == RESET_ALL_KEYS_BUTTON_ID) {
@@ -592,28 +574,6 @@ public class GuiNewControls extends GuiControls {
         }
     }
 
-    /**
-     * When the associated GuiButton is pressed, it will bind the vanilla minecraft keys to the default values for a
-     * QWERTY keyboard. When pressed again it will bind them to the default values for an AZERTY keyboard
-     * <p>
-     * QWERTY : Go Left -> A Walk Forward -> W Drop Item -> Q
-     * <p>
-     * AZERTY : Go Left -> Q Walk Forward -> Z Drop Item -> A
-     */
-    private void bindKeysToDefaultKeyboardLayout() {
-        if (this.isQwertyLayout) {
-            this.options.keyBindLeft.setKeyCode(this.options.keyBindLeft.getKeyCodeDefault());
-            this.options.keyBindForward.setKeyCode(this.options.keyBindForward.getKeyCodeDefault());
-            this.options.keyBindDrop.setKeyCode(this.options.keyBindDrop.getKeyCodeDefault());
-        } else {
-            this.options.keyBindLeft.setKeyCode(Keyboard.KEY_Q);
-            this.options.keyBindForward.setKeyCode(Keyboard.KEY_Z);
-            this.options.keyBindDrop.setKeyCode(Keyboard.KEY_A);
-        }
-        this.options.saveOptions();
-        KeyBinding.resetKeyBindingArrayAndHash();
-    }
-
     public SearchType getSearchType() {
         return this.searchType;
     }
@@ -653,10 +613,6 @@ public class GuiNewControls extends GuiControls {
         this.filterKeys();
         this.guiNewKeyBindingList.scrollToKeyBinding(keyBinding);
         this.showVisualKeyboard = false;
-    }
-
-    boolean isQwertyLayout() {
-        return this.isQwertyLayout;
     }
 
 }

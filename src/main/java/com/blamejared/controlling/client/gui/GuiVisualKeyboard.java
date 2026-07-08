@@ -13,6 +13,8 @@ import org.lwjgl.input.Keyboard;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
+import cpw.mods.fml.common.Loader;
+
 public class GuiVisualKeyboard {
 
     private static final int PANEL_COLOR = 0xEE101010;
@@ -40,7 +42,6 @@ public class GuiVisualKeyboard {
     private int keyboardWidth;
     private int keyGap;
     private int keyHeight;
-    private boolean qwertyLayout = true;
 
     public void draw(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
         this.layout(screen);
@@ -133,7 +134,6 @@ public class GuiVisualKeyboard {
     }
 
     private void layout(GuiNewControls screen) {
-        this.qwertyLayout = screen.isQwertyLayout();
         int maxWidth = Math.max(220, screen.width - 24);
         this.keyboardWidth = Math.min(560, maxWidth - 16);
         int panelWidth = Math.min(screen.width - 8, this.keyboardWidth + 16);
@@ -401,11 +401,34 @@ public class GuiVisualKeyboard {
     }
 
     private KeyButton key(int keyCode, String label, double units) {
-        return new KeyButton(keyCode, label, units);
+        return new KeyButton(keyCode, this.getKeyLabel(keyCode, label), units);
     }
 
     private KeyButton key(int keyCode, String qwertyLabel, String azertyLabel, double units) {
-        return new KeyButton(keyCode, this.qwertyLayout ? qwertyLabel : azertyLabel, units);
+        return this.key(keyCode, qwertyLabel, units);
+    }
+
+    private String getKeyLabel(int keyCode, String fallback) {
+        if (!Loader.isModLoaded("lwjgl3ify") || this.shouldUseFixedLabel(keyCode)) {
+            return fallback;
+        }
+        String keyName = Keyboard.getKeyName(keyCode);
+        return keyName == null || keyName.startsWith("Key ") ? fallback : keyName;
+    }
+
+    private boolean shouldUseFixedLabel(int keyCode) {
+        return switch (keyCode) {
+            // spotless:off
+            case Keyboard.KEY_ESCAPE, Keyboard.KEY_BACK, Keyboard.KEY_TAB, Keyboard.KEY_CAPITAL,
+                    Keyboard.KEY_RETURN, Keyboard.KEY_LSHIFT, Keyboard.KEY_RSHIFT, Keyboard.KEY_LCONTROL,
+                    Keyboard.KEY_RCONTROL, Keyboard.KEY_LMENU, Keyboard.KEY_RMENU, Keyboard.KEY_LMETA,
+                    Keyboard.KEY_RMETA, Keyboard.KEY_SPACE, Keyboard.KEY_NUMLOCK, Keyboard.KEY_SYSRQ,
+                    Keyboard.KEY_SCROLL, Keyboard.KEY_INSERT, Keyboard.KEY_DELETE, Keyboard.KEY_HOME,
+                    Keyboard.KEY_END, Keyboard.KEY_PRIOR, Keyboard.KEY_NEXT, Keyboard.KEY_UP, Keyboard.KEY_DOWN,
+                    Keyboard.KEY_LEFT, Keyboard.KEY_RIGHT, Keyboard.KEY_NUMPADENTER -> true;
+            default -> false;
+            // spotless:on
+        };
     }
 
     private void addRow(double y, double unitWidth, KeyButton... row) {
