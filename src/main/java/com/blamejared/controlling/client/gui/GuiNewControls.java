@@ -60,6 +60,8 @@ public class GuiNewControls extends GuiControls {
     private GuiCheckBox buttonCat;
     private boolean confirmingReset = false;
     private boolean isQwertyLayout;
+    private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
+    private KeyModifier visualKeyboardModifier = KeyModifier.NONE;
     private KeyModifier selectedModifier = KeyModifier.NONE;
     private int selectedModifierKeyCode = Keyboard.KEY_NONE;
     private KeyBinding pendingBinding;
@@ -259,6 +261,10 @@ public class GuiNewControls extends GuiControls {
                 this.width / 2 - (155 / 2) - (fontRendererObj.getStringWidth(text)) - 5,
                 this.height - 29 - 42,
                 0xFFFFFF);
+
+        if (this.buttonId != null) {
+            this.visualKeyboard.draw(this, this.mc, mouseX, mouseY);
+        }
     }
 
     @Override
@@ -328,7 +334,9 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void mouseClicked(int mx, int my, int mb) {
-        if (this.buttonId != null) {
+        if (this.buttonId != null && this.visualKeyboard.mouseClicked(this, mx, my, mb)) {
+            searchTextBox.setFocused(false);
+        } else if (this.buttonId != null) {
             if (this.buttonId instanceof ComboKeyBinding) {
                 this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());
             } else {
@@ -461,6 +469,25 @@ public class GuiNewControls extends GuiControls {
         this.pendingModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
     }
 
+    void selectVisualKeyboardKey(int keyCode) {
+        if (this.buttonId == null) {
+            return;
+        }
+
+        if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
+            comboKeyBinding.controlling$setKeyModifierAndCode(this.visualKeyboardModifier, keyCode);
+        }
+        this.options.setOptionKeyBinding(this.buttonId, keyCode);
+        this.pendingBinding = null;
+        this.pendingModifier = KeyModifier.NONE;
+        this.pendingKeyCode = Keyboard.KEY_NONE;
+        this.selectedModifier = KeyModifier.NONE;
+        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+        this.buttonId = null;
+        this.field_152177_g = Minecraft.getSystemTime();
+        KeyBinding.resetKeyBindingArrayAndHash();
+    }
+
     private void captureModifierOnlyBinding() {
         if (!(this.buttonId instanceof ComboKeyBinding) || this.pendingBinding != null
                 || this.selectedModifier == KeyModifier.NONE
@@ -548,6 +575,18 @@ public class GuiNewControls extends GuiControls {
 
     public String getSearchString() {
         return lastSearch;
+    }
+
+    KeyBinding getSelectedKeyBinding() {
+        return this.buttonId;
+    }
+
+    KeyModifier getVisualKeyboardModifier() {
+        return this.visualKeyboardModifier;
+    }
+
+    void setVisualKeyboardModifier(KeyModifier visualKeyboardModifier) {
+        this.visualKeyboardModifier = visualKeyboardModifier == null ? KeyModifier.NONE : visualKeyboardModifier;
     }
 
 }
