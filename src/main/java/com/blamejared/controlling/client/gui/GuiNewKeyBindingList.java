@@ -32,6 +32,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private final List<IGuiListEntry> displayedEntries = new ArrayList<>();
     private final List<IGuiListEntry> allEntries = new ArrayList<>();
     private int maxListLabelWidth;
+    private String hoveredKeyDescription;
 
     public GuiNewKeyBindingList(GuiNewControls controls, Minecraft mcIn) {
         super(controls, mcIn);
@@ -71,6 +72,18 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     }
 
     @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        this.hoveredKeyDescription = null;
+        super.drawScreen(mouseX, mouseY, partialTicks);
+    }
+
+    public void drawHoveredKeyDescriptionTooltip(int mouseX, int mouseY) {
+        if (this.hoveredKeyDescription != null) {
+            this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredKeyDescription, mouseX, mouseY);
+        }
+    }
+
+    @Override
     public IGuiListEntry getListEntry(int index) {
         return this.displayedEntries.get(index);
     }
@@ -92,6 +105,17 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     public void setDisplayedEntries(List<IGuiListEntry> displayedEntries) {
         this.displayedEntries.clear();
         this.displayedEntries.addAll(displayedEntries);
+    }
+
+    public boolean scrollToKeyBinding(KeyBinding keyBinding) {
+        for (int i = 0; i < this.displayedEntries.size(); i++) {
+            if (this.displayedEntries.get(i) instanceof KeyEntry keyEntry && keyEntry.getKeybinding() == keyBinding) {
+                int target = i * this.getSlotHeight() - (this.bottom - this.top) / 2 + this.getSlotHeight() / 2;
+                this.scrollBy(target - this.getAmountScrolled());
+                return true;
+            }
+        }
+        return false;
     }
 
     private void drawHighlightedString(String text, int x, int y, boolean highlight) {
@@ -173,12 +197,14 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         private final CategoryEntry categoryEntry;
 
         private final GuiButton btnChangeKeyBinding;
+        private final GuiButton btnVisualKeyboard;
         private final GuiButton btnResetKeyBinding;
 
         private KeyEntry(final KeyBinding keyBinding, CategoryEntry categoryEntry) {
             this.keybinding = keyBinding;
             this.keyDesc = I18n.format(keyBinding.getKeyDescription());
             this.btnChangeKeyBinding = new GuiButton(2000, 0, 0, 75 + 20, 20, this.keyDesc);
+            this.btnVisualKeyboard = new GuiButton(2002, 0, 0, 18, 20, "");
             this.categoryEntry = categoryEntry;
             this.btnResetKeyBinding = new GuiButton(2001, 0, 0, 50, 20, I18n.format("controls.reset"));
         }
@@ -187,20 +213,22 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         public void drawEntry(int slotIndex, int x, int y, int listWidth, int slotHeight, Tessellator tessellator,
                 int mouseX, int mouseY, boolean isSelected) {
             boolean isKeySelected = controlsScreen.buttonId == this.keybinding;
-            drawHighlightedString(
-                    this.keyDesc,
-                    x + 90 - maxListLabelWidth,
-                    y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2,
-                    shouldHighlightKeybindName());
-            this.btnResetKeyBinding.xPosition = x + 190 + 20;
+            this.btnChangeKeyBinding.xPosition = x + 105;
+            this.btnChangeKeyBinding.yPosition = y;
+            this.drawKeyDescription(x, y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2, mouseX, mouseY);
+
+            this.btnVisualKeyboard.xPosition = x + 204;
+            this.btnVisualKeyboard.yPosition = y;
+            this.btnVisualKeyboard.drawButton(mc, mouseX, mouseY);
+            this.drawKeyboardIcon();
+
+            this.btnResetKeyBinding.xPosition = x + 224;
             this.btnResetKeyBinding.yPosition = y;
             this.btnResetKeyBinding.enabled = keybinding instanceof ComboKeyBinding comboKeyBinding
                     ? !comboKeyBinding.controlling$isSetToDefaultValue()
                     : this.keybinding.getKeyCode() != this.keybinding.getKeyCodeDefault();
             this.btnResetKeyBinding.drawButton(mc, mouseX, mouseY);
 
-            this.btnChangeKeyBinding.xPosition = x + 105;
-            this.btnChangeKeyBinding.yPosition = y;
             this.btnChangeKeyBinding.displayString = keybinding instanceof ComboKeyBinding comboKeyBinding
                     ? comboKeyBinding.controlling$getDisplayName()
                     : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
@@ -259,6 +287,23 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
         }
 
+        private void drawKeyboardIcon() {
+            int color = 0xFFFFFFFF;
+            int left = this.btnVisualKeyboard.xPosition + 4;
+            int top = this.btnVisualKeyboard.yPosition + 5;
+            Gui.drawRect(left, top, left + 10, top + 1, color);
+            Gui.drawRect(left, top + 8, left + 10, top + 9, color);
+            Gui.drawRect(left, top, left + 1, top + 9, color);
+            Gui.drawRect(left + 9, top, left + 10, top + 9, color);
+            Gui.drawRect(left + 2, top + 2, left + 3, top + 3, color);
+            Gui.drawRect(left + 4, top + 2, left + 6, top + 3, color);
+            Gui.drawRect(left + 7, top + 2, left + 8, top + 3, color);
+            Gui.drawRect(left + 2, top + 4, left + 3, top + 5, color);
+            Gui.drawRect(left + 4, top + 4, left + 6, top + 5, color);
+            Gui.drawRect(left + 7, top + 4, left + 8, top + 5, color);
+            Gui.drawRect(left + 2, top + 6, left + 8, top + 7, color);
+        }
+
         private void drawButtonWithHighlightedText(int mouseX, int mouseY, String prefix, String textStart,
                 String textMiddle, String textEnd, String suffix) {
             if (prefix.contains(EnumChatFormatting.UNDERLINE.toString())) {
@@ -282,11 +327,40 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             mc.fontRenderer.drawStringWithShadow(textEnd + suffix, rectRight, yString, 0xFFFFFF);
         }
 
+        private void drawKeyDescription(int x, int y, int mouseX, int mouseY) {
+            final int labelLeft = 4;
+            final int labelRight = x + 95;
+            final int maxWidth = Math.max(0, labelRight - labelLeft);
+            final boolean truncated = mc.fontRenderer.getStringWidth(this.keyDesc) > maxWidth;
+            final String label = trimWithEllipsis(this.keyDesc, maxWidth);
+            final int labelX = labelRight - mc.fontRenderer.getStringWidth(label);
+            drawHighlightedString(label, labelX, y, shouldHighlightKeybindName());
+            if (truncated && mouseX >= labelLeft
+                    && mouseX <= labelRight
+                    && mouseY >= y
+                    && mouseY < y + mc.fontRenderer.FONT_HEIGHT) {
+                hoveredKeyDescription = this.keyDesc;
+            }
+        }
+
+        private String trimWithEllipsis(String text, int width) {
+            if (mc.fontRenderer.getStringWidth(text) <= width) {
+                return text;
+            }
+            final String ellipsis = "...";
+            final int ellipsisWidth = mc.fontRenderer.getStringWidth(ellipsis);
+            return width <= ellipsisWidth ? mc.fontRenderer.trimStringToWidth(text, width)
+                    : mc.fontRenderer.trimStringToWidth(text, width - ellipsisWidth) + ellipsis;
+        }
+
         @Override
         public boolean mousePressed(int slotIndex, int mouseX, int mouseY, int mouseEvent, int relativeX,
                 int relativeY) {
             if (this.btnChangeKeyBinding.mousePressed(mc, mouseX, mouseY)) {
-                controlsScreen.buttonId = this.keybinding;
+                controlsScreen.selectKeyBinding(this.keybinding, false);
+                return true;
+            } else if (this.btnVisualKeyboard.mousePressed(mc, mouseX, mouseY)) {
+                controlsScreen.selectKeyBinding(this.keybinding, true);
                 return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
                 if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
@@ -305,6 +379,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         @Override
         public void mouseReleased(int slotIndex, int x, int y, int mouseEvent, int relativeX, int relativeY) {
             this.btnChangeKeyBinding.mouseReleased(x, y);
+            this.btnVisualKeyboard.mouseReleased(x, y);
             this.btnResetKeyBinding.mouseReleased(x, y);
         }
 

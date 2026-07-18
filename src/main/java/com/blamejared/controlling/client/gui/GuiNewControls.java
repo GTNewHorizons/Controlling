@@ -20,6 +20,7 @@ import net.minecraft.util.StatCollector;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
+import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
@@ -33,13 +34,13 @@ public class GuiNewControls extends GuiControls {
     private static final GameSettings.Options[] OPTIONS_ARR = new GameSettings.Options[] {
             GameSettings.Options.INVERT_MOUSE, GameSettings.Options.SENSITIVITY, GameSettings.Options.TOUCHSCREEN };
 
-    private static final int KEYBOARD_LAYOUT_BUTTON_ID = 999;
     private static final int DONE_BUTTON_ID = 1001;
     private static final int RESET_ALL_KEYS_BUTTON_ID = 1002;
     private static final int SHOW_UNBOUD_BUTTON_ID = 1003;
     private static final int SHOW_CONFLICTS_BUTTON_ID = 1004;
     private static final int SEARCH_KEYNAME_BUTTON_ID = 1005;
     private static final int SEARCH_CATEGORYNAME_BUTTON_ID = 1006;
+    private static final int VISUAL_KEYBOARD_BUTTON_ID = 1007;
     private static final int SORT_TYPE_BUTTON_ID = 1008;
 
     private final GuiScreen parentScreen;
@@ -59,7 +60,9 @@ public class GuiNewControls extends GuiControls {
     private GuiCheckBox buttonKey;
     private GuiCheckBox buttonCat;
     private boolean confirmingReset = false;
-    private boolean isQwertyLayout;
+    private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
+    private boolean showVisualKeyboard = false;
+    private KeyModifier visualKeyboardModifier = KeyModifier.NONE;
     private KeyModifier selectedModifier = KeyModifier.NONE;
     private int selectedModifierKeyCode = Keyboard.KEY_NONE;
     private KeyBinding pendingBinding;
@@ -71,7 +74,6 @@ public class GuiNewControls extends GuiControls {
         this.parentScreen = screen;
         this.options = settings;
         this.guiScreenTitle = StatCollector.translateToLocal("controls.title");
-        this.isQwertyLayout = !(this.options.keyBindForward.getKeyCode() == Keyboard.KEY_Z);
     }
 
     /**
@@ -101,16 +103,6 @@ public class GuiNewControls extends GuiControls {
             }
             ++i;
         }
-
-        this.buttonList.add(
-                new GuiButton(
-                        KEYBOARD_LAYOUT_BUTTON_ID,
-                        this.width / 2 - 155 + i % 2 * 160,
-                        18 + 24 * (i >> 1),
-                        150,
-                        20,
-                        StatCollector.translateToLocal("options.keyboardLayout")
-                                + (this.isQwertyLayout ? "QWERTY" : "AZERTY")));
 
         this.guiNewKeyBindingList = new GuiNewKeyBindingList(this, this.mc);
 
@@ -171,6 +163,15 @@ public class GuiNewControls extends GuiControls {
 
         this.buttonList.add(
                 new GuiButton(
+                        VISUAL_KEYBOARD_BUTTON_ID,
+                        this.width / 2 - 155 + 160,
+                        this.height - 29 - 24 - 24,
+                        150 / 2,
+                        20,
+                        StatCollector.translateToLocal("options.keyMap")));
+
+        this.buttonList.add(
+                new GuiButton(
                         SORT_TYPE_BUTTON_ID,
                         this.width / 2 - 155 + 160 + 76,
                         this.height - 29 - 24 - 24,
@@ -196,8 +197,7 @@ public class GuiNewControls extends GuiControls {
                 .and(searchType.getPredicate(searchTextBox.getText()));
         final List<GuiNewKeyBindingList.KeyEntry> keysToDisplay = new ArrayList<>();
         for (GuiListExtended.IGuiListEntry entry : guiNewKeyBindingList.getAllEntries()) {
-            if (entry instanceof GuiNewKeyBindingList.KeyEntry) {
-                GuiNewKeyBindingList.KeyEntry keyEntry = (GuiNewKeyBindingList.KeyEntry) entry;
+            if (entry instanceof GuiNewKeyBindingList.KeyEntry keyEntry) {
                 if (keyFilter.test(keyEntry)) {
                     keysToDisplay.add(keyEntry);
                 }
@@ -248,7 +248,7 @@ public class GuiNewControls extends GuiControls {
             buttonReset.displayString = StatCollector.translateToLocal("controls.resetAll");
         }
 
-        for (GuiButton guiButton : (List<GuiButton>) this.buttonList) {
+        for (GuiButton guiButton : this.buttonList) {
             guiButton.drawButton(mc, mouseX, mouseY);
         }
 
@@ -259,6 +259,12 @@ public class GuiNewControls extends GuiControls {
                 this.width / 2 - (155 / 2) - (fontRendererObj.getStringWidth(text)) - 5,
                 this.height - 29 - 42,
                 0xFFFFFF);
+
+        if (this.showVisualKeyboard) {
+            this.visualKeyboard.draw(this, this.mc, mouseX, mouseY);
+        } else {
+            this.guiNewKeyBindingList.drawHoveredKeyDescriptionTooltip(mouseX, mouseY);
+        }
     }
 
     @Override
@@ -266,11 +272,6 @@ public class GuiNewControls extends GuiControls {
         if (button.id < 100 && button instanceof GuiOptionButton) {
             this.options.setOptionValue(((GuiOptionButton) button).returnEnumOptions(), 1);
             button.displayString = this.options.getKeyBinding(GameSettings.Options.getEnumOptions(button.id));
-        } else if (button.id == KEYBOARD_LAYOUT_BUTTON_ID) {
-            this.isQwertyLayout = !this.isQwertyLayout;
-            button.displayString = StatCollector.translateToLocal("options.keyboardLayout")
-                    + (this.isQwertyLayout ? "QWERTY" : "AZERTY");
-            bindKeysToDefaultKeyboardLayout();
         } else if (button.id == DONE_BUTTON_ID) {
             mc.displayGuiScreen(this.parentScreen);
         } else if (button.id == RESET_ALL_KEYS_BUTTON_ID) {
@@ -290,6 +291,7 @@ public class GuiNewControls extends GuiControls {
                     keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
                 }
             }
+            this.options.saveOptions();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else if (button.id == SHOW_UNBOUD_BUTTON_ID) {
             if (displayMode == DisplayMode.UNBOUND) {
@@ -319,6 +321,10 @@ public class GuiNewControls extends GuiControls {
             buttonKey.setIsChecked(false);
             searchType = buttonCat.isChecked() ? SearchType.CATEGORY_NAME : SearchType.ALL;
             filterKeys();
+        } else if (button.id == VISUAL_KEYBOARD_BUTTON_ID) {
+            this.showVisualKeyboard = !this.showVisualKeyboard;
+            this.buttonId = null;
+            this.visualKeyboardModifier = KeyModifier.NONE;
         } else if (button.id == SORT_TYPE_BUTTON_ID) {
             sortOrder = sortOrder.getNext();
             button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNextName();
@@ -328,12 +334,16 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void mouseClicked(int mx, int my, int mb) {
-        if (this.buttonId != null) {
+        if (this.showVisualKeyboard && this.visualKeyboard.mouseClicked(this, mx, my, mb)) {
+            searchTextBox.setFocused(false);
+            return;
+        } else if (this.buttonId != null) {
             if (this.buttonId instanceof ComboKeyBinding) {
                 this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());
             } else {
                 this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
                 this.buttonId = null;
+                this.showVisualKeyboard = false;
                 this.field_152177_g = Minecraft.getSystemTime();
             }
             this.selectedModifier = KeyModifier.NONE;
@@ -345,7 +355,7 @@ public class GuiNewControls extends GuiControls {
             try {
                 superSuperMouseClicked(mx, my, mb);
             } catch (IOException e) {
-                e.printStackTrace();
+                Controlling.LOGGER.error("Failed to forward mouse click to keybinding list", e);
             }
         }
 
@@ -358,7 +368,7 @@ public class GuiNewControls extends GuiControls {
     protected void superSuperMouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (mouseButton == 0) {
             for (int i = 0; i < this.buttonList.size(); ++i) {
-                GuiButton guibutton = (GuiButton) this.buttonList.get(i);
+                GuiButton guibutton = this.buttonList.get(i);
 
                 if (guibutton.mousePressed(this.mc, mouseX, mouseY)) {
                     net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre event = new net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre(
@@ -438,11 +448,16 @@ public class GuiNewControls extends GuiControls {
 
             if (shouldCloseBindSelection) {
                 this.buttonId = null;
+                this.showVisualKeyboard = false;
             }
 
             this.field_152177_g = Minecraft.getSystemTime();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
+            if (this.showVisualKeyboard && keyCode == Keyboard.KEY_ESCAPE) {
+                this.showVisualKeyboard = false;
+                return;
+            }
             if (this.searchTextBox.isFocused()) {
                 if (keyCode == Keyboard.KEY_ESCAPE) {
                     this.searchTextBox.setFocused(false);
@@ -461,7 +476,44 @@ public class GuiNewControls extends GuiControls {
         this.pendingModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
     }
 
+    void selectKeyBinding(KeyBinding keyBinding, boolean showVisualKeyboard) {
+        this.buttonId = keyBinding;
+        this.showVisualKeyboard = showVisualKeyboard;
+        this.visualKeyboardModifier = showVisualKeyboard && keyBinding instanceof ComboKeyBinding comboKeyBinding
+                ? comboKeyBinding.controlling$getKeyModifier()
+                : KeyModifier.NONE;
+    }
+
+    void selectVisualKeyboardKey(int keyCode) {
+        if (this.buttonId == null) {
+            return;
+        }
+
+        if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
+            comboKeyBinding.controlling$setKeyModifierAndCode(this.getVisualKeyboardModifier(), keyCode);
+        }
+        this.options.setOptionKeyBinding(this.buttonId, keyCode);
+        this.pendingBinding = null;
+        this.pendingModifier = KeyModifier.NONE;
+        this.pendingKeyCode = Keyboard.KEY_NONE;
+        this.selectedModifier = KeyModifier.NONE;
+        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+        this.buttonId = null;
+        this.showVisualKeyboard = false;
+        this.field_152177_g = Minecraft.getSystemTime();
+        KeyBinding.resetKeyBindingArrayAndHash();
+    }
+
     private void captureModifierOnlyBinding() {
+        if (this.showVisualKeyboard) {
+            if (this.selectedModifierKeyCode != Keyboard.KEY_NONE
+                    && !Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
+                this.visualKeyboardModifier = KeyModifier.NONE;
+                this.selectedModifier = KeyModifier.NONE;
+                this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+            }
+            return;
+        }
         if (!(this.buttonId instanceof ComboKeyBinding) || this.pendingBinding != null
                 || this.selectedModifier == KeyModifier.NONE
                 || this.selectedModifierKeyCode == Keyboard.KEY_NONE) {
@@ -476,6 +528,9 @@ public class GuiNewControls extends GuiControls {
     }
 
     private KeyModifier getSelectedModifierForBinding() {
+        if (this.showVisualKeyboard) {
+            return this.getVisualKeyboardModifier();
+        }
         return this.selectedModifier == KeyModifier.NONE ? KeyModifier.getActiveModifier() : this.selectedModifier;
     }
 
@@ -495,6 +550,7 @@ public class GuiNewControls extends GuiControls {
         this.pendingModifier = KeyModifier.NONE;
         this.pendingKeyCode = Keyboard.KEY_NONE;
         this.buttonId = null;
+        this.showVisualKeyboard = false;
         this.field_152177_g = Minecraft.getSystemTime();
         KeyBinding.resetKeyBindingArrayAndHash();
     }
@@ -520,34 +576,49 @@ public class GuiNewControls extends GuiControls {
         }
     }
 
-    /**
-     * When the associated GuiButton is pressed, it will bind the vanilla minecraft keys to the default values for a
-     * QWERTY keyboard. When pressed again it will bind them to the default values for an AZERTY keyboard
-     * <p>
-     * QWERTY : Go Left -> A Walk Forward -> W Drop Item -> Q
-     * <p>
-     * AZERTY : Go Left -> Q Walk Forward -> Z Drop Item -> A
-     */
-    private void bindKeysToDefaultKeyboardLayout() {
-        if (this.isQwertyLayout) {
-            this.options.keyBindLeft.setKeyCode(this.options.keyBindLeft.getKeyCodeDefault());
-            this.options.keyBindForward.setKeyCode(this.options.keyBindForward.getKeyCodeDefault());
-            this.options.keyBindDrop.setKeyCode(this.options.keyBindDrop.getKeyCodeDefault());
-        } else {
-            this.options.keyBindLeft.setKeyCode(Keyboard.KEY_Q);
-            this.options.keyBindForward.setKeyCode(Keyboard.KEY_Z);
-            this.options.keyBindDrop.setKeyCode(Keyboard.KEY_A);
-        }
-        this.options.saveOptions();
-        KeyBinding.resetKeyBindingArrayAndHash();
-    }
-
     public SearchType getSearchType() {
         return this.searchType;
     }
 
     public String getSearchString() {
         return lastSearch;
+    }
+
+    KeyBinding getSelectedKeyBinding() {
+        return this.buttonId;
+    }
+
+    KeyModifier getVisualKeyboardModifier() {
+        KeyModifier activeModifier = KeyModifier.getActiveModifier();
+        return activeModifier == KeyModifier.NONE ? this.visualKeyboardModifier : activeModifier;
+    }
+
+    void setVisualKeyboardModifier(KeyModifier visualKeyboardModifier) {
+        this.visualKeyboardModifier = visualKeyboardModifier == null ? KeyModifier.NONE : visualKeyboardModifier;
+    }
+
+    void drawVisualKeyboardTooltip(List<String> lines, int mouseX, int mouseY) {
+        this.func_146283_a(lines, mouseX, mouseY);
+    }
+
+    void drawKeyDescriptionTooltip(String text, int mouseX, int mouseY) {
+        this.func_146283_a(java.util.Collections.singletonList(text), mouseX, mouseY);
+    }
+
+    void showKeyBinding(KeyBinding keyBinding) {
+        if (this.guiNewKeyBindingList.scrollToKeyBinding(keyBinding)) {
+            this.showVisualKeyboard = false;
+            return;
+        }
+
+        this.searchTextBox.setText("");
+        this.lastSearch = "";
+        this.displayMode = DisplayMode.ALL;
+        this.buttonNone.displayString = StatCollector.translateToLocal("options.showNone");
+        this.buttonConflicting.displayString = StatCollector.translateToLocal("options.showConflicts");
+        this.filterKeys();
+        this.guiNewKeyBindingList.scrollToKeyBinding(keyBinding);
+        this.showVisualKeyboard = false;
     }
 
 }
