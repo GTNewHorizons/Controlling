@@ -6,6 +6,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.blamejared.controlling.events.ClientEventHandler;
+import com.blamejared.controlling.keybinding.DebugKeyBindings;
+import com.blamejared.controlling.keybinding.VanillaKeyContexts;
 
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
@@ -27,5 +29,9 @@ public class Controlling {
         }
 
         MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
+
+        DebugKeyBindings.registerIfDevEnvironment();
+
+        VanillaKeyContexts.apply();
     }
 }
