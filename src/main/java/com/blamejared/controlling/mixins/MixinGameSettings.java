@@ -15,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ComboKeyCodec;
 import com.blamejared.controlling.keybinding.KeyModifier;
 import com.llamalad7.mixinextras.sugar.Local;
 
@@ -34,11 +35,24 @@ public abstract class MixinGameSettings {
             method = "loadOptions",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/settings/KeyBinding;setKeyCode(I)V"))
     private void controlling$loadOptions(CallbackInfo ci, @Local KeyBinding keybinding, @Local String[] astring) {
-        if (astring.length > 2) {
-            if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
-                comboKeyBinding.controlling$setKeyModifier(KeyModifier.fromSerializedName(astring[2]));
-            }
+        if (astring.length <= 2 || !(keybinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return;
         }
+        final ComboKeyCodec.Parsed parsed = ComboKeyCodec.parse(astring[2]);
+        if (parsed.legacy) {
+            comboKeyBinding.controlling$setKeyModifier(KeyModifier.fromSerializedName(parsed.legacyName));
+        } else {
+            comboKeyBinding.controlling$setComboKeys(controlling$toBoxedList(parsed.comboKeys));
+        }
+    }
+
+    @Unique
+    private static java.util.List<Integer> controlling$toBoxedList(it.unimi.dsi.fastutil.ints.IntList keys) {
+        final java.util.List<Integer> out = new java.util.ArrayList<>(keys.size());
+        for (int i = 0; i < keys.size(); i++) {
+            out.add(keys.get(i));
+        }
+        return out;
     }
 
     @Redirect(
@@ -56,19 +70,23 @@ public abstract class MixinGameSettings {
     private String controlling$appendModifierToKeyLine(String line) {
         final String[] split = line.split(":", 2);
 
-        final KeyModifier keyModifier = this.controlling$getModifierForOptionKey(split[0]);
-        if (keyModifier == null || keyModifier == KeyModifier.NONE) {
+        final ComboKeyBinding bind = this.controlling$getComboBindForOptionKey(split[0]);
+        if (bind == null) {
             return line;
         }
-        return split[0] + ":" + split[1] + ":" + keyModifier.name();
+        final it.unimi.dsi.fastutil.ints.IntList comboKeys = bind.controlling$comboKeysRaw();
+        if (comboKeys.isEmpty()) {
+            return line;
+        }
+        return split[0] + ":" + split[1] + ":" + ComboKeyCodec.formatComboKeys(comboKeys);
     }
 
     @Unique
-    private KeyModifier controlling$getModifierForOptionKey(String optionKey) {
+    private ComboKeyBinding controlling$getComboBindForOptionKey(String optionKey) {
         for (KeyBinding keyBinding : this.keyBindings) {
             if (optionKey.equals(KEY_OPTION_PREFIX + keyBinding.getKeyDescription())
                     && keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-                return comboKeyBinding.controlling$getKeyModifier();
+                return comboKeyBinding;
             }
         }
         return null;
