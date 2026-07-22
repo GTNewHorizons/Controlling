@@ -57,6 +57,8 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     private boolean controlling$allowsMouse = true;
     @Unique
     private boolean controlling$allowsKeyboard = true;
+    @Unique
+    private int controlling$comboHeldTicks = -1; // -1 = not satisfied; 0 = first tick; increments while held
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void controlling$onInit(String description, int keyCode, String category, CallbackInfo ci) {
@@ -193,6 +195,16 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Override
     public int controlling$mainKeyCode() {
         return this.keyCode;
+    }
+
+    @Override
+    public int controlling$getComboHeldTicks() {
+        return this.controlling$comboHeldTicks;
+    }
+
+    @Override
+    public void controlling$setComboHeldTicks(int ticks) {
+        this.controlling$comboHeldTicks = ticks;
     }
 
     @Unique

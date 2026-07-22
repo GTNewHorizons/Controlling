@@ -30,6 +30,10 @@ public interface ComboKeyBinding {
     /** The main key code (== KeyBinding.getKeyCode()); convenience for internal polling. */
     int controlling$mainKeyCode();
 
+    int controlling$getComboHeldTicks();
+
+    void controlling$setComboHeldTicks(int ticks);
+
     void controlling$setKeyModifierAndCode(KeyModifier keyModifier, int keyCode);
 
     String controlling$getDisplayName();
