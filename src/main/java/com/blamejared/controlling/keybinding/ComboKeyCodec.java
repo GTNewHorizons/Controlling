@@ -1,7 +1,7 @@
 package com.blamejared.controlling.keybinding;
 
-import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 /**
  * Pure format/parse for the third colon segment of a key_ options line. Writes combo keys as a CSV of keycodes; parse

@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-
 import org.junit.jupiter.api.Test;
+
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class ComboKeyCodecTest {
 

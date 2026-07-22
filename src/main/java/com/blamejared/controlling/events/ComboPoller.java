@@ -12,9 +12,10 @@ import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent;
 import cpw.mods.fml.common.gameevent.TickEvent.Phase;
 
 /**
- * Maintains a held-tick counter per combo bind by directly polling key/mouse state at the end of each client tick. Works
- * while a GUI is open (Keyboard.isKeyDown / Mouse.isButtonDown stay live), so mouse-in-GUI combos resolve here rather
- * than through vanilla dispatch. Only writes controlling$comboHeldTicks; never touches vanilla pressed/pressTime.
+ * Maintains a held-tick counter per combo bind by directly polling key/mouse state at the end of each client tick.
+ * Works while a GUI is open (Keyboard.isKeyDown / Mouse.isButtonDown stay live), so mouse-in-GUI combos resolve here
+ * rather than through vanilla dispatch. Only writes controlling$comboHeldTicks; never touches vanilla
+ * pressed/pressTime.
  */
 public final class ComboPoller {
 
@@ -40,8 +41,8 @@ public final class ComboPoller {
     }
 
     private static boolean controlling$rawSatisfied(ComboKeyBinding combo) {
-        return combo.controlling$getKeyContext().isActive()
-                && ComboState.satisfied(combo.controlling$mainKeyCode(), combo.controlling$comboKeysRaw(), InputState.IS_DOWN);
+        return combo.controlling$getKeyContext().isActive() && ComboState
+                .satisfied(combo.controlling$mainKeyCode(), combo.controlling$comboKeysRaw(), InputState.IS_DOWN);
     }
 
     private static boolean controlling$supersetSatisfied(KeyBinding[] binds, ComboKeyBinding self) {

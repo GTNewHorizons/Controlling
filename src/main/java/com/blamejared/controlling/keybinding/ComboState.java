@@ -16,8 +16,8 @@ public final class ComboState {
     private ComboState() {}
 
     /**
-     * A combo is satisfied when the main key is down (or main is KEY_NONE and there is at least one combo key) and every
-     * combo key is down.
+     * A combo is satisfied when the main key is down (or main is KEY_NONE and there is at least one combo key) and
+     * every combo key is down.
      */
     public static boolean satisfied(int mainKey, IntList comboKeys, IntPredicate isDown) {
         if (mainKey == KEY_NONE) {

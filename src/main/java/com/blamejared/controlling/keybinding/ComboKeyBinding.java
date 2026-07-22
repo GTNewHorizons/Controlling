@@ -4,9 +4,9 @@ import java.util.List;
 
 import net.minecraft.client.settings.KeyBinding;
 
-import it.unimi.dsi.fastutil.ints.IntList;
-
 import com.blamejared.controlling.api.KeyContext;
+
+import it.unimi.dsi.fastutil.ints.IntList;
 
 public interface ComboKeyBinding {
 

@@ -15,7 +15,11 @@ import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 
-@Mod(modid = Controlling.MODID, name = "Controlling", version = Tags.VERSION, acceptableRemoteVersions = "*",
+@Mod(
+        modid = Controlling.MODID,
+        name = "Controlling",
+        version = Tags.VERSION,
+        acceptableRemoteVersions = "*",
         dependencies = "required-after:gtnhlib")
 public class Controlling {
 

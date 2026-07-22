@@ -1,6 +1,7 @@
 package com.blamejared.controlling.api;
 
 import java.util.Locale;
+
 import net.minecraft.client.Minecraft;
 
 /** Built-in {@link KeyContext} values. */
