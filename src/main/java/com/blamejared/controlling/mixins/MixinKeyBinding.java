@@ -16,9 +16,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ComboState;
 import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 import com.blamejared.controlling.keybinding.KeyModifier;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
@@ -254,12 +256,55 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Override
     public String controlling$getDisplayName() {
-        final String keyName = GameSettings.getKeyDisplayString(this.keyCode);
-        final KeyModifier modifier = this.controlling$getKeyModifier();
-        if (modifier == KeyModifier.NONE || this.keyCode == Keyboard.KEY_NONE) {
-            return keyName;
+        final String mainName = controlling$keyName(this.keyCode);
+        if (this.controlling$comboKeys.isEmpty()) {
+            return mainName;
         }
-        return modifier.getDisplayName() + " + " + keyName;
+        final StringBuilder sb = new StringBuilder();
+        // modifiers first for readability, then other combo keys, then the main key
+        controlling$appendKeys(sb, true);
+        controlling$appendKeys(sb, false);
+        if (this.keyCode != Keyboard.KEY_NONE) {
+            if (sb.length() > 0) {
+                sb.append(" + ");
+            }
+            sb.append(mainName);
+        }
+        return sb.toString();
+    }
+
+    @Unique
+    private void controlling$appendKeys(StringBuilder sb, boolean modifiersOnly) {
+        for (int i = 0; i < this.controlling$comboKeys.size(); i++) {
+            final int key = this.controlling$comboKeys.get(i);
+            final boolean isModifier = KeyModifier.isKeyCodeModifier(key);
+            if (isModifier != modifiersOnly) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append(" + ");
+            }
+            sb.append(controlling$keyName(key));
+        }
+    }
+
+    // display string for a keycode, honoring the mouse encoding (LMB/RMB/MMB)
+    @Unique
+    private static String controlling$keyName(int keyCode) {
+        if (ControllingApi.isMouseKeyCode(keyCode)) {
+            final int button = keyCode - ControllingApi.MOUSE_KEYCODE_OFFSET;
+            switch (button) {
+                case 0:
+                    return "LMB";
+                case 1:
+                    return "RMB";
+                case 2:
+                    return "MMB";
+                default:
+                    return "MB" + button;
+            }
+        }
+        return GameSettings.getKeyDisplayString(keyCode);
     }
 
     @Override
@@ -271,9 +316,9 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
             return false;
         }
 
-        final KeyModifier otherModifier = other instanceof ComboKeyBinding combo ? combo.controlling$getKeyModifier()
-                : KeyModifier.NONE;
-        if (this.controlling$getKeyModifier() != otherModifier) {
+        final IntList otherCombo = other instanceof ComboKeyBinding combo ? combo.controlling$comboKeysRaw()
+                : new IntArrayList();
+        if (!ComboState.sameKeySet(this.keyCode, this.controlling$comboKeys, other.getKeyCode(), otherCombo)) {
             return false;
         }
 
@@ -295,7 +340,11 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         if (!this.controlling$conflicts(other)) {
             return false;
         }
-        return this.controlling$getKeyModifier() != combo.controlling$getKeyModifier();
+        return !ComboState.sameKeySet(
+                this.keyCode,
+                this.controlling$comboKeys,
+                combo.controlling$mainKeyCode(),
+                combo.controlling$comboKeysRaw());
     }
 
     @Override
