@@ -1,5 +1,8 @@
 package com.blamejared.controlling.api;
 
+import java.util.Collections;
+import java.util.List;
+
 import net.minecraft.client.settings.KeyBinding;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
@@ -191,5 +194,56 @@ public final class ControllingApi {
             return comboKeyBinding.controlling$allowsKeyboard();
         }
         return true;
+    }
+
+    /** @return the extra chord keycodes for this bind, or an empty list when combos are unavailable. */
+    public static List<Integer> getComboKeys(KeyBinding keyBinding) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return comboKeyBinding.controlling$getComboKeys();
+        }
+        return Collections.emptyList();
+    }
+
+    /** @return false when the keybinding does not support combos. */
+    public static boolean setComboKeys(KeyBinding keyBinding, List<Integer> keys) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setComboKeys(keys);
+        KeyBinding.resetKeyBindingArrayAndHash();
+        return true;
+    }
+
+    /** @return false when the keybinding does not support combos. */
+    public static boolean setDefaultComboKeys(KeyBinding keyBinding, List<Integer> keys) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setDefaultComboKeys(keys);
+        return true;
+    }
+
+    /** @return ticks the combo has been held (0 = first tick), or -1 when not held / unsupported. */
+    public static int getComboHeldTicks(KeyBinding keyBinding) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return comboKeyBinding.controlling$getComboHeldTicks();
+        }
+        return -1;
+    }
+
+    /** @return true while the combo is satisfied this tick. */
+    public static boolean isComboPressed(KeyBinding keyBinding) {
+        return getComboHeldTicks(keyBinding) >= 0;
+    }
+
+    /** @return true only on the first tick the combo became satisfied. */
+    public static boolean isComboFirstPressed(KeyBinding keyBinding) {
+        return getComboHeldTicks(keyBinding) == 0;
+    }
+
+    /** @return true on the first press or once it has been held at least minHeldTicks (key-repeat style). */
+    public static boolean isComboPressedOrHeld(KeyBinding keyBinding, int minHeldTicks) {
+        final int held = getComboHeldTicks(keyBinding);
+        return held == 0 || (held >= minHeldTicks && minHeldTicks >= 0);
     }
 }
