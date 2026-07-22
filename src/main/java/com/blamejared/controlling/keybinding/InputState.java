@@ -8,8 +8,8 @@ import org.lwjgl.input.Mouse;
 import com.blamejared.controlling.api.ControllingApi;
 
 /**
- * Reads live key/mouse state per the mouse-keycode convention. Modifier keycodes are treated left/right agnostically so
- * a combo storing LCONTROL is satisfied by either control key, matching the legacy modifier behavior.
+ * Reads live key/mouse state per the mouse-keycode convention. Keys match by exact physical code, so left and right
+ * modifier keys (LSHIFT vs RSHIFT, etc.) are distinct: a combo storing RSHIFT is satisfied only by the right shift.
  */
 public final class InputState {
 
@@ -25,10 +25,6 @@ public final class InputState {
         if (ControllingApi.isMouseKeyCode(keyCode)) {
             final int button = keyCode - ControllingApi.MOUSE_KEYCODE_OFFSET;
             return button >= 0 && button < Mouse.getButtonCount() && Mouse.isButtonDown(button);
-        }
-        final KeyModifier modifier = KeyModifier.fromKeyCode(keyCode);
-        if (modifier != KeyModifier.NONE) {
-            return modifier.isActive(); // either left or right side counts
         }
         return keyCode > 0 && keyCode < Keyboard.getKeyCount() && Keyboard.isKeyDown(keyCode);
     }
