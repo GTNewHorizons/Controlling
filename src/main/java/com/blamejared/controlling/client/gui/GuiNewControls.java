@@ -268,6 +268,7 @@ public class GuiNewControls extends GuiControls {
             this.guiNewKeyBindingList.drawHoveredKeyDescriptionTooltip(mouseX, mouseY);
             this.guiNewKeyBindingList.drawHoveredConflictTooltip(mouseX, mouseY);
             this.guiNewKeyBindingList.drawHoveredIndicatorTooltip(mouseX, mouseY);
+            this.guiNewKeyBindingList.drawHoveredChordTooltip(mouseX, mouseY);
         }
     }
 

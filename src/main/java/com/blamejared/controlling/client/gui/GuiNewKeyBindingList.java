@@ -15,6 +15,7 @@ import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.EnumChatFormatting;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.lwjgl.opengl.GL11;
 
 import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
@@ -26,6 +27,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
+    private static final float MIN_LABEL_SCALE = 0.5F;
     private static final int YELLOW_HIGHLIGHT_COLOR = 0xFFDFD407;
     private static final int DARK_TEXT_HIGHLIGHT_COLOR = 0x404040;
     private static final int CONTEXT_COLOR_IN_GAME = 0xFF55DD55;
@@ -44,6 +46,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private String hoveredKeyDescription;
     private List<String> hoveredConflictLines;
     private String hoveredIndicatorText;
+    private String hoveredChordText;
 
     public GuiNewKeyBindingList(GuiNewControls controls, Minecraft mcIn) {
         super(controls, mcIn);
@@ -87,6 +90,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         this.hoveredKeyDescription = null;
         this.hoveredConflictLines = null;
         this.hoveredIndicatorText = null;
+        this.hoveredChordText = null;
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
@@ -105,6 +109,12 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     public void drawHoveredIndicatorTooltip(int mouseX, int mouseY) {
         if (this.hoveredIndicatorText != null) {
             this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredIndicatorText, mouseX, mouseY);
+        }
+    }
+
+    public void drawHoveredChordTooltip(int mouseX, int mouseY) {
+        if (this.hoveredChordText != null) {
+            this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredChordText, mouseX, mouseY);
         }
     }
 
@@ -272,7 +282,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                     : this.keybinding.getKeyCode() != this.keybinding.getKeyCodeDefault();
             this.btnResetKeyBinding.drawButton(mc, mouseX, mouseY);
 
-            this.btnChangeKeyBinding.displayString = keybinding instanceof ComboKeyBinding comboKeyBinding
+            final String fullChordName = keybinding instanceof ComboKeyBinding comboKeyBinding
                     ? comboKeyBinding.controlling$getDisplayName()
                     : GameSettings.getKeyDisplayString(this.keybinding.getKeyCode());
 
@@ -299,22 +309,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 }
             }
 
-            if (hasConflict && !conflicts.isEmpty() && this.isMouseOverChangeButton(mouseX, mouseY)) {
+            final boolean overChangeButton = this.isMouseOverChangeButton(mouseX, mouseY);
+            if (hasConflict && !conflicts.isEmpty() && overChangeButton) {
                 hoveredConflictLines = this.buildConflictTooltip(conflicts);
-            }
-
-            final String displayText = this.btnChangeKeyBinding.displayString;
-            final String searchString = controlsScreen.getSearchString();
-            final int index = this.btnChangeKeyBinding.displayString.toLowerCase().indexOf(searchString.toLowerCase());
-            final int indexEndHighlight = index + controlsScreen.getSearchString().length();
-            final boolean highlight = shouldHighlightKeyName() && index > -1;
-            String textStart = null;
-            String textMiddle = null;
-            String textEnd = null;
-            if (highlight) {
-                textStart = displayText.substring(0, index);
-                textMiddle = displayText.substring(index, indexEndHighlight);
-                textEnd = displayText.substring(indexEndHighlight);
             }
 
             String prefix = "";
@@ -327,13 +324,54 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 prefix = clr + "[ " + EnumChatFormatting.RESET;
                 suffix = clr + " ]";
             }
-            this.btnChangeKeyBinding.displayString = prefix + this.btnChangeKeyBinding.displayString + suffix;
 
-            if (highlight) {
-                this.drawButtonWithHighlightedText(mouseX, mouseY, prefix, textStart, textMiddle, textEnd, suffix);
-            } else {
-                this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
+            // Fit the chord label to the button: shrink the font first, then clip with an ellipsis as a last resort.
+            final int available = this.btnChangeKeyBinding.width - 6;
+            final int markerWidth = mc.fontRenderer.getStringWidth(prefix + suffix);
+            final int fullWidth = markerWidth + mc.fontRenderer.getStringWidth(fullChordName);
+            String shownName = fullChordName;
+            boolean truncated = false;
+            float scale = 1.0F;
+            if (fullWidth > available) {
+                scale = (float) available / (float) fullWidth;
+                if (scale < MIN_LABEL_SCALE) {
+                    scale = MIN_LABEL_SCALE;
+                    final int budget = (int) (available / MIN_LABEL_SCALE) - markerWidth
+                            - mc.fontRenderer.getStringWidth("...");
+                    shownName = mc.fontRenderer.trimStringToWidth(fullChordName, Math.max(0, budget)) + "...";
+                    truncated = true;
+                }
             }
+            // Show the full chord on hover only when it still had to be clipped (conflict tooltip already lists names).
+            if (truncated && overChangeButton && !hasConflict) {
+                hoveredChordText = fullChordName;
+            }
+
+            final String searchString = controlsScreen.getSearchString();
+            final int index = shownName.toLowerCase().indexOf(searchString.toLowerCase());
+            final int indexEndHighlight = index + searchString.length();
+            final boolean highlight = shouldHighlightKeyName() && index > -1;
+            String textStart = null;
+            String textMiddle = null;
+            String textEnd = null;
+            if (highlight) {
+                textStart = shownName.substring(0, index);
+                textMiddle = shownName.substring(index, indexEndHighlight);
+                textEnd = shownName.substring(indexEndHighlight);
+            }
+
+            this.btnChangeKeyBinding.displayString = prefix + shownName + suffix;
+            this.drawScaledButtonLabel(
+                    mouseX,
+                    mouseY,
+                    scale,
+                    prefix,
+                    shownName,
+                    suffix,
+                    highlight,
+                    textStart,
+                    textMiddle,
+                    textEnd);
 
         }
 
@@ -354,27 +392,43 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             Gui.drawRect(left + 2, top + 6, left + 8, top + 7, color);
         }
 
-        private void drawButtonWithHighlightedText(int mouseX, int mouseY, String prefix, String textStart,
-                String textMiddle, String textEnd, String suffix) {
-            if (prefix.contains(EnumChatFormatting.UNDERLINE.toString())) {
-                textMiddle = EnumChatFormatting.UNDERLINE + textMiddle;
-                textEnd = EnumChatFormatting.UNDERLINE + textEnd;
+        // Draws the button background, then the label centered and scaled down (scale < 1) so long chords fit.
+        private void drawScaledButtonLabel(int mouseX, int mouseY, float scale, String prefix, String shownName,
+                String suffix, boolean highlight, String textStart, String textMiddle, String textEnd) {
+            final GuiButton btn = this.btnChangeKeyBinding;
+            final String saved = btn.displayString;
+            btn.displayString = "";
+            btn.drawButton(mc, mouseX, mouseY);
+            btn.displayString = saved;
+
+            final int fontHeight = mc.fontRenderer.FONT_HEIGHT;
+            final int totalWidth = mc.fontRenderer.getStringWidth(prefix + shownName + suffix);
+            final int left = Math.round(-totalWidth / 2.0F);
+            final int top = -fontHeight / 2;
+
+            GL11.glPushMatrix();
+            GL11.glTranslatef(btn.xPosition + btn.width / 2.0F, btn.yPosition + btn.height / 2.0F, 0.0F);
+            GL11.glScalef(scale, scale, 1.0F);
+
+            if (highlight) {
+                String middle = textMiddle;
+                String end = textEnd;
+                if (prefix.contains(EnumChatFormatting.UNDERLINE.toString())) {
+                    middle = EnumChatFormatting.UNDERLINE + middle;
+                    end = EnumChatFormatting.UNDERLINE + end;
+                }
+                final String drawnStart = prefix + textStart;
+                final int rectLeft = left + mc.fontRenderer.getStringWidth(drawnStart);
+                final int rectRight = rectLeft + mc.fontRenderer.getStringWidth(middle);
+                Gui.drawRect(rectLeft, top, rectRight, top + fontHeight, YELLOW_HIGHLIGHT_COLOR);
+                mc.fontRenderer.drawStringWithShadow(drawnStart, left, top, 0xFFFFFF);
+                mc.fontRenderer.drawString(middle, rectLeft, top, DARK_TEXT_HIGHLIGHT_COLOR);
+                mc.fontRenderer.drawStringWithShadow(end + suffix, rectRight, top, 0xFFFFFF);
+            } else {
+                final int color = this.isMouseOverChangeButton(mouseX, mouseY) ? 0xFFFFA0 : 0xE0E0E0;
+                mc.fontRenderer.drawStringWithShadow(prefix + shownName + suffix, left, top, color);
             }
-            final String saveStr = this.btnChangeKeyBinding.displayString;
-            this.btnChangeKeyBinding.displayString = "";
-            this.btnChangeKeyBinding.drawButton(mc, mouseX, mouseY);
-            this.btnChangeKeyBinding.displayString = saveStr;
-            int xString = this.btnChangeKeyBinding.xPosition + this.btnChangeKeyBinding.width / 2
-                    - mc.fontRenderer.getStringWidth(this.btnChangeKeyBinding.displayString) / 2;
-            final int yString = this.btnChangeKeyBinding.yPosition + (this.btnChangeKeyBinding.height - 8) / 2;
-            final String drawnTextStart = prefix + textStart;
-            final int rectLeft = xString + mc.fontRenderer.getStringWidth(drawnTextStart);
-            final int rectRight = rectLeft + mc.fontRenderer.getStringWidth(textMiddle);
-            final int rectBottom = yString + mc.fontRenderer.FONT_HEIGHT;
-            Gui.drawRect(rectLeft, yString, rectRight, rectBottom, YELLOW_HIGHLIGHT_COLOR);
-            mc.fontRenderer.drawStringWithShadow(drawnTextStart, xString, yString, 0xFFFFFF);
-            mc.fontRenderer.drawString(textMiddle, rectLeft, yString, DARK_TEXT_HIGHLIGHT_COLOR);
-            mc.fontRenderer.drawStringWithShadow(textEnd + suffix, rectRight, yString, 0xFFFFFF);
+            GL11.glPopMatrix();
         }
 
         private boolean isMouseOverChangeButton(int mouseX, int mouseY) {

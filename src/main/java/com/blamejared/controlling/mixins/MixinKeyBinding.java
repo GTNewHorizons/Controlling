@@ -279,7 +279,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         controlling$appendKeys(sb, false);
         if (this.keyCode != Keyboard.KEY_NONE) {
             if (sb.length() > 0) {
-                sb.append(" + ");
+                sb.append('+');
             }
             sb.append(mainName);
         }
@@ -298,13 +298,13 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
                 continue;
             }
             if (sb.length() > 0) {
-                sb.append(" + ");
+                sb.append('+');
             }
             sb.append(controlling$keyName(key));
         }
     }
 
-    // display string for a keycode, honoring the mouse encoding (LMB/RMB/MMB)
+    // display string for a keycode: mouse encoding (LMB/RMB/MMB) and compact side-aware modifier names
     @Unique
     private static String controlling$keyName(int keyCode) {
         if (ControllingApi.isMouseKeyCode(keyCode)) {
@@ -320,7 +320,22 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
                     return "MB" + button;
             }
         }
-        return GameSettings.getKeyDisplayString(keyCode);
+        switch (keyCode) {
+            case Keyboard.KEY_LCONTROL:
+                return "LCtrl";
+            case Keyboard.KEY_RCONTROL:
+                return "RCtrl";
+            case Keyboard.KEY_LSHIFT:
+                return "LShift";
+            case Keyboard.KEY_RSHIFT:
+                return "RShift";
+            case Keyboard.KEY_LMENU:
+                return "LAlt";
+            case Keyboard.KEY_RMENU:
+                return "RAlt";
+            default:
+                return GameSettings.getKeyDisplayString(keyCode);
+        }
     }
 
     @Override
