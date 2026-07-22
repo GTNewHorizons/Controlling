@@ -22,6 +22,7 @@ import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.ComboState;
 import com.blamejared.controlling.keybinding.GuiKeyDispatch;
+import com.blamejared.controlling.keybinding.InputState;
 import com.blamejared.controlling.keybinding.KeyModifier;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 
@@ -377,14 +378,15 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Override
     public boolean controlling$isModifierActive() {
-        final KeyModifier modifier = this.controlling$getKeyModifier();
-        if (modifier == KeyModifier.NONE) {
+        // No combo keys: keep vanilla behavior, but if the main key is itself a modifier gate on it being held.
+        if (this.controlling$comboKeys.isEmpty()) {
             if (KeyModifier.isKeyCodeModifier(this.keyCode)) {
                 return KeyModifier.fromKeyCode(this.keyCode).isActive();
             }
             return true;
         }
-        return modifier.isActive();
+        // Every combo key must be held (any keycode, including non-modifiers and mouse buttons).
+        return controlling$allComboKeysDown(this.controlling$comboKeys);
     }
 
     @Unique
@@ -392,30 +394,52 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         if (!(keyBinding instanceof ComboKeyBinding combo)) {
             return true;
         }
-        if (combo.controlling$getKeyModifier() == KeyModifier.NONE && keyBinding.getKeyCode() == inputKeyCode
+        // A bare modifier main key with no combo keys fires on that key press (existing behavior).
+        if (combo.controlling$comboKeysRaw().isEmpty() && keyBinding.getKeyCode() == inputKeyCode
                 && KeyModifier.isKeyCodeModifier(inputKeyCode)) {
             return true;
         }
-        if (combo.controlling$getKeyModifier() == KeyModifier.NONE
-                && controlling$hasActiveModifiedSiblingBinding(keyBinding, inputKeyCode)) {
+        // All combo keys must be held.
+        if (!combo.controlling$isModifierActive()) {
             return false;
         }
-        return combo.controlling$isModifierActive();
+        // Most-specific-wins: a satisfied strict-superset sibling on the same key suppresses this bind.
+        if (controlling$hasActiveSupersetSibling(keyBinding, inputKeyCode)) {
+            return false;
+        }
+        return true;
     }
 
     @Unique
-    private static boolean controlling$hasActiveModifiedSiblingBinding(KeyBinding keyBinding, int inputKeyCode) {
+    private static boolean controlling$hasActiveSupersetSibling(KeyBinding keyBinding, int inputKeyCode) {
+        if (!(keyBinding instanceof ComboKeyBinding self)) {
+            return false;
+        }
         for (int i = 0; i < keybindArray.size(); i++) {
             KeyBinding otherBinding = keybindArray.get(i);
             if (otherBinding == keyBinding || otherBinding.getKeyCode() != inputKeyCode) {
                 continue;
             }
-            if (otherBinding instanceof ComboKeyBinding comboKeyBinding
-                    && comboKeyBinding.controlling$getKeyModifier() != KeyModifier.NONE
-                    && comboKeyBinding.controlling$getKeyModifier().isActive()) {
+            if (otherBinding instanceof ComboKeyBinding otherCombo
+                    && ComboState.isStrictSuperset(
+                            otherBinding.getKeyCode(),
+                            otherCombo.controlling$comboKeysRaw(),
+                            self.controlling$mainKeyCode(),
+                            self.controlling$comboKeysRaw())
+                    && controlling$allComboKeysDown(otherCombo.controlling$comboKeysRaw())) {
                 return true;
             }
         }
         return false;
+    }
+
+    @Unique
+    private static boolean controlling$allComboKeysDown(IntList comboKeys) {
+        for (int i = 0; i < comboKeys.size(); i++) {
+            if (!InputState.isDown(comboKeys.getInt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }
