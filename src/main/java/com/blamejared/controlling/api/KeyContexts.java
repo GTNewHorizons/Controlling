@@ -1,6 +1,7 @@
 package com.blamejared.controlling.api;
 
 import java.util.Locale;
+import net.minecraft.client.Minecraft;
 
 /** Built-in {@link KeyContext} values. */
 public enum KeyContexts implements KeyContext {
@@ -26,6 +27,19 @@ public enum KeyContexts implements KeyContext {
                 return other == IN_GAME;
             case GUI:
                 return other == GUI;
+            default:
+                return true;
+        }
+    }
+
+    @Override
+    public boolean isActive() {
+        switch (this) {
+            case IN_GAME:
+                return Minecraft.getMinecraft().currentScreen == null;
+            case GUI:
+                return Minecraft.getMinecraft().currentScreen != null;
+            case UNIVERSAL:
             default:
                 return true;
         }
