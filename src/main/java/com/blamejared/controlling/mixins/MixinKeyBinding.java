@@ -1,5 +1,6 @@
 package com.blamejared.controlling.mixins;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.settings.GameSettings;
@@ -22,6 +23,9 @@ import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 import com.blamejared.controlling.keybinding.KeyModifier;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+
 @Mixin(KeyBinding.class)
 public abstract class MixinKeyBinding implements ComboKeyBinding {
 
@@ -40,9 +44,9 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     private int pressTime;
 
     @Unique
-    private KeyModifier controlling$keyModifier = KeyModifier.NONE;
+    private final IntArrayList controlling$comboKeys = new IntArrayList();
     @Unique
-    private KeyModifier controlling$defaultKeyModifier = KeyModifier.NONE;
+    private final IntArrayList controlling$defaultComboKeys = new IntArrayList();
     @Unique
     private KeyContext controlling$keyContext = KeyContexts.UNIVERSAL;
     @Unique
@@ -54,8 +58,8 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void controlling$onInit(String description, int keyCode, String category, CallbackInfo ci) {
-        this.controlling$keyModifier = KeyModifier.NONE;
-        this.controlling$defaultKeyModifier = KeyModifier.NONE;
+        this.controlling$comboKeys.clear();
+        this.controlling$defaultComboKeys.clear();
     }
 
     @Inject(method = "setKeyBindState", at = @At("HEAD"), cancellable = true)
@@ -125,22 +129,81 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Override
     public KeyModifier controlling$getKeyModifier() {
-        return this.controlling$keyModifier;
+        return controlling$deriveModifier(this.controlling$comboKeys);
     }
 
     @Override
     public KeyModifier controlling$getDefaultKeyModifier() {
-        return this.controlling$defaultKeyModifier;
+        return controlling$deriveModifier(this.controlling$defaultComboKeys);
     }
 
     @Override
     public void controlling$setKeyModifier(KeyModifier keyModifier) {
-        this.controlling$keyModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+        controlling$applyModifier(this.controlling$comboKeys, keyModifier);
     }
 
     @Override
     public void controlling$setDefaultKeyModifier(KeyModifier keyModifier) {
-        this.controlling$defaultKeyModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+        controlling$applyModifier(this.controlling$defaultComboKeys, keyModifier);
+    }
+
+    // A list of exactly one modifier keycode reads back as that modifier; anything else is NONE.
+    @Unique
+    private static KeyModifier controlling$deriveModifier(IntArrayList comboKeys) {
+        if (comboKeys.size() != 1) {
+            return KeyModifier.NONE;
+        }
+        return KeyModifier.fromKeyCode(comboKeys.getInt(0));
+    }
+
+    @Unique
+    private static void controlling$applyModifier(IntArrayList comboKeys, KeyModifier keyModifier) {
+        comboKeys.clear();
+        if (keyModifier != null && keyModifier != KeyModifier.NONE) {
+            comboKeys.add(keyModifier.getLeftKeyCode());
+        }
+    }
+
+    @Override
+    public List<Integer> controlling$getComboKeys() {
+        final List<Integer> out = new ArrayList<>(this.controlling$comboKeys.size());
+        for (int i = 0; i < this.controlling$comboKeys.size(); i++) {
+            out.add(this.controlling$comboKeys.getInt(i));
+        }
+        return out;
+    }
+
+    @Override
+    public void controlling$setComboKeys(List<Integer> keys) {
+        controlling$copyInto(this.controlling$comboKeys, keys);
+    }
+
+    @Override
+    public void controlling$setDefaultComboKeys(List<Integer> keys) {
+        controlling$copyInto(this.controlling$defaultComboKeys, keys);
+    }
+
+    @Override
+    public IntList controlling$comboKeysRaw() {
+        return this.controlling$comboKeys;
+    }
+
+    @Override
+    public int controlling$mainKeyCode() {
+        return this.keyCode;
+    }
+
+    @Unique
+    private static void controlling$copyInto(IntArrayList target, List<Integer> keys) {
+        target.clear();
+        if (keys == null) {
+            return;
+        }
+        for (Integer key : keys) {
+            if (key != null) {
+                target.add(key);
+            }
+        }
     }
 
     @Override
@@ -192,10 +255,11 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Override
     public String controlling$getDisplayName() {
         final String keyName = GameSettings.getKeyDisplayString(this.keyCode);
-        if (this.controlling$keyModifier == KeyModifier.NONE || this.keyCode == Keyboard.KEY_NONE) {
+        final KeyModifier modifier = this.controlling$getKeyModifier();
+        if (modifier == KeyModifier.NONE || this.keyCode == Keyboard.KEY_NONE) {
             return keyName;
         }
-        return this.controlling$keyModifier.getDisplayName() + " + " + keyName;
+        return modifier.getDisplayName() + " + " + keyName;
     }
 
     @Override
@@ -209,7 +273,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
         final KeyModifier otherModifier = other instanceof ComboKeyBinding combo ? combo.controlling$getKeyModifier()
                 : KeyModifier.NONE;
-        if (this.controlling$keyModifier != otherModifier) {
+        if (this.controlling$getKeyModifier() != otherModifier) {
             return false;
         }
 
@@ -231,30 +295,32 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         if (!this.controlling$conflicts(other)) {
             return false;
         }
-        return this.controlling$keyModifier != combo.controlling$getKeyModifier();
+        return this.controlling$getKeyModifier() != combo.controlling$getKeyModifier();
     }
 
     @Override
     public boolean controlling$isSetToDefaultValue() {
         return this.keyCode == this.keyCodeDefault
-                && this.controlling$keyModifier == this.controlling$defaultKeyModifier;
+                && this.controlling$comboKeys.equals(this.controlling$defaultComboKeys);
     }
 
     @Override
     public void controlling$setToDefault() {
         this.keyCode = this.keyCodeDefault;
-        this.controlling$keyModifier = this.controlling$defaultKeyModifier;
+        this.controlling$comboKeys.clear();
+        this.controlling$comboKeys.addAll(this.controlling$defaultComboKeys);
     }
 
     @Override
     public boolean controlling$isModifierActive() {
-        if (this.controlling$keyModifier == KeyModifier.NONE) {
+        final KeyModifier modifier = this.controlling$getKeyModifier();
+        if (modifier == KeyModifier.NONE) {
             if (KeyModifier.isKeyCodeModifier(this.keyCode)) {
                 return KeyModifier.fromKeyCode(this.keyCode).isActive();
             }
             return true;
         }
-        return this.controlling$keyModifier.isActive();
+        return modifier.isActive();
     }
 
     @Unique

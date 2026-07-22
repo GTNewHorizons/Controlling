@@ -1,6 +1,10 @@
 package com.blamejared.controlling.keybinding;
 
+import java.util.List;
+
 import net.minecraft.client.settings.KeyBinding;
+
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import com.blamejared.controlling.api.KeyContext;
 
@@ -13,6 +17,18 @@ public interface ComboKeyBinding {
     void controlling$setKeyModifier(KeyModifier keyModifier);
 
     void controlling$setDefaultKeyModifier(KeyModifier keyModifier);
+
+    List<Integer> controlling$getComboKeys();
+
+    void controlling$setComboKeys(List<Integer> keys);
+
+    void controlling$setDefaultComboKeys(List<Integer> keys);
+
+    /** Backing primitive list of combo keys; callers must treat it as read-only. */
+    IntList controlling$comboKeysRaw();
+
+    /** The main key code (== KeyBinding.getKeyCode()); convenience for internal polling. */
+    int controlling$mainKeyCode();
 
     void controlling$setKeyModifierAndCode(KeyModifier keyModifier, int keyCode);
 
