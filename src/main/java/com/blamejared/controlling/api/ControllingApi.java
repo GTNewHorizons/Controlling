@@ -12,6 +12,19 @@ public final class ControllingApi {
 
     private ControllingApi() {}
 
+    /** Keycode offset used to encode mouse buttons: mouse button b becomes keycode b + MOUSE_KEYCODE_OFFSET. */
+    public static final int MOUSE_KEYCODE_OFFSET = -100;
+
+    /** @return the keycode encoding for a mouse button index (0 = LMB -> -100). */
+    public static int mouseButtonToKeyCode(int button) {
+        return button + MOUSE_KEYCODE_OFFSET;
+    }
+
+    /** @return true when the keycode encodes a mouse button (LMB/RMB/MMB/...). */
+    public static boolean isMouseKeyCode(int keyCode) {
+        return keyCode <= MOUSE_KEYCODE_OFFSET;
+    }
+
     /**
      * @return true when the keybinding supports combo modifiers.
      */
