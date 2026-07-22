@@ -15,6 +15,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.blamejared.controlling.api.KeyContext;
+import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 import com.blamejared.controlling.keybinding.KeyModifier;
@@ -41,6 +43,14 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     private KeyModifier controlling$keyModifier = KeyModifier.NONE;
     @Unique
     private KeyModifier controlling$defaultKeyModifier = KeyModifier.NONE;
+    @Unique
+    private KeyContext controlling$keyContext = KeyContexts.UNIVERSAL;
+    @Unique
+    private boolean controlling$allowsComboModifier = true;
+    @Unique
+    private boolean controlling$allowsMouse = true;
+    @Unique
+    private boolean controlling$allowsKeyboard = true;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void controlling$onInit(String description, int keyCode, String category, CallbackInfo ci) {
@@ -134,6 +144,46 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     }
 
     @Override
+    public KeyContext controlling$getKeyContext() {
+        return this.controlling$keyContext;
+    }
+
+    @Override
+    public void controlling$setKeyContext(KeyContext keyContext) {
+        this.controlling$keyContext = keyContext == null ? KeyContexts.UNIVERSAL : keyContext;
+    }
+
+    @Override
+    public boolean controlling$allowsComboModifier() {
+        return this.controlling$allowsComboModifier;
+    }
+
+    @Override
+    public void controlling$setAllowsComboModifier(boolean allowsComboModifier) {
+        this.controlling$allowsComboModifier = allowsComboModifier;
+    }
+
+    @Override
+    public boolean controlling$allowsMouse() {
+        return this.controlling$allowsMouse;
+    }
+
+    @Override
+    public void controlling$setAllowsMouse(boolean allowsMouse) {
+        this.controlling$allowsMouse = allowsMouse;
+    }
+
+    @Override
+    public boolean controlling$allowsKeyboard() {
+        return this.controlling$allowsKeyboard;
+    }
+
+    @Override
+    public void controlling$setAllowsKeyboard(boolean allowsKeyboard) {
+        this.controlling$allowsKeyboard = allowsKeyboard;
+    }
+
+    @Override
     public void controlling$setKeyModifierAndCode(KeyModifier keyModifier, int keyCode) {
         this.controlling$setKeyModifier(keyModifier);
         this.keyCode = keyCode;
@@ -159,7 +209,18 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
         final KeyModifier otherModifier = other instanceof ComboKeyBinding combo ? combo.controlling$getKeyModifier()
                 : KeyModifier.NONE;
-        return this.controlling$keyModifier == otherModifier;
+        if (this.controlling$keyModifier != otherModifier) {
+            return false;
+        }
+
+        final KeyContext otherContext = other instanceof ComboKeyBinding comboCtx ? comboCtx.controlling$getKeyContext()
+                : KeyContexts.UNIVERSAL;
+        return controlling$contextsConflict(this.controlling$keyContext, otherContext);
+    }
+
+    @Unique
+    private static boolean controlling$contextsConflict(KeyContext a, KeyContext b) {
+        return a.conflicts(b) || b.conflicts(a);
     }
 
     @Override

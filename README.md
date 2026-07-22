@@ -35,3 +35,20 @@ ControllingApi.setDefaultComboKeyBinding(myKeyBinding, ComboModifier.CONTROL);
 // Set the runtime combo binding to Shift + G.
 ControllingApi.setComboKeyBinding(myKeyBinding, ComboModifier.SHIFT, Keyboard.KEY_G);
 ```
+
+### Keybinding conflict contexts
+
+Controlling assigns each keybinding a conflict *context* so that bindings on the same key only conflict when they truly clash. Built-in contexts are `UNIVERSAL`, `IN_GAME`, and `GUI` (`com.blamejared.controlling.api.KeyContexts`). Vanilla movement/attack/use binds default to `IN_GAME`; most others stay `UNIVERSAL`.
+
+Mods can set a binding's context, register custom contexts, and block combo modifiers on modifier-tied binds:
+
+```java
+import com.blamejared.controlling.api.ControllingApi;
+import com.blamejared.controlling.api.KeyContexts;
+
+// Only conflicts with other GUI-context binds.
+ControllingApi.setKeyConflictContext(myGuiKeyBinding, KeyContexts.GUI);
+
+// Prevent users from attaching Ctrl/Shift/Alt to a modifier-tied bind.
+ControllingApi.setAllowsComboModifier(myModifierTiedBinding, false);
+```
