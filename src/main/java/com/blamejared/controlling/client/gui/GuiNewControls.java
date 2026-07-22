@@ -264,6 +264,8 @@ public class GuiNewControls extends GuiControls {
             this.visualKeyboard.draw(this, this.mc, mouseX, mouseY);
         } else {
             this.guiNewKeyBindingList.drawHoveredKeyDescriptionTooltip(mouseX, mouseY);
+            this.guiNewKeyBindingList.drawHoveredConflictTooltip(mouseX, mouseY);
+            this.guiNewKeyBindingList.drawHoveredIndicatorTooltip(mouseX, mouseY);
         }
     }
 
@@ -338,17 +340,23 @@ public class GuiNewControls extends GuiControls {
             searchTextBox.setFocused(false);
             return;
         } else if (this.buttonId != null) {
-            if (this.buttonId instanceof ComboKeyBinding) {
-                this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());
+            if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
+                // Only bind a mouse button when mouse binds are allowed; otherwise ignore and keep the selection open.
+                if (comboKeyBinding.controlling$allowsMouse()) {
+                    this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());
+                    this.selectedModifier = KeyModifier.NONE;
+                    this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                    KeyBinding.resetKeyBindingArrayAndHash();
+                }
             } else {
                 this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
                 this.buttonId = null;
                 this.showVisualKeyboard = false;
                 this.field_152177_g = Minecraft.getSystemTime();
+                this.selectedModifier = KeyModifier.NONE;
+                this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                KeyBinding.resetKeyBindingArrayAndHash();
             }
-            this.selectedModifier = KeyModifier.NONE;
-            this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-            KeyBinding.resetKeyBindingArrayAndHash();
             searchTextBox.setFocused(false);
         } else if (mb == 0 && !this.guiNewKeyBindingList.func_148179_a(mx, my, mb)) {
             // func_148179_a is mouseClicked but still obfuscated in 1.7.10
@@ -431,15 +439,19 @@ public class GuiNewControls extends GuiControls {
                 this.pendingKeyCode = Keyboard.KEY_NONE;
                 this.selectedModifier = KeyModifier.NONE;
                 this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-            } else if (isModifierKey && comboKeyBinding != null) {
+            } else if (isModifierKey && comboKeyBinding != null && comboKeyBinding.controlling$allowsComboModifier()) {
                 this.selectedModifier = KeyModifier.fromKeyCode(keyCode);
                 this.selectedModifierKeyCode = keyCode;
                 shouldCloseBindSelection = false;
             } else if (inputKeyCode != Keyboard.KEY_NONE) {
                 if (comboKeyBinding != null) {
-                    this.schedulePendingBinding(this.buttonId, inputKeyCode, this.getSelectedModifierForBinding());
-                    this.selectedModifier = KeyModifier.NONE;
-                    this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                    // Keep the bind selection open when keyboard binds are disallowed so a mouse button can still be
+                    // used; only actually bind when the keyboard key is allowed.
+                    if (comboKeyBinding.controlling$allowsKeyboard()) {
+                        this.schedulePendingBinding(this.buttonId, inputKeyCode, this.getSelectedModifierForBinding());
+                        this.selectedModifier = KeyModifier.NONE;
+                        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                    }
                     shouldCloseBindSelection = false;
                 } else {
                     this.options.setOptionKeyBinding(this.buttonId, inputKeyCode);
@@ -488,6 +500,9 @@ public class GuiNewControls extends GuiControls {
         if (this.buttonId == null) {
             return;
         }
+        if (this.buttonId instanceof ComboKeyBinding cb && !cb.controlling$allowsKeyboard()) {
+            return; // keyboard binds disallowed for this binding
+        }
 
         if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
             comboKeyBinding.controlling$setKeyModifierAndCode(this.getVisualKeyboardModifier(), keyCode);
@@ -530,6 +545,10 @@ public class GuiNewControls extends GuiControls {
     private KeyModifier getSelectedModifierForBinding() {
         if (this.showVisualKeyboard) {
             return this.getVisualKeyboardModifier();
+        }
+        if (this.buttonId instanceof ComboKeyBinding comboKeyBinding
+                && !comboKeyBinding.controlling$allowsComboModifier()) {
+            return KeyModifier.NONE;
         }
         return this.selectedModifier == KeyModifier.NONE ? KeyModifier.getActiveModifier() : this.selectedModifier;
     }
@@ -589,6 +608,10 @@ public class GuiNewControls extends GuiControls {
     }
 
     KeyModifier getVisualKeyboardModifier() {
+        if (this.buttonId instanceof ComboKeyBinding comboKeyBinding
+                && !comboKeyBinding.controlling$allowsComboModifier()) {
+            return KeyModifier.NONE;
+        }
         KeyModifier activeModifier = KeyModifier.getActiveModifier();
         return activeModifier == KeyModifier.NONE ? this.visualKeyboardModifier : activeModifier;
     }
@@ -603,6 +626,10 @@ public class GuiNewControls extends GuiControls {
 
     void drawKeyDescriptionTooltip(String text, int mouseX, int mouseY) {
         this.func_146283_a(java.util.Collections.singletonList(text), mouseX, mouseY);
+    }
+
+    void drawConflictTooltip(java.util.List<String> lines, int mouseX, int mouseY) {
+        this.func_146283_a(lines, mouseX, mouseY);
     }
 
     void showKeyBinding(KeyBinding keyBinding) {

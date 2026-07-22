@@ -16,6 +16,8 @@ import net.minecraft.util.EnumChatFormatting;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import com.blamejared.controlling.api.KeyContext;
+import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 
 import cpw.mods.fml.relauncher.Side;
@@ -26,6 +28,13 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
     private static final int YELLOW_HIGHLIGHT_COLOR = 0xFFDFD407;
     private static final int DARK_TEXT_HIGHLIGHT_COLOR = 0x404040;
+    private static final int CONTEXT_COLOR_IN_GAME = 0xFF55DD55;
+    private static final int CONTEXT_COLOR_GUI = 0xFF55AAFF;
+    private static final int CONTEXT_COLOR_CUSTOM = 0xFFBB55FF;
+    private static final int LOCK_COLOR = 0xFFD0D0D0;
+    private static final int GLYPH_COLOR = 0xFFD0D0D0;
+    private static final int GLYPH_DARK = 0xFF202020;
+    private static final int SLASH_COLOR = 0xFFE04040;
 
     private final GuiNewControls controlsScreen;
     private final Minecraft mc;
@@ -33,6 +42,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private final List<IGuiListEntry> allEntries = new ArrayList<>();
     private int maxListLabelWidth;
     private String hoveredKeyDescription;
+    private List<String> hoveredConflictLines;
+    private String hoveredIndicatorText;
 
     public GuiNewKeyBindingList(GuiNewControls controls, Minecraft mcIn) {
         super(controls, mcIn);
@@ -74,6 +85,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.hoveredKeyDescription = null;
+        this.hoveredConflictLines = null;
+        this.hoveredIndicatorText = null;
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
@@ -83,6 +96,35 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
     }
 
+    public void drawHoveredConflictTooltip(int mouseX, int mouseY) {
+        if (this.hoveredConflictLines != null && !this.hoveredConflictLines.isEmpty()) {
+            this.controlsScreen.drawConflictTooltip(this.hoveredConflictLines, mouseX, mouseY);
+        }
+    }
+
+    public void drawHoveredIndicatorTooltip(int mouseX, int mouseY) {
+        if (this.hoveredIndicatorText != null) {
+            this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredIndicatorText, mouseX, mouseY);
+        }
+    }
+
+    private static int contextColor(KeyContext context) {
+        if (context == KeyContexts.IN_GAME) {
+            return CONTEXT_COLOR_IN_GAME;
+        }
+        if (context == KeyContexts.GUI) {
+            return CONTEXT_COLOR_GUI;
+        }
+        return CONTEXT_COLOR_CUSTOM;
+    }
+
+    private static String contextDisplayName(KeyContext context) {
+        if (context instanceof KeyContexts) {
+            return I18n.format("options.context." + context.id());
+        }
+        return context.id();
+    }
+
     @Override
     public IGuiListEntry getListEntry(int index) {
         return this.displayedEntries.get(index);
@@ -90,7 +132,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
     @Override
     protected int getScrollBarX() {
-        return super.getScrollBarX() + 15 + 20;
+        return super.getScrollBarX() + 15 + 20 + 14;
     }
 
     @Override
@@ -216,6 +258,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
             this.drawKeyDescription(x, y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2, mouseX, mouseY);
+            this.drawIndicators(x, y, mouseX, mouseY);
 
             this.btnVisualKeyboard.xPosition = x + 204;
             this.btnVisualKeyboard.yPosition = y;
@@ -235,6 +278,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
             boolean hasConflict = false;
             boolean modConflict = true; // less severe form of conflict, like SHIFT conflicting with SHIFT+G
+            final List<KeyBinding> conflicts = new ArrayList<>();
 
             if (this.keybinding.getKeyCode() != 0) {
                 for (KeyBinding key : mc.gameSettings.keyBindings) {
@@ -244,13 +288,19 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                             if (comboKeyBinding.controlling$conflicts(keybinding)) {
                                 hasConflict = true;
                                 modConflict &= comboKeyBinding2.controlling$hasKeyCodeModifierConflict(key);
+                                conflicts.add(key);
                             }
                         } else if (this.keybinding.getKeyCode() == key.getKeyCode()) {
                             hasConflict = true;
+                            conflicts.add(key);
                             break;
                         }
                     }
                 }
+            }
+
+            if (hasConflict && !conflicts.isEmpty() && this.isMouseOverChangeButton(mouseX, mouseY)) {
+                hoveredConflictLines = this.buildConflictTooltip(conflicts);
             }
 
             final String displayText = this.btnChangeKeyBinding.displayString;
@@ -325,6 +375,109 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             mc.fontRenderer.drawStringWithShadow(drawnTextStart, xString, yString, 0xFFFFFF);
             mc.fontRenderer.drawString(textMiddle, rectLeft, yString, DARK_TEXT_HIGHLIGHT_COLOR);
             mc.fontRenderer.drawStringWithShadow(textEnd + suffix, rectRight, yString, 0xFFFFFF);
+        }
+
+        private boolean isMouseOverChangeButton(int mouseX, int mouseY) {
+            final GuiButton btn = this.btnChangeKeyBinding;
+            return mouseX >= btn.xPosition && mouseX < btn.xPosition + btn.width
+                    && mouseY >= btn.yPosition
+                    && mouseY < btn.yPosition + btn.height;
+        }
+
+        private List<String> buildConflictTooltip(List<KeyBinding> conflicts) {
+            final List<String> lines = new ArrayList<>();
+            lines.add(I18n.format("options.conflictsHeader"));
+            final ComboKeyBinding self = this.keybinding instanceof ComboKeyBinding combo ? combo : null;
+            for (KeyBinding conflict : conflicts) {
+                final boolean modifierConflict = self != null && self.controlling$hasKeyCodeModifierConflict(conflict);
+                final EnumChatFormatting color = modifierConflict ? EnumChatFormatting.GOLD : EnumChatFormatting.RED;
+                final String name = I18n.format(conflict.getKeyDescription());
+                final String keyDisplay = conflict instanceof ComboKeyBinding combo ? combo.controlling$getDisplayName()
+                        : GameSettings.getKeyDisplayString(conflict.getKeyCode());
+                lines.add(color + name + EnumChatFormatting.GRAY + "  [" + keyDisplay + "]");
+            }
+            return lines;
+        }
+
+        private void drawIndicators(int x, int y, int mouseX, int mouseY) {
+            final ComboKeyBinding combo = this.keybinding instanceof ComboKeyBinding c ? c : null;
+            final KeyContext context = combo != null ? combo.controlling$getKeyContext() : KeyContexts.UNIVERSAL;
+            final boolean lockedModifier = combo != null && !combo.controlling$allowsComboModifier();
+            final boolean noMouse = combo != null && !combo.controlling$allowsMouse();
+            final boolean noKeyboard = combo != null && !combo.controlling$allowsKeyboard();
+
+            // 2x2 grid in the widened gap: reset ends at x + 274, scroll bar at x + 297.
+            final int colLeft = x + 275;
+            final int colRight = x + 285;
+            final int rowTop = y + 2;
+            final int rowBottom = y + 11;
+
+            if (context != KeyContexts.UNIVERSAL) {
+                this.drawContextDot(colLeft, rowTop, contextColor(context));
+                this.setIndicatorHover(
+                        mouseX,
+                        mouseY,
+                        colLeft,
+                        rowTop,
+                        I18n.format("options.contextLabel", contextDisplayName(context)));
+            }
+            if (lockedModifier) {
+                this.drawLockIcon(colRight + 1, rowTop);
+                this.setIndicatorHover(mouseX, mouseY, colRight, rowTop, I18n.format("options.modifiersLocked"));
+            }
+            if (noMouse) {
+                this.drawMouseGlyph(colLeft, rowBottom);
+                this.setIndicatorHover(mouseX, mouseY, colLeft, rowBottom, I18n.format("options.mouseDisabled"));
+            }
+            if (noKeyboard) {
+                this.drawKeyboardGlyph(colRight, rowBottom);
+                this.setIndicatorHover(mouseX, mouseY, colRight, rowBottom, I18n.format("options.keyboardDisabled"));
+            }
+        }
+
+        private void setIndicatorHover(int mouseX, int mouseY, int left, int top, String text) {
+            if (mouseX >= left && mouseX < left + 9 && mouseY >= top && mouseY < top + 9) {
+                hoveredIndicatorText = text;
+            }
+        }
+
+        private void drawContextDot(int left, int top, int color) {
+            Gui.drawRect(left + 2, top + 2, left + 7, top + 7, color); // 5x5 centered in the cell
+        }
+
+        private void drawLockIcon(int left, int top) {
+            Gui.drawRect(left + 1, top, left + 5, top + 1, LOCK_COLOR); // shackle top
+            Gui.drawRect(left + 1, top, left + 2, top + 3, LOCK_COLOR); // shackle left
+            Gui.drawRect(left + 4, top, left + 5, top + 3, LOCK_COLOR); // shackle right
+            Gui.drawRect(left, top + 3, left + 6, top + 8, LOCK_COLOR); // body
+        }
+
+        private void drawMouseGlyph(int left, int top) {
+            final int l = left + 2;
+            final int t = top + 1;
+            Gui.drawRect(l + 1, t, l + 4, t + 7, GLYPH_COLOR); // body
+            Gui.drawRect(l, t + 1, l + 5, t + 6, GLYPH_COLOR); // rounded sides
+            Gui.drawRect(l + 2, t, l + 3, t + 3, GLYPH_DARK); // button split
+            this.drawSlash(left, top);
+        }
+
+        private void drawKeyboardGlyph(int left, int top) {
+            final int l = left + 1;
+            final int t = top + 2;
+            Gui.drawRect(l, t, l + 7, t + 5, GLYPH_COLOR); // outer
+            Gui.drawRect(l + 1, t + 1, l + 6, t + 4, GLYPH_DARK); // inner
+            Gui.drawRect(l + 1, t + 1, l + 2, t + 2, GLYPH_COLOR); // key
+            Gui.drawRect(l + 3, t + 1, l + 4, t + 2, GLYPH_COLOR); // key
+            Gui.drawRect(l + 5, t + 1, l + 6, t + 2, GLYPH_COLOR); // key
+            Gui.drawRect(l + 2, t + 2, l + 5, t + 3, GLYPH_COLOR); // space bar
+            this.drawSlash(left, top);
+        }
+
+        private void drawSlash(int left, int top) {
+            Gui.drawRect(left, top + 6, left + 2, top + 8, SLASH_COLOR);
+            Gui.drawRect(left + 2, top + 4, left + 4, top + 6, SLASH_COLOR);
+            Gui.drawRect(left + 4, top + 2, left + 6, top + 4, SLASH_COLOR);
+            Gui.drawRect(left + 6, top, left + 8, top + 2, SLASH_COLOR);
         }
 
         private void drawKeyDescription(int x, int y, int mouseX, int mouseY) {

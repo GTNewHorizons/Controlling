@@ -66,13 +66,15 @@ public class GuiVisualKeyboard {
             pageButton.draw(mc, mouseX, mouseY, pageButton.page == this.page);
         }
 
-        mc.fontRenderer.drawStringWithShadow(
-                I18n.format("options.visualKeyboardModifier"),
-                this.panelLeft + 8,
-                this.panelTop + 38,
-                MUTED_TEXT_COLOR);
-        for (ModifierButton modifierButton : this.modifierButtons) {
-            modifierButton.draw(mc, mouseX, mouseY, modifierButton.modifier == screen.getVisualKeyboardModifier());
+        if (this.controlling$allowsModifiers(screen)) {
+            mc.fontRenderer.drawStringWithShadow(
+                    I18n.format("options.visualKeyboardModifier"),
+                    this.panelLeft + 8,
+                    this.panelTop + 38,
+                    MUTED_TEXT_COLOR);
+            for (ModifierButton modifierButton : this.modifierButtons) {
+                modifierButton.draw(mc, mouseX, mouseY, modifierButton.modifier == screen.getVisualKeyboardModifier());
+            }
         }
 
         for (KeyButton key : this.keys) {
@@ -107,10 +109,12 @@ public class GuiVisualKeyboard {
             }
         }
 
-        for (ModifierButton modifierButton : this.modifierButtons) {
-            if (modifierButton.contains(mouseX, mouseY)) {
-                screen.setVisualKeyboardModifier(modifierButton.modifier);
-                return true;
+        if (this.controlling$allowsModifiers(screen)) {
+            for (ModifierButton modifierButton : this.modifierButtons) {
+                if (modifierButton.contains(mouseX, mouseY)) {
+                    screen.setVisualKeyboardModifier(modifierButton.modifier);
+                    return true;
+                }
             }
         }
 
@@ -136,6 +140,11 @@ public class GuiVisualKeyboard {
         return mouseX >= this.panelLeft && mouseX < this.panelRight
                 && mouseY >= this.panelTop
                 && mouseY < this.panelBottom;
+    }
+
+    private boolean controlling$allowsModifiers(GuiNewControls screen) {
+        return !(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)
+                || comboKeyBinding.controlling$allowsComboModifier();
     }
 
     private void layout(GuiNewControls screen) {
@@ -530,7 +539,9 @@ public class GuiVisualKeyboard {
 
         private void draw(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
             KeyModifier modifier = screen.getVisualKeyboardModifier();
-            this.enabled = !modifier.matches(this.keyCode);
+            final boolean keyboardAllowed = !(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)
+                    || comboKeyBinding.controlling$allowsKeyboard();
+            this.enabled = !modifier.matches(this.keyCode) && keyboardAllowed;
 
             int bindings = this.getMatchingBindings(mc, modifier).size();
             int color = KEY_NORMAL_COLOR;
