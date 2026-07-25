@@ -16,6 +16,7 @@ import net.minecraft.util.StatCollector;
 import org.lwjgl.input.Keyboard;
 
 import com.blamejared.controlling.api.ControllingApi;
+import com.blamejared.controlling.config.ControllingConfig;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.ComboState;
 import com.blamejared.controlling.keybinding.KeyNames;
@@ -29,24 +30,11 @@ public class GuiVisualKeyboard {
 
     private static final int PANEL_COLOR = 0xEE101010;
     private static final int PANEL_BORDER_COLOR = 0xFF777777;
-    private static final int KEY_NORMAL_COLOR = 0xFF555555;
-    private static final int KEY_HOVER_COLOR = 0xFF888888;
-    private static final int KEY_BOUND_COLOR = 0xFF1A6B3A;
-    private static final int KEY_CONFLICT_COLOR = 0xFFA34A16;
-    private static final int KEY_SELECTED_COLOR = 0xFFD4A928;
-    private static final int KEY_DISABLED_COLOR = 0xFF262626;
     private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int MUTED_TEXT_COLOR = 0xA0A0A0;
 
     /** LMB, RMB, MMB and two extra buttons; matches what most mice report. */
     private static final int MOUSE_BUTTON_COUNT = 5;
-    private static final int KEY_CHORD_COLOR = 0xFF4076C9;
-    /**
-     * Border for a key barred from this binding's chord. Blocked keys keep their fill: hue is the scarce channel here
-     * and a sixth fill colour could not be told apart from the disabled one, even with normal vision. Border and label
-     * are free because a blocked key can never also be in the chord.
-     */
-    private static final int CHORD_BLOCKED_BORDER_COLOR = 0xFFB0554F;
     /** Vertical gap between the last key row and the legend. */
     private static final int LEGEND_TOP_GAP = 6;
     /** Space below the legend for the hint line, only reserved when a binding is selected. */
@@ -55,11 +43,6 @@ public class GuiVisualKeyboard {
     private static final int CLOSE_BUTTON_SIZE = 18;
     /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
     private static final int GLYPH_TEXT_HEIGHT = 8;
-    private static final int[] LEGEND_COLORS = { KEY_BOUND_COLOR, KEY_CONFLICT_COLOR, KEY_CHORD_COLOR,
-            KEY_SELECTED_COLOR, KEY_DISABLED_COLOR, KEY_NORMAL_COLOR };
-    /** Per-entry swatch border, so the blocked entry shows the border that actually marks a blocked key. */
-    private static final int[] LEGEND_BORDERS = { PANEL_BORDER_COLOR, PANEL_BORDER_COLOR, PANEL_BORDER_COLOR,
-            PANEL_BORDER_COLOR, PANEL_BORDER_COLOR, CHORD_BLOCKED_BORDER_COLOR };
     private static final String[] LEGEND_KEYS = { "options.legendBound", "options.legendConflict",
             "options.legendChord", "options.legendSelected", "options.legendDisabled", "options.legendNoChord" };
     /** Reused buffer for the localized legend labels; drawn every frame the panel is open. */
@@ -67,7 +50,9 @@ public class GuiVisualKeyboard {
     private static final int LEGEND_SWATCH = 7;
     private static final int LEGEND_SWATCH_GAP = 3;
     private static final int LEGEND_ITEM_GAP = 8;
-    private static final int CHORD_BORDER_COLOR = 0xFFD4A928;
+
+    /** Refreshed once per draw so the nested button classes can read it without a config lookup per key. */
+    private static ColorPalette palette = ColorPalette.DEFAULT;
 
     private Page page = Page.MAIN;
     private final List<KeyButton> keys = new ArrayList<>();
@@ -97,6 +82,7 @@ public class GuiVisualKeyboard {
     private int keyHeight;
 
     public void draw(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
+        palette = ControllingConfig.palette;
         this.layout(screen);
 
         Gui.drawRect(this.panelLeft, this.panelTop, this.panelRight, this.panelBottom, PANEL_COLOR);
@@ -161,7 +147,7 @@ public class GuiVisualKeyboard {
         final String name = mc.fontRenderer.trimStringToWidth(
                 StatCollector.translateToLocal(selected.getKeyDescription()),
                 Math.max(0, available));
-        mc.fontRenderer.drawStringWithShadow(name, nameLeft, top, KEY_SELECTED_COLOR);
+        mc.fontRenderer.drawStringWithShadow(name, nameLeft, top, palette.keySelected);
     }
 
     /**
@@ -169,7 +155,7 @@ public class GuiVisualKeyboard {
      * too narrow to hold them all, so the most important ones survive on small screens.
      */
     private void drawLegend(Minecraft mc) {
-        final int[] colors = LEGEND_COLORS;
+        final int[] colors = palette.legendColors;
         final String[] labels = LEGEND_LABELS;
         for (int i = 0; i < LEGEND_KEYS.length; i++) {
             labels[i] = StatCollector.translateToLocal(LEGEND_KEYS[i]);
@@ -185,7 +171,9 @@ public class GuiVisualKeyboard {
         final int top = this.legendTop;
         for (int i = 0; i < shown; i++) {
             Gui.drawRect(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, colors[i]);
-            drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, LEGEND_BORDERS[i]);
+            // the blocked entry shows the border that actually marks a blocked key
+            final int swatchBorder = i == LEGEND_KEYS.length - 1 ? palette.chordBlockedBorder : PANEL_BORDER_COLOR;
+            drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, swatchBorder);
             left += LEGEND_SWATCH + LEGEND_SWATCH_GAP;
             mc.fontRenderer.drawStringWithShadow(labels[i], left, top, MUTED_TEXT_COLOR);
             left += mc.fontRenderer.getStringWidth(labels[i]) + LEGEND_ITEM_GAP;
@@ -724,8 +712,8 @@ public class GuiVisualKeyboard {
         }
 
         protected void draw(Minecraft mc, int mouseX, int mouseY, boolean active) {
-            int color = active ? KEY_SELECTED_COLOR
-                    : this.contains(mouseX, mouseY) ? KEY_HOVER_COLOR : KEY_NORMAL_COLOR;
+            int color = active ? palette.keySelected
+                    : this.contains(mouseX, mouseY) ? palette.keyHover : palette.keyNormal;
             Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, color);
             drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, PANEL_BORDER_COLOR);
             drawCentered(mc, this.label, this.left, this.top, this.width, this.height, TEXT_COLOR);
@@ -771,24 +759,24 @@ public class GuiVisualKeyboard {
             // says "chords disabled" for that case.
             final boolean chordBlocked = allowsChordsFor(screen) && !screen.acceptsChordKey(this.keyCode);
 
-            int color = KEY_NORMAL_COLOR;
+            int color = palette.keyNormal;
             if (inChord) {
-                color = KEY_CHORD_COLOR;
+                color = palette.keyChord;
             } else if (!this.enabled) {
-                color = KEY_DISABLED_COLOR;
+                color = palette.keyDisabled;
             } else if (this.isSelected(screen, chord)) {
-                color = KEY_SELECTED_COLOR;
+                color = palette.keySelected;
             } else if (bindings > 1) {
-                color = KEY_CONFLICT_COLOR;
+                color = palette.keyConflict;
             } else if (bindings == 1) {
-                color = KEY_BOUND_COLOR;
+                color = palette.keyBound;
             } else if (this.contains(mouseX, mouseY)) {
-                color = KEY_HOVER_COLOR;
+                color = palette.keyHover;
             }
 
             Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, color);
-            final int border = inChord ? CHORD_BORDER_COLOR
-                    : chordBlocked ? CHORD_BLOCKED_BORDER_COLOR : PANEL_BORDER_COLOR;
+            final int border = inChord ? palette.keySelected
+                    : chordBlocked ? palette.chordBlockedBorder : PANEL_BORDER_COLOR;
             drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, border);
             drawCentered(
                     mc,
@@ -797,7 +785,7 @@ public class GuiVisualKeyboard {
                     this.top,
                     this.width,
                     this.height,
-                    (this.enabled || inChord) && !chordBlocked ? TEXT_COLOR : MUTED_TEXT_COLOR);
+                    (this.enabled || inChord) && !chordBlocked ? ColorPalette.labelColor(color) : MUTED_TEXT_COLOR);
         }
 
         // Bindings may opt out of mouse or keyboard input; the mouse row and the keys honor the matching flag.

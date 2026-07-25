@@ -16,6 +16,18 @@ Controlling is a client-side quality-of-life mod for Minecraft 1.7.10 that repla
 - Bind keys from a visual keyboard overlay with main, numpad, auxiliary key pages and a mouse-button row. Left-click a key to bind it; right-click keys to build the chord that will be attached, shown live in the header with a `Clear` button. Keys already in the chord are highlighted and cannot double as the main key. With no binding selected, the chord filters which bindings the keys light up for.
 
 
+## Color palettes
+
+The controls list and visual keyboard color-code binding state. `config/controlling.cfg` selects the palette:
+
+| Palette | For |
+|---|---|
+| `DEFAULT` | readable with any one of the three common types of color blindness |
+| `PROTANOPIA` / `DEUTERANOPIA` / `TRITANOPIA` | trades the other types away for more separation in one |
+| `HIGH_CONTRAST` | separates by lightness rather than hue, for greyscale vision or a washed out display |
+
+Each was picked by simulating it under the relevant vision type and maximising the smallest perceptual distance between any two states, so no two collapse into each other.
+
 Incompatible with ModernKeybinding (`mkb`) because combo support is now built in.
 
 ## Credits

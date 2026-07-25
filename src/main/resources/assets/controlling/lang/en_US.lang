@@ -35,3 +35,4 @@ options.legendChord=Chord
 options.legendSelected=Selected
 options.legendDisabled=Disabled
 options.legendNoChord=Disabled In Chord
+config.controlling.palette=Color palette

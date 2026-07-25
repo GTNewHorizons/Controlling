@@ -21,6 +21,7 @@ import org.lwjgl.opengl.GL11;
 import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
+import com.blamejared.controlling.config.ControllingConfig;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyNames;
 
@@ -36,38 +37,49 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private static final float MIN_LABEL_SCALE = 0.5F;
     private static final int YELLOW_HIGHLIGHT_COLOR = 0xFFDFD407;
     private static final int DARK_TEXT_HIGHLIGHT_COLOR = 0x404040;
-    private static final int CONTEXT_COLOR_IN_GAME = 0xFF55DD55;
-    private static final int CONTEXT_COLOR_GUI = 0xFF55AAFF;
-    private static final int CONTEXT_COLOR_CUSTOM = 0xFFBB55FF;
     private static final int CONTEXT_BAR_WIDTH = 2;
 
     /**
-     * Angelica renders &#RRGGBB colour codes, and GTNHLib's font helpers treat them as zero width, so measuring and
-     * trimming stay correct. Without Angelica the code would be drawn literally, so fall back to a vanilla colour.
+     * Angelica renders &#RRGGBB color codes, and GTNHLib's font helpers treat them as zero width, so measuring and
+     * trimming stay correct. Without Angelica the code would be drawn literally, so fall back to a vanilla color.
      */
     private static final boolean RGB_TEXT = Loader.isModLoaded("angelica");
-    /**
-     * Hard conflict marker. With RGB available this is the visual keyboard's conflict fill brightened for text on a
-     * dark background; the fill itself is only 2.9:1 there. Vanilla red is the fallback at 5.5:1.
-     */
-    private static final String MARK_HARD_COLOR = RGB_TEXT ? "&#E0762E" : EnumChatFormatting.RED.toString();
-    /** Soft conflict has no counterpart in the panel, and gold already reads well, so it stays a vanilla colour. */
-    private static final String MARK_SOFT_COLOR = EnumChatFormatting.GOLD.toString();
+    // Row markers are fixed per state, so they are built once rather than concatenated per row per frame. They also
+    // depend on the palette, so refreshMarkers rebuilds them only when it changes; it runs once per frame.
+    private static ColorPalette markerPalette;
+    private static String MARK_SOFT_COLOR;
+    private static String MARK_HARD_COLOR;
+    private static String MARK_SELECTED_PREFIX;
+    private static String MARK_SELECTED_SUFFIX;
+    private static String MARK_SOFT_PREFIX;
+    private static String MARK_SOFT_SUFFIX;
+    private static String MARK_HARD_PREFIX;
+    private static String MARK_HARD_SUFFIX;
+    private static String MARK_SELECTED;
+    private static String MARK_SOFT;
+    private static String MARK_HARD;
 
-    // Row markers are fixed per state, so build them once instead of concatenating per row per frame. The combined
-    // form exists so measuring the markers does not concatenate either.
-    private static final String MARK_SELECTED_PREFIX = EnumChatFormatting.YELLOW + "> "
-            + EnumChatFormatting.RESET
-            + EnumChatFormatting.UNDERLINE;
-    private static final String MARK_SELECTED_SUFFIX = EnumChatFormatting.RESET.toString() + EnumChatFormatting.YELLOW
-            + " <";
-    private static final String MARK_SOFT_PREFIX = MARK_SOFT_COLOR + "[ " + EnumChatFormatting.RESET;
-    private static final String MARK_SOFT_SUFFIX = MARK_SOFT_COLOR + " ]";
-    private static final String MARK_HARD_PREFIX = MARK_HARD_COLOR + "[ " + EnumChatFormatting.RESET;
-    private static final String MARK_HARD_SUFFIX = MARK_HARD_COLOR + " ]";
-    private static final String MARK_SELECTED = MARK_SELECTED_PREFIX + MARK_SELECTED_SUFFIX;
-    private static final String MARK_SOFT = MARK_SOFT_PREFIX + MARK_SOFT_SUFFIX;
-    private static final String MARK_HARD = MARK_HARD_PREFIX + MARK_HARD_SUFFIX;
+    private static void refreshMarkers() {
+        final ColorPalette p = ControllingConfig.palette;
+        if (p == markerPalette) {
+            return;
+        }
+        markerPalette = p;
+        MARK_SOFT_COLOR = RGB_TEXT ? "&#" + p.markSoftRgb : p.markSoftFallback.toString();
+        MARK_HARD_COLOR = RGB_TEXT ? "&#" + p.markHardRgb : p.markHardFallback.toString();
+        MARK_SELECTED_PREFIX = EnumChatFormatting.YELLOW + "> "
+                + EnumChatFormatting.RESET
+                + EnumChatFormatting.UNDERLINE;
+        MARK_SELECTED_SUFFIX = EnumChatFormatting.RESET.toString() + EnumChatFormatting.YELLOW + " <";
+        MARK_SOFT_PREFIX = MARK_SOFT_COLOR + "[ " + EnumChatFormatting.RESET;
+        MARK_SOFT_SUFFIX = MARK_SOFT_COLOR + " ]";
+        MARK_HARD_PREFIX = MARK_HARD_COLOR + "[ " + EnumChatFormatting.RESET;
+        MARK_HARD_SUFFIX = MARK_HARD_COLOR + " ]";
+        MARK_SELECTED = MARK_SELECTED_PREFIX + MARK_SELECTED_SUFFIX;
+        MARK_SOFT = MARK_SOFT_PREFIX + MARK_SOFT_SUFFIX;
+        MARK_HARD = MARK_HARD_PREFIX + MARK_HARD_SUFFIX;
+    }
+
     private static final int JUMP_HIGHLIGHT_COLOR = 0xD4A928;
     private static final int JUMP_HIGHLIGHT_MAX_ALPHA = 0x60;
     /** Pixels trimmed off the bar's top and bottom so it sits inside the key button's bevel. */
@@ -158,6 +170,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         // Lowercased once per frame rather than twice per row.
         this.lowerSearch = this.controlsScreen.getSearchString().toLowerCase();
+        refreshMarkers();
         this.hoveredKeyDescription = null;
         this.hoveredConflictLines = null;
         this.hoveredIndicatorText = null;
@@ -190,13 +203,14 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     }
 
     private static int contextColor(KeyContext context) {
+        final ColorPalette p = ControllingConfig.palette;
         if (context == KeyContexts.IN_GAME) {
-            return CONTEXT_COLOR_IN_GAME;
+            return p.contextInGame;
         }
         if (context == KeyContexts.GUI) {
-            return CONTEXT_COLOR_GUI;
+            return p.contextGui;
         }
-        return CONTEXT_COLOR_CUSTOM;
+        return p.contextCustom;
     }
 
     private static boolean isOver(int mouseX, int mouseY, int left, int top, int width, int height) {
