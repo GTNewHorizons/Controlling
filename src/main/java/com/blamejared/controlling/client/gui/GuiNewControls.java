@@ -358,13 +358,16 @@ public class GuiNewControls extends GuiControls {
             if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
                 // Only bind a mouse button when mouse binds are allowed; otherwise ignore and keep the selection open.
                 if (comboKeyBinding.controlling$allowsMouse()) {
-                    this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());
+                    this.schedulePendingBinding(
+                            this.buttonId,
+                            ControllingApi.mouseButtonToKeyCode(mb),
+                            this.getSelectedModifierForBinding());
                     this.selectedModifier = KeyModifier.NONE;
                     this.selectedModifierKeyCode = Keyboard.KEY_NONE;
                     KeyBinding.resetKeyBindingArrayAndHash();
                 }
             } else {
-                this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
+                this.options.setOptionKeyBinding(this.buttonId, ControllingApi.mouseButtonToKeyCode(mb));
                 this.buttonId = null;
                 this.showVisualKeyboard = false;
                 this.field_152177_g = Minecraft.getSystemTime();
@@ -633,8 +636,9 @@ public class GuiNewControls extends GuiControls {
         if (this.pendingModifier != KeyModifier.NONE && this.pendingModifier.isActive()) {
             return true;
         }
-        if (this.pendingKeyCode <= -100) {
-            final int mouseButton = this.pendingKeyCode + 100;
+        // Mouse codes count up from the offset (-100, -99, ...), so test the encoding, not "<= -100".
+        if (ControllingApi.isMouseKeyCode(this.pendingKeyCode)) {
+            final int mouseButton = this.pendingKeyCode - ControllingApi.MOUSE_KEYCODE_OFFSET;
             return mouseButton >= 0 && mouseButton < Mouse.getButtonCount() && Mouse.isButtonDown(mouseButton);
         }
         return this.pendingKeyCode > Keyboard.KEY_NONE && this.pendingKeyCode < 256
