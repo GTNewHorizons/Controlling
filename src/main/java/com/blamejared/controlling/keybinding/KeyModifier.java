@@ -25,6 +25,11 @@ public enum KeyModifier {
         return displayName;
     }
 
+    /** Canonical (left) keycode for this modifier, or -1 for NONE. */
+    public int getLeftKeyCode() {
+        return leftKeyCode;
+    }
+
     public boolean isActive() {
         return this != NONE && (Keyboard.isKeyDown(leftKeyCode) || Keyboard.isKeyDown(rightKeyCode));
     }
