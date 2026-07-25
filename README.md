@@ -69,6 +69,15 @@ ControllingApi.setComboKeyBinding(myKeyBinding, Keyboard.KEY_G, Arrays.asList(Ke
 
 `setDefaultComboKeys` sets the chord a binding resets to. A binding still sitting on its old default is moved to the new one, so changing a shipped default reaches players who never customised it, while customised bindings are left alone.
 
+### Display strings
+
+For tooltips and help text, ask for the binding's full display string rather than building one from the keycode, so it stays in step with the controls screen.
+
+```java
+// "LCtrl+G" for a chorded binding, "G" for a plain one.
+String keyText = ControllingApi.getDisplayName(myKeyBinding);
+```
+
 ### Held-state API
 
 A client-tick poller tracks how long each combo has been satisfied (it works inside GUIs and never touches vanilla `pressed`/`pressTime`). Consumers query held-state instead of polling raw input. All return `-1`/`false` for non-combo bindings.

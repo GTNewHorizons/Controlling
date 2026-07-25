@@ -3,6 +3,7 @@ package com.blamejared.controlling.api;
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 
 import com.blamejared.controlling.keybinding.ChordPolicy;
@@ -59,6 +60,23 @@ public final class ControllingApi {
         keyBinding.setKeyCode(keyCode);
         KeyBinding.resetKeyBindingArrayAndHash();
         return true;
+    }
+
+    /**
+     * The binding's full display string including its chord, for tooltips and help text: "LCtrl+G" rather than just
+     * "G". This is the same string the controls screen shows, so a tooltip and the keybind list cannot disagree.
+     *
+     * <p>
+     * Safe for any keybinding: one without combo support falls back to the vanilla key name. An unbound binding gives
+     * whatever vanilla names keycode 0, so test {@link KeyBinding#getKeyCode()} first if that matters.
+     *
+     * @return the display string, never null.
+     */
+    public static String getDisplayName(KeyBinding keyBinding) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return comboKeyBinding.controlling$getDisplayName();
+        }
+        return GameSettings.getKeyDisplayString(keyBinding.getKeyCode());
     }
 
     /**
