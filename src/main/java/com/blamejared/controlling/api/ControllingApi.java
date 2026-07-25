@@ -9,10 +9,12 @@ import com.blamejared.controlling.keybinding.ChordPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-
 /**
  * Public API surface for interacting with Controlling combo keybindings.
+ *
+ * <p>
+ * Internal types appear only inside method bodies, never in a signature, so the api artifact compiles against nothing
+ * but Minecraft. The full mod is still required at runtime.
  */
 public final class ControllingApi {
 
@@ -48,7 +50,7 @@ public final class ControllingApi {
      */
     public static ComboModifier getComboModifier(KeyBinding keyBinding) {
         if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return ComboModifier.fromInternal(comboKeyBinding.controlling$getKeyModifier());
+            return fromInternalName(comboKeyBinding.controlling$getKeyModifier().name());
         }
         return ComboModifier.NONE;
     }
@@ -58,7 +60,7 @@ public final class ControllingApi {
      */
     public static ComboModifier getDefaultComboModifier(KeyBinding keyBinding) {
         if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return ComboModifier.fromInternal(comboKeyBinding.controlling$getDefaultKeyModifier());
+            return fromInternalName(comboKeyBinding.controlling$getDefaultKeyModifier().name());
         }
         return ComboModifier.NONE;
     }
@@ -72,7 +74,7 @@ public final class ControllingApi {
         if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
             return false;
         }
-        KeyModifier keyModifier = comboModifier == null ? KeyModifier.NONE : comboModifier.toInternal();
+        KeyModifier keyModifier = KeyModifier.fromSerializedName(internalName(comboModifier));
         if (!comboKeyBinding.controlling$allowsChords()) {
             keyModifier = KeyModifier.NONE;
         }
@@ -92,7 +94,7 @@ public final class ControllingApi {
             return false;
         }
         final boolean wasDefault = comboKeyBinding.controlling$isSetToDefaultValue();
-        final KeyModifier keyModifier = comboModifier == null ? KeyModifier.NONE : comboModifier.toInternal();
+        final KeyModifier keyModifier = KeyModifier.fromSerializedName(internalName(comboModifier));
         comboKeyBinding.controlling$setDefaultKeyModifier(keyModifier);
         if (wasDefault) {
             comboKeyBinding.controlling$setKeyModifier(keyModifier);
@@ -175,7 +177,7 @@ public final class ControllingApi {
         if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
             return false;
         }
-        comboKeyBinding.controlling$setBlockedChordKeys(new IntArrayList(keys));
+        comboKeyBinding.controlling$setBlockedChordKeys(keys);
         return true;
     }
 
@@ -311,5 +313,20 @@ public final class ControllingApi {
     public static boolean isComboPressedOrHeld(KeyBinding keyBinding, int minHeldTicks) {
         final int held = getComboHeldTicks(keyBinding);
         return held == 0 || (held >= minHeldTicks && minHeldTicks >= 0);
+    }
+
+    // Both enums share their constant names, so the two ends map through the name. Passing a String keeps KeyModifier
+    // out of every member descriptor in this package, which is what makes the api artifact resolve on its own.
+    private static String internalName(ComboModifier comboModifier) {
+        return comboModifier == null ? ComboModifier.NONE.name() : comboModifier.name();
+    }
+
+    private static ComboModifier fromInternalName(String name) {
+        return switch (name) {
+            case "CONTROL" -> ComboModifier.CONTROL;
+            case "SHIFT" -> ComboModifier.SHIFT;
+            case "ALT" -> ComboModifier.ALT;
+            default -> ComboModifier.NONE;
+        };
     }
 }

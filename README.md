@@ -38,6 +38,8 @@ The visual keyboard overlay includes code adapted from [Keyboard Wizard](https:/
 
 Controlling exposes a small client-side API for combo keybindings in `com.blamejared.controlling.api.ControllingApi`.
 
+The published `api` artifact holds only `com.blamejared.controlling.api`, and no signature in it names an internal or fastutil type, so it compiles against Minecraft alone. The full mod is still required at runtime.
+
 ### Chords
 
 A binding carries a main key plus an ordered list of extra "chord" keys held alongside it. Any keycode works, including mouse buttons and non-modifiers. A mouse button `b` encodes as keycode `b - 100` (LMB `0` -> `-100`); use the helpers instead of hardcoding the offset.

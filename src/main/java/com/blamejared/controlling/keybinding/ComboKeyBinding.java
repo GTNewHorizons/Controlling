@@ -80,6 +80,9 @@ public interface ComboKeyBinding {
 
     void controlling$setBlockedChordKeys(IntList keys);
 
+    /** Array counterpart, so the api package never has to name a fastutil type. */
+    void controlling$setBlockedChordKeys(int[] keys);
+
     boolean controlling$allowsMouse();
 
     void controlling$setAllowsMouse(boolean allowsMouse);

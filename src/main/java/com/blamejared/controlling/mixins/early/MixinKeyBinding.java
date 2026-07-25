@@ -261,6 +261,14 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     }
 
     @Override
+    public void controlling$setBlockedChordKeys(int[] keys) {
+        this.controlling$blockedChordKeys.clear();
+        if (keys != null) {
+            this.controlling$blockedChordKeys.addAll(IntArrayList.wrap(keys));
+        }
+    }
+
+    @Override
     public void controlling$setAllowsChords(boolean allowsChords) {
         this.controlling$allowsChords = allowsChords;
     }
