@@ -30,6 +30,17 @@ public enum KeyModifier {
         return leftKeyCode;
     }
 
+    /** The physically held side of this modifier, or {@link Keyboard#KEY_NONE} when neither side is down. */
+    public int getHeldKeyCode() {
+        if (this == NONE) {
+            return Keyboard.KEY_NONE;
+        }
+        if (Keyboard.isKeyDown(leftKeyCode)) {
+            return leftKeyCode;
+        }
+        return Keyboard.isKeyDown(rightKeyCode) ? rightKeyCode : Keyboard.KEY_NONE;
+    }
+
     public boolean isActive() {
         return this != NONE && (Keyboard.isKeyDown(leftKeyCode) || Keyboard.isKeyDown(rightKeyCode));
     }

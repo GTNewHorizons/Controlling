@@ -3,7 +3,6 @@ package com.blamejared.controlling.mixins;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 
 import org.lwjgl.input.Keyboard;
@@ -15,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
@@ -23,6 +21,7 @@ import com.blamejared.controlling.keybinding.ComboState;
 import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 import com.blamejared.controlling.keybinding.InputState;
 import com.blamejared.controlling.keybinding.KeyModifier;
+import com.blamejared.controlling.keybinding.KeyNames;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -277,7 +276,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Override
     public String controlling$getDisplayName() {
-        final String mainName = controlling$keyName(this.keyCode);
+        final String mainName = KeyNames.display(this.keyCode);
         if (this.controlling$comboKeys.isEmpty()) {
             return mainName;
         }
@@ -308,41 +307,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
             if (sb.length() > 0) {
                 sb.append('+');
             }
-            sb.append(controlling$keyName(key));
-        }
-    }
-
-    // display string for a keycode: mouse encoding (LMB/RMB/MMB) and compact side-aware modifier names
-    @Unique
-    private static String controlling$keyName(int keyCode) {
-        if (ControllingApi.isMouseKeyCode(keyCode)) {
-            final int button = keyCode - ControllingApi.MOUSE_KEYCODE_OFFSET;
-            switch (button) {
-                case 0:
-                    return "LMB";
-                case 1:
-                    return "RMB";
-                case 2:
-                    return "MMB";
-                default:
-                    return "MB" + button;
-            }
-        }
-        switch (keyCode) {
-            case Keyboard.KEY_LCONTROL:
-                return "LCtrl";
-            case Keyboard.KEY_RCONTROL:
-                return "RCtrl";
-            case Keyboard.KEY_LSHIFT:
-                return "LShift";
-            case Keyboard.KEY_RSHIFT:
-                return "RShift";
-            case Keyboard.KEY_LMENU:
-                return "LAlt";
-            case Keyboard.KEY_RMENU:
-                return "RAlt";
-            default:
-                return GameSettings.getKeyDisplayString(keyCode);
+            sb.append(KeyNames.display(key));
         }
     }
 
