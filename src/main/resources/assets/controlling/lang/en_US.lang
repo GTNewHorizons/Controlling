@@ -33,3 +33,4 @@ options.legendConflict=Conflict
 options.legendChord=Chord
 options.legendSelected=Selected
 options.legendDisabled=Disabled
+options.legendNoChord=No chord

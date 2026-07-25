@@ -41,6 +41,8 @@ public class GuiVisualKeyboard {
     /** LMB, RMB, MMB and two extra buttons; matches what most mice report. */
     private static final int MOUSE_BUTTON_COUNT = 5;
     private static final int KEY_CHORD_COLOR = 0xFF2F5FA8;
+    /** Bindable as a main key, but barred from this binding's chord; distinct from a key that cannot be bound. */
+    private static final int KEY_CHORD_BLOCKED_COLOR = 0xFF4A3A3A;
     /** Vertical gap between the last key row and the legend. */
     private static final int LEGEND_TOP_GAP = 6;
     /** Space below the legend for the hint line, only reserved when a binding is selected. */
@@ -50,9 +52,9 @@ public class GuiVisualKeyboard {
     /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
     private static final int GLYPH_TEXT_HEIGHT = 8;
     private static final int[] LEGEND_COLORS = { KEY_BOUND_COLOR, KEY_CONFLICT_COLOR, KEY_CHORD_COLOR,
-            KEY_SELECTED_COLOR, KEY_DISABLED_COLOR };
+            KEY_SELECTED_COLOR, KEY_DISABLED_COLOR, KEY_CHORD_BLOCKED_COLOR };
     private static final String[] LEGEND_KEYS = { "options.legendBound", "options.legendConflict",
-            "options.legendChord", "options.legendSelected", "options.legendDisabled" };
+            "options.legendChord", "options.legendSelected", "options.legendDisabled", "options.legendNoChord" };
     /** Reused buffer for the localized legend labels; drawn every frame the panel is open. */
     private static final String[] LEGEND_LABELS = new String[LEGEND_KEYS.length];
     private static final int LEGEND_SWATCH = 7;
@@ -193,7 +195,7 @@ public class GuiVisualKeyboard {
 
     // Header line: the chord being built, plus a Clear button once it is non-empty.
     private void drawChordRow(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
-        if (!this.allowsChords(screen)) {
+        if (!allowsChordsFor(screen)) {
             mc.fontRenderer.drawStringWithShadow(
                     StatCollector.translateToLocal("options.chordsLocked"),
                     this.panelLeft + 8,
@@ -255,7 +257,7 @@ public class GuiVisualKeyboard {
         if (mouseButton == 1) {
             // Also works with nothing selected: the chord then filters which bindings the keys light up for.
             final KeyButton key = this.hit(mouseX, mouseY);
-            if (key != null && this.allowsChords(screen) && screen.acceptsChordKey(key.keyCode)) {
+            if (key != null && allowsChordsFor(screen) && screen.acceptsChordKey(key.keyCode)) {
                 screen.toggleVisualKeyboardChordKey(key.keyCode);
             }
             return true;
@@ -305,7 +307,7 @@ public class GuiVisualKeyboard {
                 && mouseY < this.panelBottom;
     }
 
-    private boolean allowsChords(GuiNewControls screen) {
+    private static boolean allowsChordsFor(GuiNewControls screen) {
         return !(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)
                 || comboKeyBinding.controlling$allowsChords();
     }
@@ -757,12 +759,18 @@ public class GuiVisualKeyboard {
             final boolean inChord = screen.isVisualKeyboardChordKey(this.keyCode);
             // A chord member cannot also be the main key, so it is not selectable while toggled on.
             this.enabled = this.allowsInputType(screen) && !inChord;
+            // Only per-key blocks are painted. When the binding bars chords outright every key would qualify, and
+            // grinding the whole keyboard grey would wrongly imply the main key cannot be bound either; the header
+            // says "chords disabled" for that case.
+            final boolean chordBlocked = allowsChordsFor(screen) && !screen.acceptsChordKey(this.keyCode);
 
             int color = KEY_NORMAL_COLOR;
             if (inChord) {
                 color = KEY_CHORD_COLOR;
             } else if (!this.enabled) {
                 color = KEY_DISABLED_COLOR;
+            } else if (chordBlocked) {
+                color = KEY_CHORD_BLOCKED_COLOR;
             } else if (this.isSelected(screen, chord)) {
                 color = KEY_SELECTED_COLOR;
             } else if (bindings > 1) {
