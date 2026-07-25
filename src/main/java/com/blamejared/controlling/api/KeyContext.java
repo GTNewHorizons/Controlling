@@ -14,8 +14,8 @@ public interface KeyContext {
     boolean conflicts(KeyContext other);
 
     /**
-     * Reserved for a future activation-gating phase; NOT consulted yet. Defaulted so adding usage later does not break
-     * implementors.
+     * Whether binds in this context may fire right now. Consulted every client tick by the combo poller, so keep it
+     * cheap. Defaulted to always-active for implementors that only care about conflicts.
      */
     default boolean isActive() {
         return true;

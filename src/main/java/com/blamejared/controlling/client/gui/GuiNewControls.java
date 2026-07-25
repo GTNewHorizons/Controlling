@@ -2,6 +2,7 @@ package com.blamejared.controlling.client.gui;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -655,10 +656,10 @@ public class GuiNewControls extends GuiControls {
     }
 
     void drawKeyDescriptionTooltip(String text, int mouseX, int mouseY) {
-        this.func_146283_a(java.util.Collections.singletonList(text), mouseX, mouseY);
+        this.func_146283_a(Collections.singletonList(text), mouseX, mouseY);
     }
 
-    void drawConflictTooltip(java.util.List<String> lines, int mouseX, int mouseY) {
+    void drawConflictTooltip(List<String> lines, int mouseX, int mouseY) {
         this.func_146283_a(lines, mouseX, mouseY);
     }
 

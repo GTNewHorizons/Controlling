@@ -34,18 +34,18 @@ public final class ComboPoller {
             if (!(kb instanceof ComboKeyBinding combo)) {
                 continue;
             }
-            boolean effective = controlling$rawSatisfied(combo) && !controlling$supersetSatisfied(binds, combo);
+            boolean effective = rawSatisfied(combo) && !supersetSatisfied(binds, combo);
             final int held = combo.controlling$getComboHeldTicks();
             combo.controlling$setComboHeldTicks(effective ? (held < 0 ? 0 : held + 1) : -1);
         }
     }
 
-    private static boolean controlling$rawSatisfied(ComboKeyBinding combo) {
+    private static boolean rawSatisfied(ComboKeyBinding combo) {
         return combo.controlling$getKeyContext().isActive() && ComboState
                 .satisfied(combo.controlling$mainKeyCode(), combo.controlling$comboKeysRaw(), InputState.IS_DOWN);
     }
 
-    private static boolean controlling$supersetSatisfied(KeyBinding[] binds, ComboKeyBinding self) {
+    private static boolean supersetSatisfied(KeyBinding[] binds, ComboKeyBinding self) {
         for (int i = 0; i < binds.length; i++) {
             final KeyBinding other = binds[i];
             if (other == self || !(other instanceof ComboKeyBinding combo)) {
@@ -55,7 +55,7 @@ public final class ComboPoller {
                     combo.controlling$mainKeyCode(),
                     combo.controlling$comboKeysRaw(),
                     self.controlling$mainKeyCode(),
-                    self.controlling$comboKeysRaw()) && controlling$rawSatisfied(combo)) {
+                    self.controlling$comboKeysRaw()) && rawSatisfied(combo)) {
                 return true;
             }
         }

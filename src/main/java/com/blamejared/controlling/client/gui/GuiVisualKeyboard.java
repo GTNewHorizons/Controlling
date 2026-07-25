@@ -66,7 +66,7 @@ public class GuiVisualKeyboard {
             pageButton.draw(mc, mouseX, mouseY, pageButton.page == this.page);
         }
 
-        if (this.controlling$allowsModifiers(screen)) {
+        if (this.allowsModifiers(screen)) {
             mc.fontRenderer.drawStringWithShadow(
                     I18n.format("options.visualKeyboardModifier"),
                     this.panelLeft + 8,
@@ -109,7 +109,7 @@ public class GuiVisualKeyboard {
             }
         }
 
-        if (this.controlling$allowsModifiers(screen)) {
+        if (this.allowsModifiers(screen)) {
             for (ModifierButton modifierButton : this.modifierButtons) {
                 if (modifierButton.contains(mouseX, mouseY)) {
                     screen.setVisualKeyboardModifier(modifierButton.modifier);
@@ -142,7 +142,7 @@ public class GuiVisualKeyboard {
                 && mouseY < this.panelBottom;
     }
 
-    private boolean controlling$allowsModifiers(GuiNewControls screen) {
+    private boolean allowsModifiers(GuiNewControls screen) {
         return !(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)
                 || comboKeyBinding.controlling$allowsComboModifier();
     }
