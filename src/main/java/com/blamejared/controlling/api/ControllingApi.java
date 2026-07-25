@@ -23,9 +23,14 @@ public final class ControllingApi {
         return button + MOUSE_KEYCODE_OFFSET;
     }
 
-    /** @return true when the keycode encodes a mouse button (LMB/RMB/MMB/...). */
+    /**
+     * Mouse buttons encode upward from the offset (LMB -100, RMB -99, MMB -98, ...), so every mouse keycode is negative
+     * and no keyboard keycode is. Matches vanilla, which treats any negative keycode as a mouse button.
+     *
+     * @return true when the keycode encodes a mouse button (LMB/RMB/MMB/...).
+     */
     public static boolean isMouseKeyCode(int keyCode) {
-        return keyCode <= MOUSE_KEYCODE_OFFSET;
+        return keyCode < 0;
     }
 
     /**
