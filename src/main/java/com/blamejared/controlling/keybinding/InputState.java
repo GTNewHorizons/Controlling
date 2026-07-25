@@ -10,6 +10,10 @@ import com.blamejared.controlling.api.ControllingApi;
 /**
  * Reads live key/mouse state per the mouse-keycode convention. Keys match by exact physical code, so left and right
  * modifier keys (LSHIFT vs RSHIFT, etc.) are distinct: a combo storing RSHIFT is satisfied only by the right shift.
+ *
+ * <p>
+ * Codes at or above {@link Keyboard#getKeyCount()} (vanilla's {@code typedChar + 256} encoding) are unpollable and
+ * always read as up, so such binds work through vanilla dispatch but never through the chord API.
  */
 public final class InputState {
 

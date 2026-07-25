@@ -110,12 +110,15 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
     /** Draws a square icon at its native size; the textures carry alpha, so blending stays on for the draw. */
     private static void drawIcon(ResourceLocation texture, int left, int top, int size) {
+        final boolean wasBlending = GL11.glIsEnabled(GL11.GL_BLEND);
         Minecraft.getMinecraft().getTextureManager().bindTexture(texture);
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         Gui.func_146110_a(left, top, 0.0F, 0.0F, size, size, size, size);
-        GL11.glDisable(GL11.GL_BLEND);
+        if (!wasBlending) {
+            GL11.glDisable(GL11.GL_BLEND);
+        }
     }
 
     private final GuiNewControls controlsScreen;

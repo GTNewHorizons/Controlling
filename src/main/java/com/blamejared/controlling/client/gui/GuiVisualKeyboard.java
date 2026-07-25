@@ -14,6 +14,7 @@ import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 
 import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.config.ControllingConfig;
@@ -33,8 +34,9 @@ public class GuiVisualKeyboard {
     private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int MUTED_TEXT_COLOR = 0xA0A0A0;
 
-    /** LMB, RMB, MMB and two extra buttons; matches what most mice report. */
-    private static final int MOUSE_BUTTON_COUNT = 5;
+    /** Clamped so an odd driver count cannot blow the row out; the floor keeps LMB/RMB/MMB always reachable. */
+    private static final int MIN_MOUSE_BUTTONS = 3;
+    private static final int MAX_MOUSE_BUTTONS = 8;
     /** Vertical gap between the last key row and the legend. */
     private static final int LEGEND_TOP_GAP = 6;
     /** Space below the legend for the hint line, only reserved when a binding is selected. */
@@ -412,10 +414,11 @@ public class GuiVisualKeyboard {
     // Mouse buttons live on their own row below the keyboard so mouse chords and mouse main keys are reachable here.
     private void layoutMouseKeys() {
         this.mouseKeys.clear();
+        final int count = Math.max(MIN_MOUSE_BUTTONS, Math.min(Mouse.getButtonCount(), MAX_MOUSE_BUTTONS));
         final int top = this.keyboardTop + this.keyboardHeight() + this.keyGap;
-        final int buttonWidth = Math.max(24, Math.min(48, (this.keyboardWidth - this.keyGap * 4) / 5));
+        final int buttonWidth = Math.max(24, Math.min(48, (this.keyboardWidth - this.keyGap * (count - 1)) / count));
         int left = this.keyboardLeft;
-        for (int button = 0; button < MOUSE_BUTTON_COUNT; button++) {
+        for (int button = 0; button < count; button++) {
             final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
             final KeyButton key = new KeyButton(keyCode, KeyNames.display(keyCode), 1.0D);
             key.setBounds(left, top, buttonWidth, this.keyHeight);
