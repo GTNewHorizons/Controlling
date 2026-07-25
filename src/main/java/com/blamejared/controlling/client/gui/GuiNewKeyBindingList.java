@@ -13,10 +13,12 @@ import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.ResourceLocation;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.lwjgl.opengl.GL11;
 
+import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
@@ -33,10 +35,35 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private static final int CONTEXT_COLOR_IN_GAME = 0xFF55DD55;
     private static final int CONTEXT_COLOR_GUI = 0xFF55AAFF;
     private static final int CONTEXT_COLOR_CUSTOM = 0xFFBB55FF;
-    private static final int LOCK_COLOR = 0xFFD0D0D0;
-    private static final int GLYPH_COLOR = 0xFFD0D0D0;
-    private static final int GLYPH_DARK = 0xFF202020;
-    private static final int SLASH_COLOR = 0xFFE04040;
+    private static final int CONTEXT_BAR_WIDTH = 2;
+    /** Pixels trimmed off the bar's top and bottom so it sits inside the key button's bevel. */
+    private static final int CONTEXT_BAR_INSET = 1;
+    /** Width of the context bar's hover target, which reaches past the bar so 2px is still easy to hit. */
+    private static final int CONTEXT_BAR_HOVER_WIDTH = 6;
+    private static final int GLYPH_SIZE = 9;
+    private static final int KEYBOARD_ICON_SIZE = 14;
+    /** Entry-relative left edge of the indicator row; the reset button ends at x + 274. */
+    private static final int INDICATOR_LEFT = 275;
+    private static final int INDICATOR_GAP = 1;
+
+    private static final ResourceLocation ICON_LOCK = icon("lock_glyph");
+    private static final ResourceLocation ICON_NO_MOUSE = icon("mouse_glyph");
+    private static final ResourceLocation ICON_NO_KEYBOARD = icon("keyboard_glyph");
+    private static final ResourceLocation ICON_KEYBOARD = icon("keyboard");
+
+    private static ResourceLocation icon(String name) {
+        return new ResourceLocation(Controlling.MODID, "textures/gui/icon/" + name + ".png");
+    }
+
+    /** Draws a square icon at its native size; the textures carry alpha, so blending stays on for the draw. */
+    private static void drawIcon(ResourceLocation texture, int left, int top, int size) {
+        Minecraft.getMinecraft().getTextureManager().bindTexture(texture);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        Gui.func_146110_a(left, top, 0.0F, 0.0F, size, size, size, size);
+        GL11.glDisable(GL11.GL_BLEND);
+    }
 
     private final GuiNewControls controlsScreen;
     private final Minecraft mc;
@@ -142,7 +169,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
     @Override
     protected int getScrollBarX() {
-        return super.getScrollBarX() + 15 + 20 + 14;
+        // Last term reserves the indicator row: three glyphs plus gaps, and the usual margin before the bar.
+        return super.getScrollBarX() + 15 + 20 + 24;
     }
 
     @Override
@@ -376,20 +404,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
 
         private void drawKeyboardIcon() {
-            int color = 0xFFFFFFFF;
-            int left = this.btnVisualKeyboard.xPosition + 4;
-            int top = this.btnVisualKeyboard.yPosition + 5;
-            Gui.drawRect(left, top, left + 10, top + 1, color);
-            Gui.drawRect(left, top + 8, left + 10, top + 9, color);
-            Gui.drawRect(left, top, left + 1, top + 9, color);
-            Gui.drawRect(left + 9, top, left + 10, top + 9, color);
-            Gui.drawRect(left + 2, top + 2, left + 3, top + 3, color);
-            Gui.drawRect(left + 4, top + 2, left + 6, top + 3, color);
-            Gui.drawRect(left + 7, top + 2, left + 8, top + 3, color);
-            Gui.drawRect(left + 2, top + 4, left + 3, top + 5, color);
-            Gui.drawRect(left + 4, top + 4, left + 6, top + 5, color);
-            Gui.drawRect(left + 7, top + 4, left + 8, top + 5, color);
-            Gui.drawRect(left + 2, top + 6, left + 8, top + 7, color);
+            final int left = this.btnVisualKeyboard.xPosition + (this.btnVisualKeyboard.width - KEYBOARD_ICON_SIZE) / 2;
+            final int top = this.btnVisualKeyboard.yPosition + (this.btnVisualKeyboard.height - KEYBOARD_ICON_SIZE) / 2;
+            drawIcon(ICON_KEYBOARD, left, top, KEYBOARD_ICON_SIZE);
         }
 
         // Draws the button background, then the label centered and scaled down (scale < 1) so long chords fit.
@@ -460,78 +477,75 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             final boolean noMouse = combo != null && !combo.controlling$allowsMouse();
             final boolean noKeyboard = combo != null && !combo.controlling$allowsKeyboard();
 
-            // 2x2 grid in the widened gap: reset ends at x + 274, scroll bar at x + 297.
-            final int colLeft = x + 275;
-            final int colRight = x + 285;
-            final int rowTop = y + 2;
-            final int rowBottom = y + 11;
+            // Context reads as a colored spine on the key button. The input-type flags sit in one row in the widened
+            // gap after the reset button (reset ends at x + 274, scroll bar at x + 307), each in a fixed slot so a
+            // given indicator is always in the same column.
+            final int slotLock = x + INDICATOR_LEFT;
+            final int slotMouse = slotLock + GLYPH_SIZE + INDICATOR_GAP;
+            final int slotKeyboard = slotMouse + GLYPH_SIZE + INDICATOR_GAP;
+            final int slotTop = y + (this.btnChangeKeyBinding.height - GLYPH_SIZE) / 2;
 
             if (context != KeyContexts.UNIVERSAL) {
-                this.drawContextDot(colLeft, rowTop, contextColor(context));
+                this.drawContextBar(contextColor(context));
+                // Hover keeps the button's full height and reaches left into the gap; the bar itself is only 2px.
                 this.setIndicatorHover(
                         mouseX,
                         mouseY,
-                        colLeft,
-                        rowTop,
+                        this.btnChangeKeyBinding.xPosition - CONTEXT_BAR_HOVER_WIDTH,
+                        this.btnChangeKeyBinding.yPosition,
+                        CONTEXT_BAR_HOVER_WIDTH,
+                        this.btnChangeKeyBinding.height,
                         I18n.format("options.contextLabel", contextDisplayName(context)));
             }
             if (lockedModifier) {
-                this.drawLockIcon(colRight + 1, rowTop);
-                this.setIndicatorHover(mouseX, mouseY, colRight, rowTop, I18n.format("options.modifiersLocked"));
+                this.drawLockIcon(slotLock, slotTop);
+                this.setIndicatorHover(mouseX, mouseY, slotLock, slotTop, I18n.format("options.modifiersLocked"));
             }
             if (noMouse) {
-                this.drawMouseGlyph(colLeft, rowBottom);
-                this.setIndicatorHover(mouseX, mouseY, colLeft, rowBottom, I18n.format("options.mouseDisabled"));
+                this.drawMouseGlyph(slotMouse, slotTop);
+                this.setIndicatorHover(mouseX, mouseY, slotMouse, slotTop, I18n.format("options.mouseDisabled"));
             }
             if (noKeyboard) {
-                this.drawKeyboardGlyph(colRight, rowBottom);
-                this.setIndicatorHover(mouseX, mouseY, colRight, rowBottom, I18n.format("options.keyboardDisabled"));
+                this.drawKeyboardGlyph(slotKeyboard, slotTop);
+                this.setIndicatorHover(mouseX, mouseY, slotKeyboard, slotTop, I18n.format("options.keyboardDisabled"));
             }
         }
 
         private void setIndicatorHover(int mouseX, int mouseY, int left, int top, String text) {
-            if (mouseX >= left && mouseX < left + 9 && mouseY >= top && mouseY < top + 9) {
+            this.setIndicatorHover(mouseX, mouseY, left, top, 9, 9, text);
+        }
+
+        private void setIndicatorHover(int mouseX, int mouseY, int left, int top, int width, int height, String text) {
+            if (mouseX >= left && mouseX < left + width && mouseY >= top && mouseY < top + height) {
                 hoveredIndicatorText = text;
             }
         }
 
-        private void drawContextDot(int left, int top, int color) {
-            Gui.drawRect(left + 2, top + 2, left + 7, top + 7, color); // 5x5 centered in the cell
+        /**
+         * Bar butted against the left edge of the key button. Inset top and bottom because the button's bevel reads as
+         * shadow, so a flat bar spanning the full height looks taller than the button next to it.
+         */
+        private void drawContextBar(int color) {
+            final GuiButton btn = this.btnChangeKeyBinding;
+            final int right = btn.xPosition;
+            Gui.drawRect(
+                    right - CONTEXT_BAR_WIDTH,
+                    btn.yPosition + CONTEXT_BAR_INSET,
+                    right,
+                    btn.yPosition + btn.height - CONTEXT_BAR_INSET,
+                    color);
         }
 
         private void drawLockIcon(int left, int top) {
-            Gui.drawRect(left + 1, top, left + 5, top + 1, LOCK_COLOR); // shackle top
-            Gui.drawRect(left + 1, top, left + 2, top + 3, LOCK_COLOR); // shackle left
-            Gui.drawRect(left + 4, top, left + 5, top + 3, LOCK_COLOR); // shackle right
-            Gui.drawRect(left, top + 3, left + 6, top + 8, LOCK_COLOR); // body
+            drawIcon(ICON_LOCK, left, top, GLYPH_SIZE);
         }
 
         private void drawMouseGlyph(int left, int top) {
-            final int l = left + 2;
-            final int t = top + 1;
-            Gui.drawRect(l + 1, t, l + 4, t + 7, GLYPH_COLOR); // body
-            Gui.drawRect(l, t + 1, l + 5, t + 6, GLYPH_COLOR); // rounded sides
-            Gui.drawRect(l + 2, t, l + 3, t + 3, GLYPH_DARK); // button split
-            this.drawSlash(left, top);
+            drawIcon(ICON_NO_MOUSE, left, top, GLYPH_SIZE);
         }
 
         private void drawKeyboardGlyph(int left, int top) {
-            final int l = left + 1;
-            final int t = top + 2;
-            Gui.drawRect(l, t, l + 7, t + 5, GLYPH_COLOR); // outer
-            Gui.drawRect(l + 1, t + 1, l + 6, t + 4, GLYPH_DARK); // inner
-            Gui.drawRect(l + 1, t + 1, l + 2, t + 2, GLYPH_COLOR); // key
-            Gui.drawRect(l + 3, t + 1, l + 4, t + 2, GLYPH_COLOR); // key
-            Gui.drawRect(l + 5, t + 1, l + 6, t + 2, GLYPH_COLOR); // key
-            Gui.drawRect(l + 2, t + 2, l + 5, t + 3, GLYPH_COLOR); // space bar
-            this.drawSlash(left, top);
-        }
-
-        private void drawSlash(int left, int top) {
-            Gui.drawRect(left, top + 6, left + 2, top + 8, SLASH_COLOR);
-            Gui.drawRect(left + 2, top + 4, left + 4, top + 6, SLASH_COLOR);
-            Gui.drawRect(left + 4, top + 2, left + 6, top + 4, SLASH_COLOR);
-            Gui.drawRect(left + 6, top, left + 8, top + 2, SLASH_COLOR);
+            drawIcon(ICON_NO_KEYBOARD, left, top, GLYPH_SIZE);
         }
 
         private void drawKeyDescription(int x, int y, int mouseX, int mouseY) {
