@@ -7,7 +7,6 @@ import net.minecraft.client.settings.KeyBinding;
 
 import com.blamejared.controlling.keybinding.ChordPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
-import com.blamejared.controlling.keybinding.KeyModifier;
 
 /**
  * Public API surface for interacting with Controlling combo keybindings.
@@ -46,59 +45,19 @@ public final class ControllingApi {
     }
 
     /**
-     * @return the active combo modifier, or {@link ComboModifier#NONE} when combos are unavailable.
-     */
-    public static ComboModifier getComboModifier(KeyBinding keyBinding) {
-        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return fromInternalName(comboKeyBinding.controlling$getKeyModifier().name());
-        }
-        return ComboModifier.NONE;
-    }
-
-    /**
-     * @return the default combo modifier, or {@link ComboModifier#NONE} when combos are unavailable.
-     */
-    public static ComboModifier getDefaultComboModifier(KeyBinding keyBinding) {
-        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return fromInternalName(comboKeyBinding.controlling$getDefaultKeyModifier().name());
-        }
-        return ComboModifier.NONE;
-    }
-
-    /**
-     * Sets the current combo binding value.
+     * Sets the main key and the chord in one call, which the GUI's own reset then picks up. Prefer this over
+     * {@link #setComboKeys(KeyBinding, List)} when the main key changes too, so the binding is never briefly half
+     * applied.
      *
      * @return false when the keybinding does not support combos.
      */
-    public static boolean setComboKeyBinding(KeyBinding keyBinding, ComboModifier comboModifier, int keyCode) {
+    public static boolean setComboKeyBinding(KeyBinding keyBinding, int keyCode, List<Integer> chordKeys) {
         if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
             return false;
         }
-        KeyModifier keyModifier = KeyModifier.fromSerializedName(internalName(comboModifier));
-        if (!comboKeyBinding.controlling$allowsChords()) {
-            keyModifier = KeyModifier.NONE;
-        }
-        comboKeyBinding.controlling$setKeyModifierAndCode(keyModifier, keyCode);
+        comboKeyBinding.controlling$setComboKeys(chordKeys);
+        keyBinding.setKeyCode(keyCode);
         KeyBinding.resetKeyBindingArrayAndHash();
-        return true;
-    }
-
-    /**
-     * Sets the default combo modifier for a keybinding. The default key code still comes from
-     * {@link KeyBinding#getKeyCodeDefault()}.
-     *
-     * @return false when the keybinding does not support combos.
-     */
-    public static boolean setDefaultComboKeyBinding(KeyBinding keyBinding, ComboModifier comboModifier) {
-        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
-            return false;
-        }
-        final boolean wasDefault = comboKeyBinding.controlling$isSetToDefaultValue();
-        final KeyModifier keyModifier = KeyModifier.fromSerializedName(internalName(comboModifier));
-        comboKeyBinding.controlling$setDefaultKeyModifier(keyModifier);
-        if (wasDefault) {
-            comboKeyBinding.controlling$setKeyModifier(keyModifier);
-        }
         return true;
     }
 
@@ -256,12 +215,22 @@ public final class ControllingApi {
         return true;
     }
 
-    /** @return false when the keybinding does not support combos. */
+    /**
+     * Sets the chord this binding resets to. A binding still sitting on its old default is moved to the new one, so
+     * changing a shipped default reaches players who never customised it while leaving customised bindings alone.
+     *
+     * @return false when the keybinding does not support combos.
+     */
     public static boolean setDefaultComboKeys(KeyBinding keyBinding, List<Integer> keys) {
         if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
             return false;
         }
+        final boolean wasDefault = comboKeyBinding.controlling$isSetToDefaultValue();
         comboKeyBinding.controlling$setDefaultComboKeys(keys);
+        if (wasDefault) {
+            comboKeyBinding.controlling$setComboKeys(keys);
+            KeyBinding.resetKeyBindingArrayAndHash();
+        }
         return true;
     }
 
@@ -315,18 +284,4 @@ public final class ControllingApi {
         return held == 0 || (held >= minHeldTicks && minHeldTicks >= 0);
     }
 
-    // Both enums share their constant names, so the two ends map through the name. Passing a String keeps KeyModifier
-    // out of every member descriptor in this package, which is what makes the api artifact resolve on its own.
-    private static String internalName(ComboModifier comboModifier) {
-        return comboModifier == null ? ComboModifier.NONE.name() : comboModifier.name();
-    }
-
-    private static ComboModifier fromInternalName(String name) {
-        return switch (name) {
-            case "CONTROL" -> ComboModifier.CONTROL;
-            case "SHIFT" -> ComboModifier.SHIFT;
-            case "ALT" -> ComboModifier.ALT;
-            default -> ComboModifier.NONE;
-        };
-    }
 }

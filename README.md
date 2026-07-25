@@ -10,10 +10,10 @@ Controlling is a client-side quality-of-life mod for Minecraft 1.7.10 that repla
 - Sort keybindings in vanilla order, A-Z, or Z-A.
 - Reset individual keybindings or confirm-reset all keybindings.
 - Toggle default movement keys between QWERTY and AZERTY presets.
-- Use combo keybindings with modifier keys (`Ctrl`, `Shift`, `Alt`), correctly disambiguated from bare keybindings even while a GUI is open.
+- Use chord keybindings, correctly disambiguated from bare keybindings even while a GUI is open.
 - Build N-key chords: a main key plus any number of extra held keys, including non-modifiers and mouse buttons. Hold the chord and press the final key in the controls screen to capture it.
 - Resolve combos (including mouse-button combos) while a GUI is open, via a central client-tick poller.
-- Bind keys from a visual keyboard overlay with main, numpad, auxiliary key pages and a mouse-button row. Left-click a key to bind it; right-click keys to build the chord that will be attached, shown live in the header with a `Clear` button. Keys already in the chord are highlighted and cannot double as the main key. With no binding selected, the chord filters which bindings the keys light up for.
+- Bind keys from a visual keyboard overlay with main, numpad, auxiliary key pages and a mouse-button row. Left-click a key to bind it; right-click keys to build the chord that will be attached, shown live in the header with a `Clear` button. Keys already in the chord are highlighted and cannot double as the main key. Holding any keys filters the keyboard to bindings using them.
 
 
 ## Color palettes
@@ -58,24 +58,16 @@ List<Integer> chord = ControllingApi.getComboKeys(myKeyBinding);
 // mouseButtonToKeyCode(0) == -100 (LMB); isMouseKeyCode(-100) == true.
 ```
 
-### Single-modifier convenience layer
+### Setting a whole binding
 
-`ComboModifier` predates chords and covers the common Ctrl/Shift/Alt case in one call:
+`setComboKeys` changes only the chord. When the main key changes too, set both at once so the binding is never briefly half applied:
 
 ```java
-import com.blamejared.controlling.api.ComboModifier;
-
-// Set Ctrl as the default modifier for a key whose default key code is Keyboard.KEY_G.
-ControllingApi.setDefaultComboKeyBinding(myKeyBinding, ComboModifier.CONTROL);
-
-// Set the runtime combo binding to Shift + G.
-ControllingApi.setComboKeyBinding(myKeyBinding, ComboModifier.SHIFT, Keyboard.KEY_G);
+// Ctrl + G, main key and chord together.
+ControllingApi.setComboKeyBinding(myKeyBinding, Keyboard.KEY_G, Arrays.asList(Keyboard.KEY_LCONTROL));
 ```
 
-Reading through this layer is lossy, so prefer `getComboKeys` when you need the truth:
-
-- `getComboModifier` returns `NONE` for any chord that is not exactly one modifier key, so `Ctrl+Shift+G` and `Space+G` are both reported as `NONE`.
-- Modifiers are stored as their left keycode, so a chord holding `RShift` reads back as `SHIFT` and writes back as `LShift`.
+`setDefaultComboKeys` sets the chord a binding resets to. A binding still sitting on its old default is moved to the new one, so changing a shipped default reaches players who never customised it, while customised bindings are left alone.
 
 ### Held-state API
 

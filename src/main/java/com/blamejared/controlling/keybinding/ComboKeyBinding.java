@@ -11,14 +11,6 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 
 public interface ComboKeyBinding {
 
-    KeyModifier controlling$getKeyModifier();
-
-    KeyModifier controlling$getDefaultKeyModifier();
-
-    void controlling$setKeyModifier(KeyModifier keyModifier);
-
-    void controlling$setDefaultKeyModifier(KeyModifier keyModifier);
-
     List<Integer> controlling$getComboKeys();
 
     void controlling$setComboKeys(List<Integer> keys);
@@ -51,8 +43,6 @@ public interface ComboKeyBinding {
     int controlling$getComboHeldTicks();
 
     void controlling$setComboHeldTicks(int ticks);
-
-    void controlling$setKeyModifierAndCode(KeyModifier keyModifier, int keyCode);
 
     String controlling$getDisplayName();
 

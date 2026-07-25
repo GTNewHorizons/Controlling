@@ -25,6 +25,7 @@ import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.keybinding.ChordPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.InputState;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
 import cpw.mods.fml.client.config.GuiCheckBox;
@@ -32,6 +33,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 @SideOnly(Side.CLIENT)
 public class GuiNewControls extends GuiControls {
@@ -76,10 +78,8 @@ public class GuiNewControls extends GuiControls {
     private long highlightExpiry;
     /** Scratch buffer for {@link #getVisualKeyboardChord()}; avoids allocating every frame. */
     private final IntArrayList effectiveChord = new IntArrayList();
-    private KeyModifier selectedModifier = KeyModifier.NONE;
     private int selectedModifierKeyCode = Keyboard.KEY_NONE;
     private KeyBinding pendingBinding;
-    private KeyModifier pendingModifier = KeyModifier.NONE;
     private int pendingKeyCode = Keyboard.KEY_NONE;
     private List<Integer> pendingComboKeys = new ArrayList<>();
 
@@ -358,11 +358,7 @@ public class GuiNewControls extends GuiControls {
             if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
                 // Only bind a mouse button when mouse binds are allowed; otherwise ignore and keep the selection open.
                 if (comboKeyBinding.controlling$allowsMouse()) {
-                    this.schedulePendingBinding(
-                            this.buttonId,
-                            ControllingApi.mouseButtonToKeyCode(mb),
-                            this.getSelectedModifierForBinding());
-                    this.selectedModifier = KeyModifier.NONE;
+                    this.schedulePendingBinding(this.buttonId, ControllingApi.mouseButtonToKeyCode(mb));
                     this.selectedModifierKeyCode = Keyboard.KEY_NONE;
                     KeyBinding.resetKeyBindingArrayAndHash();
                 }
@@ -371,7 +367,6 @@ public class GuiNewControls extends GuiControls {
                 this.buttonId = null;
                 this.showVisualKeyboard = false;
                 this.field_152177_g = Minecraft.getSystemTime();
-                this.selectedModifier = KeyModifier.NONE;
                 this.selectedModifierKeyCode = Keyboard.KEY_NONE;
                 KeyBinding.resetKeyBindingArrayAndHash();
             }
@@ -449,17 +444,14 @@ public class GuiNewControls extends GuiControls {
 
             if (keyCode == Keyboard.KEY_ESCAPE) {
                 if (comboKeyBinding != null) {
-                    comboKeyBinding.controlling$setKeyModifierAndCode(KeyModifier.NONE, Keyboard.KEY_NONE);
+                    comboKeyBinding.controlling$setComboKeysRaw(IntLists.EMPTY_LIST);
                 }
                 this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
                 this.pendingBinding = null;
-                this.pendingModifier = KeyModifier.NONE;
                 this.pendingKeyCode = Keyboard.KEY_NONE;
                 this.pendingComboKeys = new ArrayList<>();
-                this.selectedModifier = KeyModifier.NONE;
                 this.selectedModifierKeyCode = Keyboard.KEY_NONE;
             } else if (isModifierKey && comboKeyBinding != null && this.acceptsChordKey(comboKeyBinding, keyCode)) {
-                this.selectedModifier = KeyModifier.fromKeyCode(keyCode);
                 this.selectedModifierKeyCode = keyCode;
                 shouldCloseBindSelection = false;
             } else if (inputKeyCode != Keyboard.KEY_NONE) {
@@ -467,8 +459,7 @@ public class GuiNewControls extends GuiControls {
                     // Keep the bind selection open when keyboard binds are disallowed so a mouse button can still be
                     // used; only actually bind when the keyboard key is allowed.
                     if (comboKeyBinding.controlling$allowsKeyboard()) {
-                        this.schedulePendingBinding(this.buttonId, inputKeyCode, this.getSelectedModifierForBinding());
-                        this.selectedModifier = KeyModifier.NONE;
+                        this.schedulePendingBinding(this.buttonId, inputKeyCode);
                         this.selectedModifierKeyCode = Keyboard.KEY_NONE;
                     }
                     shouldCloseBindSelection = false;
@@ -501,11 +492,13 @@ public class GuiNewControls extends GuiControls {
         }
     }
 
-    private void schedulePendingBinding(KeyBinding keyBinding, int keyCode, KeyModifier keyModifier) {
+    private void schedulePendingBinding(KeyBinding keyBinding, int keyCode) {
         this.pendingBinding = keyBinding;
         this.pendingKeyCode = keyCode;
-        this.pendingModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
         this.pendingComboKeys = this.captureHeldComboKeys(keyCode);
+        // The capture replaces the chord rather than adding to it, so drop the binding's old chord that was seeded
+        // when the panel opened. Leaving it would show a chord the release is about to discard.
+        this.visualKeyboardChord.clear();
     }
 
     // Collect every currently-held key/mouse button except the main key, to become the combo (chord) keys. Keys the
@@ -561,10 +554,8 @@ public class GuiNewControls extends GuiControls {
         this.visualKeyboardChord.clear();
         this.options.setOptionKeyBinding(this.buttonId, keyCode);
         this.pendingBinding = null;
-        this.pendingModifier = KeyModifier.NONE;
         this.pendingKeyCode = Keyboard.KEY_NONE;
         this.pendingComboKeys = new ArrayList<>();
-        this.selectedModifier = KeyModifier.NONE;
         this.selectedModifierKeyCode = Keyboard.KEY_NONE;
         this.buttonId = null;
         this.showVisualKeyboard = false;
@@ -578,33 +569,14 @@ public class GuiNewControls extends GuiControls {
             return;
         }
         if (!(this.buttonId instanceof ComboKeyBinding) || this.pendingBinding != null
-                || this.selectedModifier == KeyModifier.NONE
                 || this.selectedModifierKeyCode == Keyboard.KEY_NONE) {
             return;
         }
         if (Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
             return;
         }
-        this.schedulePendingBinding(this.buttonId, this.selectedModifierKeyCode, KeyModifier.NONE);
-        this.selectedModifier = KeyModifier.NONE;
+        this.schedulePendingBinding(this.buttonId, this.selectedModifierKeyCode);
         this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-    }
-
-    private KeyModifier getSelectedModifierForBinding() {
-        if (this.showVisualKeyboard) {
-            final IntList chord = this.getVisualKeyboardChord();
-            return chord.size() == 1 ? KeyModifier.fromKeyCode(chord.getInt(0)) : KeyModifier.NONE;
-        }
-        // getActiveModifier reads physical keys, so it bypasses the checks done when a chord key is chosen; the
-        // modifier has to be policed here too or it re-adds a blocked key behind the chord list's back.
-        final KeyModifier modifier = this.selectedModifier == KeyModifier.NONE ? KeyModifier.getActiveModifier()
-                : this.selectedModifier;
-        final ComboKeyBinding bind = this.buttonId instanceof ComboKeyBinding c ? c : null;
-        if (bind != null && !ChordPolicy
-                .acceptsModifier(modifier, bind.controlling$allowsChords(), bind.controlling$blockedChordKeys())) {
-            return KeyModifier.NONE;
-        }
-        return modifier;
     }
 
     private void applyPendingBindingIfReleased() {
@@ -616,14 +588,10 @@ public class GuiNewControls extends GuiControls {
         }
 
         if (this.pendingBinding instanceof ComboKeyBinding comboKeyBinding) {
-            comboKeyBinding.controlling$setKeyModifierAndCode(this.pendingModifier, this.pendingKeyCode);
-            if (!this.pendingComboKeys.isEmpty()) {
-                comboKeyBinding.controlling$setComboKeys(this.pendingComboKeys);
-            }
+            comboKeyBinding.controlling$setComboKeys(this.pendingComboKeys);
         }
         this.options.setOptionKeyBinding(this.pendingBinding, this.pendingKeyCode);
         this.pendingBinding = null;
-        this.pendingModifier = KeyModifier.NONE;
         this.pendingKeyCode = Keyboard.KEY_NONE;
         this.pendingComboKeys = new ArrayList<>();
         this.buttonId = null;
@@ -633,8 +601,11 @@ public class GuiNewControls extends GuiControls {
     }
 
     private boolean isPendingInputStillActive() {
-        if (this.pendingModifier != KeyModifier.NONE && this.pendingModifier.isActive()) {
-            return true;
+        // The binding stays pending while any captured chord key is still held, so releasing them commits it.
+        for (int i = 0; i < this.pendingComboKeys.size(); i++) {
+            if (InputState.isDown(this.pendingComboKeys.get(i))) {
+                return true;
+            }
         }
         // Mouse codes count up from the offset (-100, -99, ...), so test the encoding, not "<= -100".
         if (ControllingApi.isMouseKeyCode(this.pendingKeyCode)) {
@@ -683,13 +654,18 @@ public class GuiNewControls extends GuiControls {
                 this.effectiveChord.add(key);
             }
         }
-        for (KeyModifier modifier : KeyModifier.VALUES) {
-            if (modifier == KeyModifier.NONE) {
-                continue;
+        // Every physically held key joins the chord, not just modifiers, so holding any key filters the keyboard
+        // the same way and can be captured into a chord.
+        for (int key = 1; key < Keyboard.getKeyCount(); key++) {
+            if (Keyboard.isKeyDown(key) && !this.effectiveChord.contains(key) && this.acceptsChordKey(bind, key)) {
+                this.effectiveChord.add(key);
             }
-            final int held = modifier.getHeldKeyCode();
-            if (held != Keyboard.KEY_NONE && !this.effectiveChord.contains(held) && this.acceptsChordKey(bind, held)) {
-                this.effectiveChord.add(held);
+        }
+        for (int button = 0; button < Mouse.getButtonCount(); button++) {
+            final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
+            if (Mouse.isButtonDown(button) && !this.effectiveChord.contains(keyCode)
+                    && this.acceptsChordKey(bind, keyCode)) {
+                this.effectiveChord.add(keyCode);
             }
         }
         return this.effectiveChord;
@@ -753,10 +729,8 @@ public class GuiNewControls extends GuiControls {
         this.buttonId = null;
         this.visualKeyboardChord.clear();
         this.pendingBinding = null;
-        this.pendingModifier = KeyModifier.NONE;
         this.pendingKeyCode = Keyboard.KEY_NONE;
         this.pendingComboKeys = new ArrayList<>();
-        this.selectedModifier = KeyModifier.NONE;
         this.selectedModifierKeyCode = Keyboard.KEY_NONE;
     }
 

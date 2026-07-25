@@ -22,6 +22,7 @@ import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 import com.blamejared.controlling.keybinding.KeyModifier;
 import com.llamalad7.mixinextras.sugar.Local;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 @Mixin(GameSettings.class)
@@ -49,7 +50,13 @@ public abstract class MixinGameSettings {
         }
         final ComboKeyCodec.Parsed parsed = ComboKeyCodec.parse(astring[2]);
         if (parsed.legacy) {
-            comboKeyBinding.controlling$setKeyModifier(KeyModifier.fromSerializedName(parsed.legacyName));
+            // Old configs stored a single modifier name; map it to that modifier's keycode.
+            final int legacyKey = KeyModifier.fromSerializedName(parsed.legacyName).getLeftKeyCode();
+            final IntArrayList legacy = new IntArrayList();
+            if (legacyKey > 0) {
+                legacy.add(legacyKey);
+            }
+            comboKeyBinding.controlling$setComboKeysRaw(legacy);
         } else {
             comboKeyBinding.controlling$setComboKeysRaw(parsed.comboKeys);
         }

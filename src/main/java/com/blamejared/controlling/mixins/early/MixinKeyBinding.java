@@ -158,43 +158,6 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     }
 
     @Override
-    public KeyModifier controlling$getKeyModifier() {
-        return controlling$deriveModifier(this.controlling$comboKeys);
-    }
-
-    @Override
-    public KeyModifier controlling$getDefaultKeyModifier() {
-        return controlling$deriveModifier(this.controlling$defaultComboKeys);
-    }
-
-    @Override
-    public void controlling$setKeyModifier(KeyModifier keyModifier) {
-        controlling$applyModifier(this.controlling$comboKeys, keyModifier);
-    }
-
-    @Override
-    public void controlling$setDefaultKeyModifier(KeyModifier keyModifier) {
-        controlling$applyModifier(this.controlling$defaultComboKeys, keyModifier);
-    }
-
-    // A list of exactly one modifier keycode reads back as that modifier; anything else is NONE.
-    @Unique
-    private static KeyModifier controlling$deriveModifier(IntArrayList comboKeys) {
-        if (comboKeys.size() != 1) {
-            return KeyModifier.NONE;
-        }
-        return KeyModifier.fromKeyCode(comboKeys.getInt(0));
-    }
-
-    @Unique
-    private static void controlling$applyModifier(IntArrayList comboKeys, KeyModifier keyModifier) {
-        comboKeys.clear();
-        if (keyModifier != null && keyModifier != KeyModifier.NONE) {
-            comboKeys.add(keyModifier.getLeftKeyCode());
-        }
-    }
-
-    @Override
     public List<Integer> controlling$getComboKeys() {
         final List<Integer> out = new ArrayList<>(this.controlling$comboKeys.size());
         for (int i = 0; i < this.controlling$comboKeys.size(); i++) {
@@ -313,12 +276,6 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Override
     public void controlling$setAllowsKeyboard(boolean allowsKeyboard) {
         this.controlling$allowsKeyboard = allowsKeyboard;
-    }
-
-    @Override
-    public void controlling$setKeyModifierAndCode(KeyModifier keyModifier, int keyCode) {
-        this.controlling$setKeyModifier(keyModifier);
-        this.keyCode = keyCode;
     }
 
     @Override
@@ -468,6 +425,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
                             otherCombo.controlling$comboKeysRaw(),
                             self.controlling$mainKeyCode(),
                             self.controlling$comboKeysRaw())
+                    && controlling$contextActive(otherBinding)
                     && controlling$allComboKeysDown(otherCombo.controlling$comboKeysRaw())) {
                 return true;
             }

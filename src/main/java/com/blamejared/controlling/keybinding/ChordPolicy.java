@@ -21,19 +21,6 @@ public final class ChordPolicy {
     }
 
     /**
-     * The modifier convenience layer stores {@link KeyModifier#getLeftKeyCode()}, so a modifier is only acceptable when
-     * that keycode is. Without this the modifier path can smuggle in a key the chord list would have rejected.
-     *
-     * @return true when attaching {@code modifier} is allowed; NONE always is, as it adds nothing.
-     */
-    public static boolean acceptsModifier(KeyModifier modifier, boolean allowsChords, IntCollection blocked) {
-        if (modifier == null || modifier == KeyModifier.NONE) {
-            return true;
-        }
-        return accepts(modifier.getLeftKeyCode(), allowsChords, blocked);
-    }
-
-    /**
      * Replaces {@code out} with the keys of {@code held} the binding will accept. A binding that disallows chords
      * yields an empty result rather than a partial one.
      */

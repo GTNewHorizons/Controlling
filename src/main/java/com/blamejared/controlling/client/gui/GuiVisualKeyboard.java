@@ -20,6 +20,7 @@ import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.config.ControllingConfig;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.ComboState;
+import com.blamejared.controlling.keybinding.InputState;
 import com.blamejared.controlling.keybinding.KeyNames;
 
 import cpw.mods.fml.common.Loader;
@@ -755,6 +756,9 @@ public class GuiVisualKeyboard {
 
         private void draw(GuiNewControls screen, Minecraft mc, IntList chord, int bindings, int mouseX, int mouseY) {
             final boolean inChord = screen.isVisualKeyboardChordKey(this.keyCode);
+            // A key held right now is part of the chord being captured, but it is not a toggle: show it with the
+            // selected border so it reads as transient rather than as something clicked on.
+            final boolean heldNow = !inChord && InputState.isDown(this.keyCode);
             // A chord member cannot also be the main key, so it is not selectable while toggled on.
             this.enabled = this.allowsInputType(screen) && !inChord;
             // Only per-key blocks are painted. When the binding bars chords outright every key would qualify, and
@@ -778,7 +782,7 @@ public class GuiVisualKeyboard {
             }
 
             Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, color);
-            final int border = inChord ? palette.keySelected
+            final int border = inChord || heldNow ? palette.keySelected
                     : chordBlocked ? palette.chordBlockedBorder : PANEL_BORDER_COLOR;
             drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, border);
             drawCentered(

@@ -61,24 +61,6 @@ class ChordPolicyTest {
     }
 
     @Test
-    void blockedModifierIsRejected() {
-        // regression: holding Ctrl set the modifier from live key state, re-adding a key the chord list had dropped
-        assertFalse(ChordPolicy.acceptsModifier(KeyModifier.CONTROL, true, blocked(LCONTROL)));
-        assertTrue(ChordPolicy.acceptsModifier(KeyModifier.SHIFT, true, blocked(LCONTROL)));
-    }
-
-    @Test
-    void noModifierIsAlwaysAccepted() {
-        assertTrue(ChordPolicy.acceptsModifier(KeyModifier.NONE, false, blocked(LCONTROL)));
-        assertTrue(ChordPolicy.acceptsModifier(null, false, null));
-    }
-
-    @Test
-    void chordsDisallowed_rejectsAnyModifier() {
-        assertFalse(ChordPolicy.acceptsModifier(KeyModifier.CONTROL, false, null));
-    }
-
-    @Test
     void filterClearsPriorContents() {
         final IntList out = new IntArrayList(new int[] { 99 });
         ChordPolicy.filter(new IntArrayList(new int[] { LSHIFT }), true, null, out);
