@@ -13,7 +13,7 @@ Controlling is a client-side quality-of-life mod for Minecraft 1.7.10 that repla
 - Use chord keybindings, correctly disambiguated from bare keybindings even while a GUI is open.
 - Build N-key chords: a main key plus any number of extra held keys, including non-modifiers and mouse buttons. Hold the chord and press the final key in the controls screen to capture it.
 - Resolve combos (including mouse-button combos) while a GUI is open, via a central client-tick poller.
-- Bind keys from a visual keyboard overlay with main, numpad, auxiliary key pages and a mouse-button row. Left-click a key to bind it; right-click keys to build the chord that will be attached, shown live in the header with a `Clear` button. Keys already in the chord are highlighted and cannot double as the main key. Holding any keys filters the keyboard to bindings using them.
+- Bind keys from a visual keyboard overlay with main, numpad, auxiliary key pages and a mouse-button row. Left-click a key to bind it; right-click keys to build the chord that will be attached, shown live in the header with a `Clear` button. Keys already in the chord are highlighted and cannot double as the main key. Holding any keys filters the keyboard to bindings using them; left and right click drive the overlay itself, so put those in a chord from the mouse row instead of holding them.
 
 
 ## Color palettes

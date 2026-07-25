@@ -661,7 +661,9 @@ public class GuiNewControls extends GuiControls {
                 this.effectiveChord.add(key);
             }
         }
-        for (int button = 0; button < Mouse.getButtonCount(); button++) {
+        // Left and right click drive this panel (pick a key / toggle a chord key), so a held one is UI input, not chord
+        // intent - this runs during mouseClicked with the button still down. Add them from the mouse row instead.
+        for (int button = 2; button < Mouse.getButtonCount(); button++) {
             final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
             if (Mouse.isButtonDown(button) && !this.effectiveChord.contains(keyCode)
                     && this.acceptsChordKey(bind, keyCode)) {

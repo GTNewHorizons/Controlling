@@ -389,13 +389,11 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         if (!(keyBinding instanceof ComboKeyBinding combo)) {
             return true;
         }
-        // A bare modifier main key with no combo keys fires on that key press (existing behavior).
-        if (combo.controlling$comboKeysRaw().isEmpty() && keyBinding.getKeyCode() == inputKeyCode
-                && KeyModifier.isKeyCodeModifier(inputKeyCode)) {
-            return true;
-        }
+        // A bare modifier main key with no combo keys fires on that key press, without waiting on polled key state.
+        final boolean bareModifierPress = combo.controlling$comboKeysRaw().isEmpty()
+                && keyBinding.getKeyCode() == inputKeyCode && KeyModifier.isKeyCodeModifier(inputKeyCode);
         // All combo keys must be held.
-        if (!combo.controlling$isModifierActive()) {
+        if (!bareModifierPress && !combo.controlling$isModifierActive()) {
             return false;
         }
         // Most-specific-wins: a satisfied strict-superset sibling on the same key suppresses this bind.
