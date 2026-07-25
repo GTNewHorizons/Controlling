@@ -28,6 +28,7 @@ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 @Mixin(KeyBinding.class)
 public abstract class MixinKeyBinding implements ComboKeyBinding {
@@ -348,8 +349,9 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         }
 
         final IntList otherCombo = other instanceof ComboKeyBinding combo ? combo.controlling$comboKeysRaw()
-                : new IntArrayList();
-        if (!ComboState.sameKeySet(this.keyCode, this.controlling$comboKeys, other.getKeyCode(), otherCombo)) {
+                : IntLists.EMPTY_LIST;
+        // Q vs Ctrl+Q is not a clash: most-specific-wins suppresses the shorter one, so only one ever fires.
+        if (ComboState.resolvedByPrecedence(this.keyCode, this.controlling$comboKeys, other.getKeyCode(), otherCombo)) {
             return false;
         }
 
@@ -371,6 +373,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         if (!this.controlling$conflicts(other)) {
             return false;
         }
+        // Softer case: the chords are incomparable (Ctrl+Q vs Shift+Q), so both fire only while the union is held.
         return !ComboState.sameKeySet(
                 this.keyCode,
                 this.controlling$comboKeys,
@@ -380,8 +383,9 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Override
     public boolean controlling$isSetToDefaultValue() {
-        return this.keyCode == this.keyCodeDefault
-                && this.controlling$comboKeys.equals(this.controlling$defaultComboKeys);
+        // Capture order is not meaningful, so compare as sets: Ctrl+Shift equals Shift+Ctrl.
+        return this.keyCode == this.keyCodeDefault && ComboState
+                .sameKeySet(this.keyCode, this.controlling$comboKeys, this.keyCode, this.controlling$defaultComboKeys);
     }
 
     @Override

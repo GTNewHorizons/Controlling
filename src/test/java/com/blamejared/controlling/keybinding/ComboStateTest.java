@@ -81,6 +81,25 @@ class ComboStateTest {
     }
 
     @Test
+    void resolvedByPrecedence_subsetEitherDirection() {
+        // bare G vs Ctrl+G: most-specific-wins picks one, so this is not a conflict
+        assertTrue(ComboState.resolvedByPrecedence(20, list(), 20, list(29)));
+        assertTrue(ComboState.resolvedByPrecedence(20, list(29), 20, list()));
+    }
+
+    @Test
+    void resolvedByPrecedence_equalSetsAreNot() {
+        // identical chords always fire together; precedence cannot separate them
+        assertFalse(ComboState.resolvedByPrecedence(20, list(29), 20, list(29)));
+    }
+
+    @Test
+    void resolvedByPrecedence_incomparableSetsAreNot() {
+        // Ctrl+G vs Shift+G: holding Ctrl+Shift+G satisfies both, neither suppresses the other
+        assertFalse(ComboState.resolvedByPrecedence(20, list(29), 20, list(42)));
+    }
+
+    @Test
     void sameKeySet_differentComboKeys() {
         assertFalse(ComboState.sameKeySet(20, list(29), 20, list(42)));
     }

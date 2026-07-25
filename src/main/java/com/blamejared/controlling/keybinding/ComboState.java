@@ -45,6 +45,14 @@ public final class ComboState {
         return containsAll(mainA, comboA, mainB, comboB);
     }
 
+    /**
+     * True when one key set strictly contains the other, so most-specific-wins always picks exactly one of them and
+     * they can never fire together. Q and Ctrl+Q are such a pair.
+     */
+    public static boolean resolvedByPrecedence(int mainA, IntList comboA, int mainB, IntList comboB) {
+        return isStrictSuperset(mainA, comboA, mainB, comboB) || isStrictSuperset(mainB, comboB, mainA, comboA);
+    }
+
     /** True when both binds have identical key sets (order-insensitive, main included unless KEY_NONE). */
     public static boolean sameKeySet(int mainA, IntList comboA, int mainB, IntList comboB) {
         if (keySetSize(mainA, comboA) != keySetSize(mainB, comboB)) {
