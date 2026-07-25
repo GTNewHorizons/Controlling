@@ -46,6 +46,8 @@ public class GuiVisualKeyboard {
     private static final int HINT_BLOCK = 14;
     private static final int FOOTER_BOTTOM_MARGIN = 5;
     private static final int CLOSE_BUTTON_SIZE = 18;
+    /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
+    private static final int GLYPH_TEXT_HEIGHT = 8;
     private static final int LEGEND_SWATCH = 7;
     private static final int LEGEND_SWATCH_GAP = 3;
     private static final int LEGEND_ITEM_GAP = 8;
@@ -791,9 +793,13 @@ public class GuiVisualKeyboard {
         }
     }
 
+    /**
+     * Centers a label in a key. Uses the glyph height rather than FONT_HEIGHT, which counts the blank descender row and
+     * so lands the text a pixel above center; this is the same convention vanilla buttons use.
+     */
     private static void drawCentered(Minecraft mc, String text, int left, int top, int width, int height, int color) {
         int textX = left + width / 2 - mc.fontRenderer.getStringWidth(text) / 2;
-        int textY = top + (height - mc.fontRenderer.FONT_HEIGHT) / 2;
+        int textY = top + (height - GLYPH_TEXT_HEIGHT) / 2;
         mc.fontRenderer.drawStringWithShadow(text, textX, textY, color);
     }
 }

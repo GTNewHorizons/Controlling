@@ -53,6 +53,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     /** The key name is right-aligned to this entry-relative x, and clamped so it never runs off screen. */
     private static final int LABEL_RIGHT = 95;
     private static final int LABEL_CLAMP_LEFT = 4;
+    /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
+    private static final int GLYPH_TEXT_HEIGHT = 8;
 
     private static final ResourceLocation ICON_LOCK = icon("lock_glyph");
     private static final ResourceLocation ICON_NO_MOUSE = icon("mouse_glyph");
@@ -307,7 +309,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             boolean isKeySelected = controlsScreen.buttonId == this.keybinding;
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
-            this.drawKeyDescription(x, y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2, mouseX, mouseY);
+            // Align the name with the key button's own label: the slotHeight argument is the slot's content height,
+            // which is shorter than the button, so centering on it puts the name a couple of pixels high.
+            this.drawKeyDescription(x, y + (this.btnChangeKeyBinding.height - GLYPH_TEXT_HEIGHT) / 2, mouseX, mouseY);
             this.drawIndicators(x, y, mouseX, mouseY);
 
             this.btnVisualKeyboard.xPosition = x + 204;
