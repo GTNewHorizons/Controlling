@@ -22,6 +22,7 @@ options.visualKeyboardNumpad=Numpad
 options.visualKeyboardAux=Aux
 options.conflictsHeader=Conflicts with:
 options.chordsLocked=Chords disabled
+options.chordsBlocked=Chords blocked: %s
 options.mouseDisabled=Mouse binding disabled
 options.keyboardDisabled=Keyboard binding disabled
 options.contextLabel=Context: %s

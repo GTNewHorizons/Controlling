@@ -1,11 +1,14 @@
 package com.blamejared.controlling.keybinding;
 
+import java.util.Arrays;
+
 import net.minecraft.client.settings.GameSettings;
 
 import org.lwjgl.input.Keyboard;
 
 import com.blamejared.controlling.api.ControllingApi;
 
+import it.unimi.dsi.fastutil.ints.IntCollection;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 /** Display names for keycodes, covering the mouse-button encoding and compact side-aware modifier names. */
@@ -38,6 +41,26 @@ public final class KeyNames {
             case Keyboard.KEY_RMETA -> "RMeta";
             default -> GameSettings.getKeyDisplayString(keyCode);
         };
+    }
+
+    /**
+     * Joins keys with {@code separator}, ordered by keycode so the text does not shuffle between frames. Takes a
+     * collection because the caller's set has no order of its own.
+     */
+    public static String joinSorted(IntCollection keys, String separator) {
+        if (keys.isEmpty()) {
+            return "";
+        }
+        final int[] sorted = keys.toIntArray();
+        Arrays.sort(sorted);
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < sorted.length; i++) {
+            if (i > 0) {
+                sb.append(separator);
+            }
+            sb.append(display(sorted[i]));
+        }
+        return sb.toString();
     }
 
     /** Joins a key list as "A + B + C"; empty list yields an empty string. */

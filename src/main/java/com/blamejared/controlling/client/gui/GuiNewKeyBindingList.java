@@ -22,6 +22,7 @@ import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.KeyNames;
 
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.relauncher.Side;
@@ -589,6 +590,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             final ComboKeyBinding combo = this.keybinding instanceof ComboKeyBinding c ? c : null;
             final KeyContext context = combo != null ? combo.controlling$getKeyContext() : KeyContexts.UNIVERSAL;
             final boolean lockedChords = combo != null && !combo.controlling$allowsChords();
+            final boolean blockedChordKeys = combo != null && !combo.controlling$blockedChordKeys().isEmpty();
             final boolean noMouse = combo != null && !combo.controlling$allowsMouse();
             final boolean noKeyboard = combo != null && !combo.controlling$allowsKeyboard();
 
@@ -614,9 +616,16 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                             .translateToLocalFormatted("options.contextLabel", contextDisplayName(context));
                 }
             }
-            if (lockedChords) {
+            // The lock covers both restrictions: chords barred outright, or only certain keys barred. The tooltip
+            // says which, and is only built for the row under the cursor.
+            if (lockedChords || blockedChordKeys) {
                 this.drawLockIcon(slotLock, slotTop);
-                this.setIndicatorHover(mouseX, mouseY, slotLock, slotTop, "options.chordsLocked");
+                if (isOver(mouseX, mouseY, slotLock, slotTop, GLYPH_SIZE, GLYPH_SIZE)) {
+                    hoveredIndicatorText = lockedChords ? StatCollector.translateToLocal("options.chordsLocked")
+                            : StatCollector.translateToLocalFormatted(
+                                    "options.chordsBlocked",
+                                    KeyNames.joinSorted(combo.controlling$blockedChordKeys(), ", "));
+                }
             }
             if (noMouse) {
                 this.drawMouseGlyph(slotMouse, slotTop);
