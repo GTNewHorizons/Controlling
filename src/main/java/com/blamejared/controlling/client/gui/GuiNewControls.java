@@ -47,6 +47,10 @@ public class GuiNewControls extends GuiControls {
     private static final int VISUAL_KEYBOARD_BUTTON_ID = 1007;
     private static final int SORT_TYPE_BUTTON_ID = 1008;
 
+    private static final long HIGHLIGHT_DURATION_MS = 2500L;
+    /** The flash holds full strength until this much time is left, then fades out. */
+    private static final float HIGHLIGHT_FADE_MS = 700.0F;
+
     private final GuiScreen parentScreen;
     private final GameSettings options;
     private final String guiScreenTitle;
@@ -67,6 +71,8 @@ public class GuiNewControls extends GuiControls {
     private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
     private boolean showVisualKeyboard = false;
     private final IntArrayList visualKeyboardChord = new IntArrayList();
+    private KeyBinding highlightedBinding;
+    private long highlightExpiry;
     /** Scratch buffer for {@link #getVisualKeyboardChord()}; avoids allocating every frame. */
     private final IntArrayList effectiveChord = new IntArrayList();
     private KeyModifier selectedModifier = KeyModifier.NONE;
@@ -476,7 +482,7 @@ public class GuiNewControls extends GuiControls {
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
             if (this.showVisualKeyboard && keyCode == Keyboard.KEY_ESCAPE) {
-                this.showVisualKeyboard = false;
+                this.closeVisualKeyboard();
                 return;
             }
             if (this.searchTextBox.isFocused()) {
@@ -690,6 +696,38 @@ public class GuiNewControls extends GuiControls {
         this.visualKeyboardChord.clear();
     }
 
+    /** Flashes a row in the list so a jump from the visual keyboard lands somewhere visible. */
+    private void highlightBinding(KeyBinding keyBinding) {
+        this.highlightedBinding = keyBinding;
+        this.highlightExpiry = Minecraft.getSystemTime() + HIGHLIGHT_DURATION_MS;
+    }
+
+    /** @return how far through the highlight flash this binding is, 0 when it is not highlighted. */
+    float getHighlightStrength(KeyBinding keyBinding) {
+        if (keyBinding != this.highlightedBinding) {
+            return 0.0F;
+        }
+        final long remaining = this.highlightExpiry - Minecraft.getSystemTime();
+        if (remaining <= 0) {
+            this.highlightedBinding = null;
+            return 0.0F;
+        }
+        return Math.min(1.0F, (float) remaining / HIGHLIGHT_FADE_MS);
+    }
+
+    /** Closes the panel leaving every binding untouched, unlike picking a key or pressing escape. */
+    void closeVisualKeyboard() {
+        this.showVisualKeyboard = false;
+        this.buttonId = null;
+        this.visualKeyboardChord.clear();
+        this.pendingBinding = null;
+        this.pendingModifier = KeyModifier.NONE;
+        this.pendingKeyCode = Keyboard.KEY_NONE;
+        this.pendingComboKeys = new ArrayList<>();
+        this.selectedModifier = KeyModifier.NONE;
+        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+    }
+
     void drawVisualKeyboardTooltip(List<String> lines, int mouseX, int mouseY) {
         this.func_146283_a(lines, mouseX, mouseY);
     }
@@ -703,6 +741,7 @@ public class GuiNewControls extends GuiControls {
     }
 
     void showKeyBinding(KeyBinding keyBinding) {
+        this.highlightBinding(keyBinding);
         if (this.guiNewKeyBindingList.scrollToKeyBinding(keyBinding)) {
             this.showVisualKeyboard = false;
             return;

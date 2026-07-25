@@ -37,6 +37,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private static final int CONTEXT_COLOR_CUSTOM = 0xFFBB55FF;
     private static final int CONTEXT_BAR_WIDTH = 2;
     private static final int LEGEND_TEXT_COLOR = 0xA0A0A0;
+    private static final int JUMP_HIGHLIGHT_COLOR = 0xD4A928;
+    private static final int JUMP_HIGHLIGHT_MAX_ALPHA = 0x60;
     /** Pixels trimmed off the bar's top and bottom so it sits inside the key button's bevel. */
     private static final int CONTEXT_BAR_INSET = 1;
     /** Width of the context bar's hover target, which reaches past the bar so 2px is still easy to hit. */
@@ -46,6 +48,11 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     /** Entry-relative left edge of the indicator row; the reset button ends at x + 274. */
     private static final int INDICATOR_LEFT = 275;
     private static final int INDICATOR_GAP = 1;
+    /** Right edge of the indicator row, entry-relative; the row's content ends here, past the list width. */
+    private static final int INDICATOR_RIGHT = INDICATOR_LEFT + GLYPH_SIZE * 3 + INDICATOR_GAP * 2;
+    /** The key name is right-aligned to this entry-relative x, and clamped so it never runs off screen. */
+    private static final int LABEL_RIGHT = 95;
+    private static final int LABEL_CLAMP_LEFT = 4;
 
     private static final ResourceLocation ICON_LOCK = icon("lock_glyph");
     private static final ResourceLocation ICON_NO_MOUSE = icon("mouse_glyph");
@@ -296,6 +303,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         @Override
         public void drawEntry(int slotIndex, int x, int y, int listWidth, int slotHeight, Tessellator tessellator,
                 int mouseX, int mouseY, boolean isSelected) {
+            this.drawJumpHighlight(x, y);
             boolean isKeySelected = controlsScreen.buttonId == this.keybinding;
             this.btnChangeKeyBinding.xPosition = x + 105;
             this.btnChangeKeyBinding.yPosition = y;
@@ -452,6 +460,25 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             GL11.glPopMatrix();
         }
 
+        /**
+         * Fades a wash across the row after the visual keyboard jumps here. Bounds come from what the row actually
+         * draws: the label runs left of x for long names, the indicators run past the list width, and the drawEntry
+         * slotHeight argument is the slot's content height rather than the button height.
+         */
+        private void drawJumpHighlight(int x, int y) {
+            final float strength = controlsScreen.getHighlightStrength(this.keybinding);
+            if (strength <= 0.0F) {
+                return;
+            }
+            final int alpha = (int) (strength * JUMP_HIGHLIGHT_MAX_ALPHA);
+            Gui.drawRect(
+                    this.labelLeftEdge(x) - 3,
+                    y,
+                    x + INDICATOR_RIGHT,
+                    y + this.btnChangeKeyBinding.height,
+                    (alpha << 24) | JUMP_HIGHLIGHT_COLOR);
+        }
+
         private boolean isMouseOverChangeButton(int mouseX, int mouseY) {
             final GuiButton btn = this.btnChangeKeyBinding;
             return mouseX >= btn.xPosition && mouseX < btn.xPosition + btn.width
@@ -552,13 +579,20 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             drawIcon(ICON_NO_KEYBOARD, left, top, GLYPH_SIZE);
         }
 
+        /** The label is right-aligned to LABEL_RIGHT, so its left edge depends on how long the name is. */
+        private int labelLeftEdge(int x) {
+            final int labelRight = x + LABEL_RIGHT;
+            final String label = trimWithEllipsis(this.keyDesc, Math.max(0, labelRight - LABEL_CLAMP_LEFT));
+            return labelRight - mc.fontRenderer.getStringWidth(label);
+        }
+
         private void drawKeyDescription(int x, int y, int mouseX, int mouseY) {
-            final int labelLeft = 4;
-            final int labelRight = x + 95;
+            final int labelLeft = LABEL_CLAMP_LEFT;
+            final int labelRight = x + LABEL_RIGHT;
             final int maxWidth = Math.max(0, labelRight - labelLeft);
             final boolean truncated = mc.fontRenderer.getStringWidth(this.keyDesc) > maxWidth;
             final String label = trimWithEllipsis(this.keyDesc, maxWidth);
-            final int labelX = labelRight - mc.fontRenderer.getStringWidth(label);
+            final int labelX = this.labelLeftEdge(x);
             drawHighlightedString(label, labelX, y, shouldHighlightKeybindName());
             if (truncated && mouseX >= labelLeft
                     && mouseX <= labelRight

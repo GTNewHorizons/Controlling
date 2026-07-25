@@ -40,8 +40,12 @@ public class GuiVisualKeyboard {
     /** LMB, RMB, MMB and two extra buttons; matches what most mice report. */
     private static final int MOUSE_BUTTON_COUNT = 5;
     private static final int KEY_CHORD_COLOR = 0xFF2F5FA8;
-    /** Legend baseline, measured up from the panel bottom; leaves a gap between the key rows and the swatches. */
-    private static final int LEGEND_BOTTOM_OFFSET = 28;
+    /** Vertical gap between the last key row and the legend. */
+    private static final int LEGEND_TOP_GAP = 6;
+    /** Space below the legend for the hint line, only reserved when a binding is selected. */
+    private static final int HINT_BLOCK = 14;
+    private static final int FOOTER_BOTTOM_MARGIN = 5;
+    private static final int CLOSE_BUTTON_SIZE = 18;
     private static final int LEGEND_SWATCH = 7;
     private static final int LEGEND_SWATCH_GAP = 3;
     private static final int LEGEND_ITEM_GAP = 8;
@@ -52,6 +56,10 @@ public class GuiVisualKeyboard {
     private final List<KeyButton> mouseKeys = new ArrayList<>();
     private final List<RectButton> pageButtons = new ArrayList<>();
     private RectButton clearButton;
+    private RectButton closeButton;
+    private int pageButtonsLeft;
+    private boolean showHint;
+    private int legendTop;
 
     private int panelLeft;
     private int panelTop;
@@ -69,12 +77,15 @@ public class GuiVisualKeyboard {
         Gui.drawRect(this.panelLeft, this.panelTop, this.panelRight, this.panelBottom, PANEL_COLOR);
         drawBorder(this.panelLeft, this.panelTop, this.panelRight, this.panelBottom, PANEL_BORDER_COLOR);
 
-        String title = I18n.format("options.visualKeyboard");
-        mc.fontRenderer.drawStringWithShadow(title, this.panelLeft + 8, this.panelTop + 7, TEXT_COLOR);
+        this.drawTitle(screen, mc);
+        if (this.closeButton != null) {
+            this.closeButton.draw(mc, mouseX, mouseY, false);
+        }
 
-        if (screen.getSelectedKeyBinding() != null) {
+        if (this.showHint) {
             String hint = I18n.format("options.visualKeyboardHint");
-            mc.fontRenderer.drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - 14, MUTED_TEXT_COLOR);
+            mc.fontRenderer
+                    .drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - HINT_BLOCK, MUTED_TEXT_COLOR);
         }
 
         this.drawLegend(mc);
@@ -103,6 +114,30 @@ public class GuiVisualKeyboard {
     }
 
     /**
+     * Panel title, followed by the binding being edited so it is clear what a key press will rebind. The name is
+     * trimmed to the space before the page buttons rather than overlapping them.
+     */
+    private void drawTitle(GuiNewControls screen, Minecraft mc) {
+        final int left = this.panelLeft + 8;
+        final int top = this.panelTop + 7;
+        final String title = I18n.format("options.visualKeyboard");
+        mc.fontRenderer.drawStringWithShadow(title, left, top, TEXT_COLOR);
+
+        final KeyBinding selected = screen.getSelectedKeyBinding();
+        if (selected == null) {
+            return;
+        }
+        final int nameLeft = left + mc.fontRenderer.getStringWidth(title + "  ");
+        final int available = this.pageButtonsLeft - 8 - nameLeft;
+        if (available <= 0) {
+            return;
+        }
+        final String name = mc.fontRenderer
+                .trimStringToWidth(I18n.format(selected.getKeyDescription()), Math.max(0, available));
+        mc.fontRenderer.drawStringWithShadow(name, nameLeft, top, KEY_SELECTED_COLOR);
+    }
+
+    /**
      * Key to the button colors, along the top of the panel footer. Items are dropped from the right when the panel is
      * too narrow to hold them all, so the most important ones survive on small screens.
      */
@@ -120,7 +155,7 @@ public class GuiVisualKeyboard {
         }
 
         int left = this.panelLeft + 8;
-        final int top = this.panelBottom - LEGEND_BOTTOM_OFFSET;
+        final int top = this.legendTop;
         for (int i = 0; i < shown; i++) {
             Gui.drawRect(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, colors[i]);
             drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, PANEL_BORDER_COLOR);
@@ -191,6 +226,11 @@ public class GuiVisualKeyboard {
             return true;
         }
 
+        if (this.closeButton != null && this.closeButton.contains(mouseX, mouseY)) {
+            screen.closeVisualKeyboard();
+            return true;
+        }
+
         for (RectButton pageButton : this.pageButtons) {
             if (pageButton.contains(mouseX, mouseY)) {
                 this.page = pageButton.page;
@@ -240,8 +280,11 @@ public class GuiVisualKeyboard {
         this.keyHeight = Math.max(14, Math.min(24, (screen.height - 116) / 7));
 
         int headerHeight = 57;
-        // Tall enough to clear the keys before the legend starts; see LEGEND_BOTTOM_OFFSET.
-        int footerHeight = 34;
+        // The hint only draws with a binding selected, so do not reserve its row otherwise.
+        this.showHint = screen.getSelectedKeyBinding() != null;
+        int footerHeight = LEGEND_TOP_GAP + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT
+                + FOOTER_BOTTOM_MARGIN
+                + (this.showHint ? HINT_BLOCK : 0);
         // keyboard rows, then the mouse row
         int bodyHeight = this.keyboardHeight() + this.keyGap + this.keyHeight;
         int panelHeight = headerHeight + bodyHeight + footerHeight;
@@ -252,6 +295,7 @@ public class GuiVisualKeyboard {
         this.panelBottom = this.panelTop + panelHeight;
         this.keyboardLeft = this.panelLeft + 8;
         this.keyboardTop = this.panelTop + headerHeight;
+        this.legendTop = this.panelBottom - footerHeight + LEGEND_TOP_GAP;
 
         this.layoutPageButtons();
         this.layoutChordRow();
@@ -262,8 +306,17 @@ public class GuiVisualKeyboard {
     private void layoutPageButtons() {
         this.pageButtons.clear();
         int buttonTop = this.panelTop + 6;
-        int buttonWidth = Math.max(42, Math.min(58, (this.panelRight - this.panelLeft - 24) / 3));
-        int buttonLeft = this.panelRight - 8 - buttonWidth * 3 - 8;
+        this.closeButton = new RectButton(
+                null,
+                this.panelRight - 8 - CLOSE_BUTTON_SIZE,
+                buttonTop,
+                CLOSE_BUTTON_SIZE,
+                18,
+                "X");
+        final int pagesRight = this.panelRight - 8 - CLOSE_BUTTON_SIZE - 4;
+        int buttonWidth = Math.max(42, Math.min(58, (pagesRight - this.panelLeft - 16) / 3));
+        int buttonLeft = pagesRight - buttonWidth * 3 - 8;
+        this.pageButtonsLeft = buttonLeft;
         this.pageButtons.add(
                 new RectButton(
                         Page.MAIN,
