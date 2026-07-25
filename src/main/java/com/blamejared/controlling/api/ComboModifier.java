@@ -18,11 +18,13 @@ public enum ComboModifier {
         this.internal = internal;
     }
 
-    public KeyModifier toInternal() {
+    /** Package-private: KeyModifier is internal, so it must not cross the api package boundary. */
+    KeyModifier toInternal() {
         return this.internal;
     }
 
-    public static ComboModifier fromInternal(KeyModifier internal) {
+    /** Package-private for the same reason as {@link #toInternal()}. */
+    static ComboModifier fromInternal(KeyModifier internal) {
         if (internal == null) {
             return NONE;
         }

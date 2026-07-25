@@ -26,10 +26,30 @@ The visual keyboard overlay includes code adapted from [Keyboard Wizard](https:/
 
 Controlling exposes a small client-side API for combo keybindings in `com.blamejared.controlling.api.ControllingApi`.
 
+### Chords
+
+A binding carries a main key plus an ordered list of extra "chord" keys held alongside it. Any keycode works, including mouse buttons and non-modifiers. A mouse button `b` encodes as keycode `b - 100` (LMB `0` -> `-100`); use the helpers instead of hardcoding the offset.
+
 ```java
-import com.blamejared.controlling.api.ComboModifier;
+import java.util.Arrays;
 import com.blamejared.controlling.api.ControllingApi;
 import org.lwjgl.input.Keyboard;
+
+// Ctrl + Space + G, where G is the binding's main key.
+ControllingApi.setComboKeys(myKeyBinding, Arrays.asList(Keyboard.KEY_LCONTROL, Keyboard.KEY_SPACE));
+
+// Read it back; the list is empty for a binding with no chord.
+List<Integer> chord = ControllingApi.getComboKeys(myKeyBinding);
+
+// mouseButtonToKeyCode(0) == -100 (LMB); isMouseKeyCode(-100) == true.
+```
+
+### Single-modifier convenience layer
+
+`ComboModifier` predates chords and covers the common Ctrl/Shift/Alt case in one call:
+
+```java
+import com.blamejared.controlling.api.ComboModifier;
 
 // Set Ctrl as the default modifier for a key whose default key code is Keyboard.KEY_G.
 ControllingApi.setDefaultComboKeyBinding(myKeyBinding, ComboModifier.CONTROL);
@@ -38,19 +58,10 @@ ControllingApi.setDefaultComboKeyBinding(myKeyBinding, ComboModifier.CONTROL);
 ControllingApi.setComboKeyBinding(myKeyBinding, ComboModifier.SHIFT, Keyboard.KEY_G);
 ```
 
-### N-key combos and mouse buttons
+Reading through this layer is lossy, so prefer `getComboKeys` when you need the truth:
 
-Beyond the single-modifier convenience layer, a binding carries an ordered list of extra "combo" keys held alongside the main key. Any keycode works, including mouse buttons. A mouse button `b` encodes as keycode `b - 100` (LMB `0` -> `-100`); use the helpers instead of hardcoding the offset.
-
-```java
-import java.util.Arrays;
-import com.blamejared.controlling.api.ControllingApi;
-import org.lwjgl.input.Keyboard;
-
-// Chord: Ctrl + Space + left mouse button as the main key.
-ControllingApi.setComboKeys(myKeyBinding, Arrays.asList(Keyboard.KEY_LCONTROL, Keyboard.KEY_SPACE));
-// mouseButtonToKeyCode(0) == -100 (LMB); isMouseKeyCode(-100) == true.
-```
+- `getComboModifier` returns `NONE` for any chord that is not exactly one modifier key, so `Ctrl+Shift+G` and `Space+G` are both reported as `NONE`.
+- Modifiers are stored as their left keycode, so a chord holding `RShift` reads back as `SHIFT` and writes back as `LShift`.
 
 ### Held-state API
 
