@@ -1,9 +1,8 @@
-package com.blamejared.controlling.mixins;
-
-import net.minecraft.client.gui.GuiScreen;
+package com.blamejared.controlling.mixins.late;
 
 import org.lwjgl.input.Keyboard;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -11,13 +10,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 
 /**
- * Opens the GUI key-dispatch window around {@code GuiScreen.handleKeyboardInput}, so that key matching done inside
- * keyTyped (via {@code eventKey == keyBinding.getKeyCode()}) becomes modifier/sibling-aware. This covers vanilla and
- * modded screens. Container GUIs whose handleKeyboardInput is replaced by NotEnoughItems are handled separately by
- * {@link MixinNEIGuiContainerManager}.
+ * NotEnoughItems compat. NEI ASM-replaces {@code GuiContainer.handleKeyboardInput} with a body that routes to
+ * {@code GuiContainerManager.handleKeyboardInput} without calling super, so
+ * {@link com.blamejared.controlling.mixins.early.MixinGuiScreen} never fires for container GUIs when NEI is installed.
+ * This opens the GUI key-dispatch window around NEI's handler instead, restoring combo disambiguation in container
+ * GUIs.
  */
-@Mixin(GuiScreen.class)
-public abstract class MixinGuiScreen {
+@Pseudo
+@Mixin(targets = "codechicken.nei.guihook.GuiContainerManager", remap = false)
+public abstract class MixinNEIGuiContainerManager {
 
     @Inject(method = "handleKeyboardInput", at = @At("HEAD"))
     private void controlling$openKeyDispatch(CallbackInfo ci) {
