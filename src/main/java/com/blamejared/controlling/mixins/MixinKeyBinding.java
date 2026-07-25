@@ -14,7 +14,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.api.KeyContext;
@@ -62,51 +61,51 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Unique
     private int controlling$comboHeldTicks = -1; // -1 = not satisfied; 0 = first tick; increments while held
 
-    @Inject(method = "<init>", at = @At("TAIL"))
-    private void controlling$onInit(String description, int keyCode, String category, CallbackInfo ci) {
-        this.controlling$comboKeys.clear();
-        this.controlling$defaultComboKeys.clear();
-    }
-
+    // Fully replaces vanilla: a bind only counts as pressed when its whole chord is held and no more specific sibling
+    // wins. Kept as a cancellable inject rather than @Overwrite so other mods' injections still apply.
     @Inject(method = "setKeyBindState", at = @At("HEAD"), cancellable = true)
     private static void controlling$setKeyBindState(int keyCode, boolean pressed, CallbackInfo ci) {
-        if (keyCode != 0) {
-            for (KeyBinding keyBinding : keybindArray) {
-                if (keyBinding.getKeyCode() == keyCode) {
-                    ((MixinKeyBinding) (Object) keyBinding).pressed = pressed
-                            && controlling$isBindingActiveWithModifier(keyBinding, keyCode);
-                }
+        ci.cancel();
+        if (keyCode == 0) {
+            return;
+        }
+        for (int i = 0; i < keybindArray.size(); i++) {
+            final KeyBinding keyBinding = keybindArray.get(i);
+            if (keyBinding.getKeyCode() == keyCode) {
+                ((MixinKeyBinding) (Object) keyBinding).pressed = pressed
+                        && controlling$isBindingActiveWithModifier(keyBinding, keyCode);
             }
         }
-        ci.cancel();
     }
 
+    // Combo-aware replacement of the press-time counter; see controlling$setKeyBindState.
     @Inject(method = "onTick", at = @At("HEAD"), cancellable = true)
     private static void controlling$onTick(int keyCode, CallbackInfo ci) {
-        if (keyCode != 0) {
-            for (KeyBinding keyBinding : keybindArray) {
-                if (keyBinding.getKeyCode() == keyCode
-                        && controlling$isBindingActiveWithModifier(keyBinding, keyCode)) {
-                    ((MixinKeyBinding) (Object) keyBinding).pressTime++;
-                }
+        ci.cancel();
+        if (keyCode == 0) {
+            return;
+        }
+        for (int i = 0; i < keybindArray.size(); i++) {
+            final KeyBinding keyBinding = keybindArray.get(i);
+            if (keyBinding.getKeyCode() == keyCode && controlling$isBindingActiveWithModifier(keyBinding, keyCode)) {
+                ((MixinKeyBinding) (Object) keyBinding).pressTime++;
             }
         }
-        ci.cancel();
     }
 
-    @Inject(method = "getIsKeyPressed", at = @At("HEAD"), cancellable = true)
-    private void controlling$getIsKeyPressed(CallbackInfoReturnable<Boolean> cir) {
-        if (!this.controlling$isModifierActive()) {
-            cir.setReturnValue(false);
-        }
+    @ModifyReturnValue(method = "getIsKeyPressed", at = @At("RETURN"))
+    private boolean controlling$getIsKeyPressed(boolean original) {
+        return original && this.controlling$isModifierActive();
     }
 
-    @Inject(method = "isPressed", at = @At("HEAD"), cancellable = true)
-    private void controlling$isPressed(CallbackInfoReturnable<Boolean> cir) {
-        if (!this.controlling$isModifierActive()) {
-            this.pressTime = 0;
-            cir.setReturnValue(false);
+    @ModifyReturnValue(method = "isPressed", at = @At("RETURN"))
+    private boolean controlling$isPressed(boolean original) {
+        if (this.controlling$isModifierActive()) {
+            return original;
         }
+        // Vanilla already consumed a press tick; drop the rest so the bind cannot fire later.
+        this.pressTime = 0;
+        return false;
     }
 
     @ModifyReturnValue(method = "getKeyCode", at = @At("RETURN"))
@@ -187,6 +186,14 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Override
     public void controlling$setDefaultComboKeys(List<Integer> keys) {
         controlling$copyInto(this.controlling$defaultComboKeys, keys);
+    }
+
+    @Override
+    public void controlling$setComboKeysRaw(IntList keys) {
+        this.controlling$comboKeys.clear();
+        if (keys != null) {
+            this.controlling$comboKeys.addAll(keys);
+        }
     }
 
     @Override

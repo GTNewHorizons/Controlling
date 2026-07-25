@@ -19,6 +19,8 @@ import com.blamejared.controlling.keybinding.ComboKeyCodec;
 import com.blamejared.controlling.keybinding.KeyModifier;
 import com.llamalad7.mixinextras.sugar.Local;
 
+import it.unimi.dsi.fastutil.ints.IntList;
+
 @Mixin(GameSettings.class)
 public abstract class MixinGameSettings {
 
@@ -42,17 +44,8 @@ public abstract class MixinGameSettings {
         if (parsed.legacy) {
             comboKeyBinding.controlling$setKeyModifier(KeyModifier.fromSerializedName(parsed.legacyName));
         } else {
-            comboKeyBinding.controlling$setComboKeys(controlling$toBoxedList(parsed.comboKeys));
+            comboKeyBinding.controlling$setComboKeysRaw(parsed.comboKeys);
         }
-    }
-
-    @Unique
-    private static java.util.List<Integer> controlling$toBoxedList(it.unimi.dsi.fastutil.ints.IntList keys) {
-        final java.util.List<Integer> out = new java.util.ArrayList<>(keys.size());
-        for (int i = 0; i < keys.size(); i++) {
-            out.add(keys.get(i));
-        }
-        return out;
     }
 
     @Redirect(
@@ -68,25 +61,28 @@ public abstract class MixinGameSettings {
 
     @Unique
     private String controlling$appendModifierToKeyLine(String line) {
-        final String[] split = line.split(":", 2);
-
-        final ComboKeyBinding bind = this.controlling$getComboBindForOptionKey(split[0]);
+        final int colon = line.indexOf(':');
+        if (colon < 0) {
+            return line;
+        }
+        final ComboKeyBinding bind = this.controlling$getComboBindForOptionKey(line.substring(0, colon));
         if (bind == null) {
             return line;
         }
-        final it.unimi.dsi.fastutil.ints.IntList comboKeys = bind.controlling$comboKeysRaw();
+        final IntList comboKeys = bind.controlling$comboKeysRaw();
         if (comboKeys.isEmpty()) {
             return line;
         }
-        return split[0] + ":" + split[1] + ":" + ComboKeyCodec.formatComboKeys(comboKeys);
+        return line + ":" + ComboKeyCodec.formatComboKeys(comboKeys);
     }
 
     @Unique
     private ComboKeyBinding controlling$getComboBindForOptionKey(String optionKey) {
+        // optionKey is "key_" + description; compare the tail directly to avoid a concat per binding.
+        final String description = optionKey.substring(KEY_OPTION_PREFIX.length());
         for (KeyBinding keyBinding : this.keyBindings) {
-            if (optionKey.equals(KEY_OPTION_PREFIX + keyBinding.getKeyDescription())
-                    && keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-                return comboKeyBinding;
+            if (description.equals(keyBinding.getKeyDescription()) && keyBinding instanceof ComboKeyBinding combo) {
+                return combo;
             }
         }
         return null;

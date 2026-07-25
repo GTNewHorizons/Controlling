@@ -27,6 +27,9 @@ public interface ComboKeyBinding {
     /** Backing primitive list of combo keys; callers must treat it as read-only. */
     IntList controlling$comboKeysRaw();
 
+    /** Primitive counterpart of {@link #controlling$setComboKeys(List)}; avoids boxing on the load path. */
+    void controlling$setComboKeysRaw(IntList keys);
+
     /** The main key code (== KeyBinding.getKeyCode()); convenience for internal polling. */
     int controlling$mainKeyCode();
 
