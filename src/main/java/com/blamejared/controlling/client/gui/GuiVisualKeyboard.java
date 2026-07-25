@@ -637,8 +637,10 @@ public class GuiVisualKeyboard {
         return new KeyButton(keyCode, this.getKeyLabel(keyCode, label), units);
     }
 
+    private static final boolean LWJGL3IFY_LOADED = Loader.isModLoaded("lwjgl3ify");
+
     private String getKeyLabel(int keyCode, String fallback) {
-        if (!Loader.isModLoaded("lwjgl3ify") || this.shouldUseFixedLabel(keyCode)) {
+        if (!LWJGL3IFY_LOADED || this.shouldUseFixedLabel(keyCode)) {
             return fallback;
         }
         String keyName = Keyboard.getKeyName(keyCode);
