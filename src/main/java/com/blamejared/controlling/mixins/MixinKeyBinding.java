@@ -424,6 +424,45 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         return false;
     }
 
+    @Override
+    public boolean controlling$isChordDown() {
+        return ComboState.satisfied(this.keyCode, this.controlling$comboKeys, InputState.IS_DOWN);
+    }
+
+    @Override
+    public boolean controlling$isChordActive() {
+        return this.controlling$keyContext.isActive() && this.controlling$isChordDown()
+                && !controlling$hasSatisfiedSuperset((KeyBinding) (Object) this);
+    }
+
+    /**
+     * Most-specific-wins for a direct state query: any other binding whose key set strictly contains this one's, is
+     * fully held, and could fire right now, suppresses this one. Unlike
+     * {@link #controlling$hasActiveSupersetSibling(KeyBinding, int)} there is no event key to filter on, so every
+     * binding is considered.
+     */
+    @Unique
+    private static boolean controlling$hasSatisfiedSuperset(KeyBinding keyBinding) {
+        if (!(keyBinding instanceof ComboKeyBinding self)) {
+            return false;
+        }
+        for (int i = 0; i < keybindArray.size(); i++) {
+            final KeyBinding other = keybindArray.get(i);
+            if (other == keyBinding || !(other instanceof ComboKeyBinding otherCombo)) {
+                continue;
+            }
+            if (ComboState.isStrictSuperset(
+                    otherCombo.controlling$mainKeyCode(),
+                    otherCombo.controlling$comboKeysRaw(),
+                    self.controlling$mainKeyCode(),
+                    self.controlling$comboKeysRaw()) && otherCombo.controlling$getKeyContext().isActive()
+                    && otherCombo.controlling$isChordDown()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Unique
     private static boolean controlling$allComboKeysDown(IntList comboKeys) {
         for (int i = 0; i < comboKeys.size(); i++) {

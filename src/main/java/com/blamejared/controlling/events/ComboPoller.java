@@ -4,18 +4,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
-import com.blamejared.controlling.keybinding.ComboState;
-import com.blamejared.controlling.keybinding.InputState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent;
 import cpw.mods.fml.common.gameevent.TickEvent.Phase;
 
 /**
- * Maintains a held-tick counter per combo bind by directly polling key/mouse state at the end of each client tick.
- * Works while a GUI is open (Keyboard.isKeyDown / Mouse.isButtonDown stay live), so mouse-in-GUI combos resolve here
- * rather than through vanilla dispatch. Only writes controlling$comboHeldTicks; never touches vanilla
- * pressed/pressTime.
+ * Maintains a held-tick counter per combo bind from controlling$isChordActive at the end of each client tick. Works
+ * while a GUI is open (Keyboard.isKeyDown / Mouse.isButtonDown stay live), so mouse-in-GUI combos resolve here rather
+ * than through vanilla dispatch. Only writes controlling$comboHeldTicks; never touches vanilla pressed/pressTime.
  */
 public final class ComboPoller {
 
@@ -34,31 +31,8 @@ public final class ComboPoller {
             if (!(kb instanceof ComboKeyBinding combo)) {
                 continue;
             }
-            boolean effective = rawSatisfied(combo) && !supersetSatisfied(binds, combo);
             final int held = combo.controlling$getComboHeldTicks();
-            combo.controlling$setComboHeldTicks(effective ? (held < 0 ? 0 : held + 1) : -1);
+            combo.controlling$setComboHeldTicks(combo.controlling$isChordActive() ? (held < 0 ? 0 : held + 1) : -1);
         }
-    }
-
-    private static boolean rawSatisfied(ComboKeyBinding combo) {
-        return combo.controlling$getKeyContext().isActive() && ComboState
-                .satisfied(combo.controlling$mainKeyCode(), combo.controlling$comboKeysRaw(), InputState.IS_DOWN);
-    }
-
-    private static boolean supersetSatisfied(KeyBinding[] binds, ComboKeyBinding self) {
-        for (int i = 0; i < binds.length; i++) {
-            final KeyBinding other = binds[i];
-            if (other == self || !(other instanceof ComboKeyBinding combo)) {
-                continue;
-            }
-            if (ComboState.isStrictSuperset(
-                    combo.controlling$mainKeyCode(),
-                    combo.controlling$comboKeysRaw(),
-                    self.controlling$mainKeyCode(),
-                    self.controlling$comboKeysRaw()) && rawSatisfied(combo)) {
-                return true;
-            }
-        }
-        return false;
     }
 }

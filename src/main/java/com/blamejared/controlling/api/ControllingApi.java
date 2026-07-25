@@ -223,6 +223,32 @@ public final class ControllingApi {
         return true;
     }
 
+    /**
+     * Live poll of the current keyboard and mouse state: true when the binding's main key and every combo key are down
+     * right now. Safe to call from anywhere on the client - in game, inside any GUI, and between ticks - because it
+     * reads input state directly rather than vanilla's press flags.
+     *
+     * <p>
+     * Ignores conflict context and more specific bindings; use {@link #isChordActive(KeyBinding)} to ask whether the
+     * binding would actually fire.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean isChordDown(KeyBinding keyBinding) {
+        return keyBinding instanceof ComboKeyBinding comboKeyBinding && comboKeyBinding.controlling$isChordDown();
+    }
+
+    /**
+     * Live poll as {@link #isChordDown(KeyBinding)}, additionally requiring the binding's {@link KeyContext} to be
+     * active and no more specific binding to be held. With both {@code G} and {@code Ctrl+G} bound, holding Ctrl+G
+     * reports only {@code Ctrl+G} as active.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean isChordActive(KeyBinding keyBinding) {
+        return keyBinding instanceof ComboKeyBinding comboKeyBinding && comboKeyBinding.controlling$isChordActive();
+    }
+
     /** @return ticks the combo has been held (0 = first tick), or -1 when not held / unsupported. */
     public static int getComboHeldTicks(KeyBinding keyBinding) {
         if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {

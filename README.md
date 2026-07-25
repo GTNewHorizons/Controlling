@@ -69,6 +69,22 @@ int ticks = ControllingApi.getComboHeldTicks(myKeyBinding);
 
 Note: the poller reads raw key state, so a combo can fire while a GUI text field is focused. Gate that in your handler if it matters.
 
+### Instant state queries
+
+The held-state counters above update once per client tick. When you need the answer *now* - inside a GUI event handler, a render pass, or anywhere a tick boundary has not passed - poll the input state directly instead. Both work everywhere on the client and return `false` for non-combo bindings.
+
+```java
+// Is the whole chord physically held this instant?
+if (ControllingApi.isChordDown(myKeyBinding)) { /* ... */ }
+
+// Same, but also requires the binding's context to be active and no more
+// specific binding to be held: with G and Ctrl+G bound, holding Ctrl+G
+// reports true only for Ctrl+G.
+if (ControllingApi.isChordActive(myKeyBinding)) { /* ... */ }
+```
+
+`isChordActive` is the same decision the tick poller uses, so `isComboPressed` is its tick-quantized form. Use `isChordDown` when you want the literal key state and will do your own disambiguation.
+
 ### Keybinding conflict contexts
 
 Controlling assigns each keybinding a conflict *context* so that bindings on the same key only conflict when they truly clash. Built-in contexts are `UNIVERSAL`, `IN_GAME`, and `GUI` (`com.blamejared.controlling.api.KeyContexts`). Vanilla movement/attack/use binds default to `IN_GAME`; most others stay `UNIVERSAL`.
