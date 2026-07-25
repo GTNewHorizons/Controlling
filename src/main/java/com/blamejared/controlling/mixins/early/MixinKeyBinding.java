@@ -64,8 +64,9 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Unique
     private int controlling$comboHeldTicks = -1; // -1 = not satisfied; 0 = first tick; increments while held
 
-    // Fully replaces vanilla: a bind only counts as pressed when its whole chord is held and no more specific sibling
-    // wins. Kept as a cancellable inject rather than @Overwrite so other mods' injections still apply.
+    // Fully replaces vanilla: a bind only counts as pressed when its whole chord is held, its context is active, and no
+    // more specific sibling wins. Kept as a cancellable inject rather than @Overwrite so other mods' injections still
+    // apply.
     @Inject(method = "setKeyBindState", at = @At("HEAD"), cancellable = true)
     private static void controlling$setKeyBindState(int keyCode, boolean pressed, CallbackInfo ci) {
         ci.cancel();
@@ -74,14 +75,25 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         }
         for (int i = 0; i < keybindArray.size(); i++) {
             final KeyBinding keyBinding = keybindArray.get(i);
-            if (keyBinding.getKeyCode() == keyCode) {
+            final int mainKey = keyBinding.getKeyCode();
+            if (mainKey == keyCode) {
                 ((MixinKeyBinding) (Object) keyBinding).pressed = pressed
-                        && controlling$isBindingActiveWithModifier(keyBinding, keyCode);
+                        && controlling$isBindingActiveWithModifier(keyBinding, keyCode)
+                        && controlling$contextActive(keyBinding);
+                continue;
+            }
+            // A chord member changed, so binds on other main keys may have become (un)satisfied. A held main key emits
+            // no event, so without this releasing Ctrl leaves a bare W bind suppressed until W is pressed again.
+            if (mainKey != ComboState.KEY_NONE && InputState.isDown(mainKey)) {
+                ((MixinKeyBinding) (Object) keyBinding).pressed = controlling$isBindingActiveWithModifier(
+                        keyBinding,
+                        mainKey) && controlling$contextActive(keyBinding);
             }
         }
     }
 
-    // Combo-aware replacement of the press-time counter; see controlling$setKeyBindState.
+    // Combo-aware replacement of the press-time counter; see controlling$setKeyBindState. Only the pressed key's own
+    // bindings tick, so completing a chord with a modifier does not manufacture an extra edge for isPressed().
     @Inject(method = "onTick", at = @At("HEAD"), cancellable = true)
     private static void controlling$onTick(int keyCode, CallbackInfo ci) {
         ci.cancel();
@@ -90,7 +102,8 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         }
         for (int i = 0; i < keybindArray.size(); i++) {
             final KeyBinding keyBinding = keybindArray.get(i);
-            if (keyBinding.getKeyCode() == keyCode && controlling$isBindingActiveWithModifier(keyBinding, keyCode)) {
+            if (keyBinding.getKeyCode() == keyCode && controlling$isBindingActiveWithModifier(keyBinding, keyCode)
+                    && controlling$contextActive(keyBinding)) {
                 ((MixinKeyBinding) (Object) keyBinding).pressTime++;
             }
         }
@@ -98,12 +111,12 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @ModifyReturnValue(method = "getIsKeyPressed", at = @At("RETURN"))
     private boolean controlling$getIsKeyPressed(boolean original) {
-        return original && this.controlling$isModifierActive();
+        return original && this.controlling$isModifierActive() && this.controlling$keyContext.isActive();
     }
 
     @ModifyReturnValue(method = "isPressed", at = @At("RETURN"))
     private boolean controlling$isPressed(boolean original) {
-        if (this.controlling$isModifierActive()) {
+        if (this.controlling$isModifierActive() && this.controlling$keyContext.isActive()) {
             return original;
         }
         // Vanilla already consumed a press tick; drop the rest so the bind cannot fire later.
@@ -111,6 +124,15 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         return false;
     }
 
+    @Unique
+    private static boolean controlling$contextActive(KeyBinding keyBinding) {
+        return !(keyBinding instanceof ComboKeyBinding combo) || combo.controlling$getKeyContext().isActive();
+    }
+
+    /**
+     * Not gated on {@link KeyContext#isActive()}: this only disambiguates chords, and masking IN_GAME binds would hide
+     * keys like sneak from every mod GUI that looks them up. Firing is gated in setKeyBindState/onTick/isPressed.
+     */
     @ModifyReturnValue(method = "getKeyCode", at = @At("RETURN"))
     private int controlling$adjustKeyCodeInGui(int original) {
         if (!GuiKeyDispatch.inGuiKeyDispatch()) {
@@ -426,6 +448,10 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         return true;
     }
 
+    /**
+     * Runs off a key event, so only siblings sharing {@code inputKeyCode} as their main key count. Unlike
+     * {@link #controlling$hasSatisfiedSuperset(KeyBinding)}, a superset on a different main key does not suppress here.
+     */
     @Unique
     private static boolean controlling$hasActiveSupersetSibling(KeyBinding keyBinding, int inputKeyCode) {
         if (!(keyBinding instanceof ComboKeyBinding self)) {

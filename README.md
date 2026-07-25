@@ -114,6 +114,8 @@ if (ControllingApi.isChordActive(myKeyBinding)) { /* ... */ }
 
 Controlling assigns each keybinding a conflict *context* so that bindings on the same key only conflict when they truly clash. Built-in contexts are `UNIVERSAL`, `IN_GAME`, and `GUI` (`com.blamejared.controlling.api.KeyContexts`). Vanilla movement/attack/use binds default to `IN_GAME`; most others stay `UNIVERSAL`.
 
+A context also gates whether a bind may fire: `IN_GAME` only with no screen open, `GUI` only with one open. This applies to vanilla `isPressed()`/`getIsKeyPressed()` as well as to `isChordActive`, so a `GUI` bind does not fire in the world. The one exception is `getKeyCode()`, which stays context-blind so mod GUIs can still look up keys like sneak.
+
 Mods can set a binding's context, register custom contexts, and restrict what the user may put in a chord:
 
 ```java
