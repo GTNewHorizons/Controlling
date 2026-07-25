@@ -28,7 +28,7 @@ public final class ComboState {
             return false;
         }
         for (int i = 0; i < comboKeys.size(); i++) {
-            if (!isDown.test(comboKeys.get(i))) {
+            if (!isDown.test(comboKeys.getInt(i))) {
                 return false;
             }
         }
@@ -65,7 +65,7 @@ public final class ComboState {
     private static int keySetSize(int mainKey, IntList comboKeys) {
         int count = mainKey == KEY_NONE ? 0 : 1;
         for (int i = 0; i < comboKeys.size(); i++) {
-            int key = comboKeys.get(i);
+            int key = comboKeys.getInt(i);
             if (key == mainKey || firstIndexOf(comboKeys, key) != i) {
                 continue; // duplicate or equal to main
             }
@@ -80,7 +80,7 @@ public final class ComboState {
             return false;
         }
         for (int i = 0; i < comboB.size(); i++) {
-            if (!inSet(mainA, comboA, comboB.get(i))) {
+            if (!inSet(mainA, comboA, comboB.getInt(i))) {
                 return false;
             }
         }
@@ -93,7 +93,7 @@ public final class ComboState {
 
     private static int firstIndexOf(IntList list, int value) {
         for (int i = 0; i < list.size(); i++) {
-            if (list.get(i) == value) {
+            if (list.getInt(i) == value) {
                 return i;
             }
         }

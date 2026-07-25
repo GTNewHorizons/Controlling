@@ -14,9 +14,18 @@ public enum KeyContexts implements KeyContext {
     /** GUI-only binds; conflicts only with other GUI binds. */
     GUI;
 
+    /** Precomputed: id() is called per row per frame by the controls list, so it must not build a string. */
+    private final String id = name().toLowerCase(Locale.ROOT);
+    private final String translationKey = "options.context." + this.id;
+
     @Override
     public String id() {
-        return name().toLowerCase(Locale.ROOT);
+        return this.id;
+    }
+
+    /** Lang key for this context's display name. */
+    public String translationKey() {
+        return this.translationKey;
     }
 
     @Override

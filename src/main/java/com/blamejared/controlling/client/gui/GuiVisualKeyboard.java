@@ -10,8 +10,8 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
 
@@ -21,6 +21,7 @@ import com.blamejared.controlling.keybinding.ComboState;
 import com.blamejared.controlling.keybinding.KeyNames;
 
 import cpw.mods.fml.common.Loader;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 
@@ -48,6 +49,12 @@ public class GuiVisualKeyboard {
     private static final int CLOSE_BUTTON_SIZE = 18;
     /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
     private static final int GLYPH_TEXT_HEIGHT = 8;
+    private static final int[] LEGEND_COLORS = { KEY_BOUND_COLOR, KEY_CONFLICT_COLOR, KEY_CHORD_COLOR,
+            KEY_SELECTED_COLOR, KEY_DISABLED_COLOR };
+    private static final String[] LEGEND_KEYS = { "options.legendBound", "options.legendConflict",
+            "options.legendChord", "options.legendSelected", "options.legendDisabled" };
+    /** Reused buffer for the localized legend labels; drawn every frame the panel is open. */
+    private static final String[] LEGEND_LABELS = new String[LEGEND_KEYS.length];
     private static final int LEGEND_SWATCH = 7;
     private static final int LEGEND_SWATCH_GAP = 3;
     private static final int LEGEND_ITEM_GAP = 8;
@@ -58,10 +65,17 @@ public class GuiVisualKeyboard {
     private final List<KeyButton> mouseKeys = new ArrayList<>();
     private final List<RectButton> pageButtons = new ArrayList<>();
     private RectButton clearButton;
+    /** Match count per main keycode, rebuilt once per frame by tallyMatches. */
+    private final Int2IntOpenHashMap matchCounts = new Int2IntOpenHashMap();
     private RectButton closeButton;
     private int pageButtonsLeft;
     private boolean showHint;
     private int legendTop;
+
+    private int laidOutWidth = -1;
+    private int laidOutHeight = -1;
+    private Page laidOutPage;
+    private boolean laidOutHint;
 
     private int panelLeft;
     private int panelTop;
@@ -85,7 +99,7 @@ public class GuiVisualKeyboard {
         }
 
         if (this.showHint) {
-            String hint = I18n.format("options.visualKeyboardHint");
+            String hint = StatCollector.translateToLocal("options.visualKeyboardHint");
             mc.fontRenderer
                     .drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - HINT_BLOCK, MUTED_TEXT_COLOR);
         }
@@ -99,11 +113,12 @@ public class GuiVisualKeyboard {
         this.drawChordRow(screen, mc, mouseX, mouseY);
 
         final IntList chord = screen.getVisualKeyboardChord();
+        this.tallyMatches(mc, chord);
         for (KeyButton key : this.keys) {
-            key.draw(screen, mc, chord, mouseX, mouseY);
+            key.draw(screen, mc, chord, this.matchCounts.get(key.keyCode), mouseX, mouseY);
         }
         for (KeyButton key : this.mouseKeys) {
-            key.draw(screen, mc, chord, mouseX, mouseY);
+            key.draw(screen, mc, chord, this.matchCounts.get(key.keyCode), mouseX, mouseY);
         }
 
         final KeyButton hovered = this.hit(mouseX, mouseY);
@@ -122,7 +137,7 @@ public class GuiVisualKeyboard {
     private void drawTitle(GuiNewControls screen, Minecraft mc) {
         final int left = this.panelLeft + 8;
         final int top = this.panelTop + 7;
-        final String title = I18n.format("options.visualKeyboard");
+        final String title = StatCollector.translateToLocal("options.visualKeyboard");
         mc.fontRenderer.drawStringWithShadow(title, left, top, TEXT_COLOR);
 
         final KeyBinding selected = screen.getSelectedKeyBinding();
@@ -134,8 +149,9 @@ public class GuiVisualKeyboard {
         if (available <= 0) {
             return;
         }
-        final String name = mc.fontRenderer
-                .trimStringToWidth(I18n.format(selected.getKeyDescription()), Math.max(0, available));
+        final String name = mc.fontRenderer.trimStringToWidth(
+                StatCollector.translateToLocal(selected.getKeyDescription()),
+                Math.max(0, available));
         mc.fontRenderer.drawStringWithShadow(name, nameLeft, top, KEY_SELECTED_COLOR);
     }
 
@@ -144,11 +160,11 @@ public class GuiVisualKeyboard {
      * too narrow to hold them all, so the most important ones survive on small screens.
      */
     private void drawLegend(Minecraft mc) {
-        final int[] colors = { KEY_BOUND_COLOR, KEY_CONFLICT_COLOR, KEY_CHORD_COLOR, KEY_SELECTED_COLOR,
-                KEY_DISABLED_COLOR };
-        final String[] labels = { I18n.format("options.legendBound"), I18n.format("options.legendConflict"),
-                I18n.format("options.legendChord"), I18n.format("options.legendSelected"),
-                I18n.format("options.legendDisabled") };
+        final int[] colors = LEGEND_COLORS;
+        final String[] labels = LEGEND_LABELS;
+        for (int i = 0; i < LEGEND_KEYS.length; i++) {
+            labels[i] = StatCollector.translateToLocal(LEGEND_KEYS[i]);
+        }
 
         final int available = this.panelRight - this.panelLeft - 16;
         int shown = labels.length;
@@ -179,18 +195,39 @@ public class GuiVisualKeyboard {
     private void drawChordRow(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
         if (!this.allowsModifiers(screen)) {
             mc.fontRenderer.drawStringWithShadow(
-                    I18n.format("options.modifiersLocked"),
+                    StatCollector.translateToLocal("options.modifiersLocked"),
                     this.panelLeft + 8,
                     this.panelTop + 38,
                     MUTED_TEXT_COLOR);
             return;
         }
         final IntList chord = screen.getVisualKeyboardChord();
-        final String label = chord.isEmpty() ? I18n.format("options.visualKeyboardChordEmpty")
-                : I18n.format("options.visualKeyboardChord", KeyNames.joinChord(chord));
+        final String label = chord.isEmpty() ? StatCollector.translateToLocal("options.visualKeyboardChordEmpty")
+                : StatCollector.translateToLocalFormatted("options.visualKeyboardChord", KeyNames.joinChord(chord));
         mc.fontRenderer.drawStringWithShadow(label, this.panelLeft + 8, this.panelTop + 38, MUTED_TEXT_COLOR);
         if (this.clearButton != null && !chord.isEmpty()) {
             this.clearButton.draw(mc, mouseX, mouseY, false);
+        }
+    }
+
+    /**
+     * Counts, per main keycode, how many bindings match the chord being built. Done once per frame rather than once per
+     * key button: the per-button form walked every binding 80-odd times a frame, and the keycode getter inside that
+     * inner loop was the single hottest thing this panel did.
+     */
+    private void tallyMatches(Minecraft mc, IntList chord) {
+        this.matchCounts.clear();
+        for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
+            if (keyBinding.getKeyCategory().endsWith(".hidden")) {
+                continue;
+            }
+            final int mainKey = keyBinding.getKeyCode();
+            final IntList bindingChord = keyBinding instanceof ComboKeyBinding comboKeyBinding
+                    ? comboKeyBinding.controlling$comboKeysRaw()
+                    : IntLists.EMPTY_LIST;
+            if (ComboState.sameKeySet(mainKey, chord, mainKey, bindingChord)) {
+                this.matchCounts.addTo(mainKey, 1);
+            }
         }
     }
 
@@ -273,7 +310,23 @@ public class GuiVisualKeyboard {
                 || comboKeyBinding.controlling$allowsComboModifier();
     }
 
+    /**
+     * Rebuilds the panel geometry. Everything here is derived from the screen size, the page and whether the hint row
+     * is shown, so it is skipped when none of those changed; draw runs every frame and this allocates every button.
+     */
     private void layout(GuiNewControls screen) {
+        // The hint only draws with a binding selected, so do not reserve its row otherwise.
+        this.showHint = screen.getSelectedKeyBinding() != null;
+        if (screen.width == this.laidOutWidth && screen.height == this.laidOutHeight
+                && this.page == this.laidOutPage
+                && this.showHint == this.laidOutHint) {
+            return;
+        }
+        this.laidOutWidth = screen.width;
+        this.laidOutHeight = screen.height;
+        this.laidOutPage = this.page;
+        this.laidOutHint = this.showHint;
+
         int maxWidth = Math.max(220, screen.width - 24);
         this.keyboardWidth = Math.min(560, maxWidth - 16);
         int panelWidth = Math.min(screen.width - 8, this.keyboardWidth + 16);
@@ -282,8 +335,6 @@ public class GuiVisualKeyboard {
         this.keyHeight = Math.max(14, Math.min(24, (screen.height - 116) / 7));
 
         int headerHeight = 57;
-        // The hint only draws with a binding selected, so do not reserve its row otherwise.
-        this.showHint = screen.getSelectedKeyBinding() != null;
         int footerHeight = LEGEND_TOP_GAP + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT
                 + FOOTER_BOTTOM_MARGIN
                 + (this.showHint ? HINT_BLOCK : 0);
@@ -326,7 +377,7 @@ public class GuiVisualKeyboard {
                         buttonTop,
                         buttonWidth,
                         18,
-                        I18n.format("options.visualKeyboardMain")));
+                        StatCollector.translateToLocal("options.visualKeyboardMain")));
         this.pageButtons.add(
                 new RectButton(
                         Page.NUMPAD,
@@ -334,7 +385,7 @@ public class GuiVisualKeyboard {
                         buttonTop,
                         buttonWidth,
                         18,
-                        I18n.format("options.visualKeyboardNumpad")));
+                        StatCollector.translateToLocal("options.visualKeyboardNumpad")));
         this.pageButtons.add(
                 new RectButton(
                         Page.AUX,
@@ -342,7 +393,7 @@ public class GuiVisualKeyboard {
                         buttonTop,
                         buttonWidth,
                         18,
-                        I18n.format("options.visualKeyboardAux")));
+                        StatCollector.translateToLocal("options.visualKeyboardAux")));
     }
 
     private void layoutChordRow() {
@@ -353,7 +404,7 @@ public class GuiVisualKeyboard {
                 this.panelTop + 33,
                 buttonWidth,
                 18,
-                I18n.format("options.visualKeyboardClear"));
+                StatCollector.translateToLocal("options.visualKeyboardClear"));
     }
 
     // Mouse buttons live on their own row below the keyboard so mouse chords and mouse main keys are reachable here.
@@ -693,12 +744,11 @@ public class GuiVisualKeyboard {
                     && mouseY < this.top + this.height;
         }
 
-        private void draw(GuiNewControls screen, Minecraft mc, IntList chord, int mouseX, int mouseY) {
+        private void draw(GuiNewControls screen, Minecraft mc, IntList chord, int bindings, int mouseX, int mouseY) {
             final boolean inChord = screen.isVisualKeyboardChordKey(this.keyCode);
             // A chord member cannot also be the main key, so it is not selectable while toggled on.
             this.enabled = this.allowsInputType(screen) && !inChord;
 
-            int bindings = this.countMatchingBindings(mc, chord);
             int color = KEY_NORMAL_COLOR;
             if (inChord) {
                 color = KEY_CHORD_COLOR;
@@ -748,21 +798,10 @@ public class GuiVisualKeyboard {
             return this.chordMatches(selected, chord);
         }
 
-        // Coloring only needs the count, and this runs for every key every frame; do not build a list for it.
-        private int countMatchingBindings(Minecraft mc, IntList chord) {
-            int count = 0;
-            for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                if (this.isMatch(keyBinding, chord)) {
-                    count++;
-                }
-            }
-            return count;
-        }
-
         private List<String> getMatchingBindings(Minecraft mc, IntList chord) {
             List<String> bindings = new ArrayList<>();
             for (KeyBinding keyBinding : this.getMatchingKeyBindings(mc, chord)) {
-                bindings.add(I18n.format(keyBinding.getKeyDescription()));
+                bindings.add(StatCollector.translateToLocal(keyBinding.getKeyDescription()));
             }
             return bindings;
         }

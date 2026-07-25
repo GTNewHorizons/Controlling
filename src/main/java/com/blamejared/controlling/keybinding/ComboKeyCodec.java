@@ -35,7 +35,7 @@ public final class ComboKeyCodec {
             if (i > 0) {
                 sb.append(',');
             }
-            sb.append(keys.get(i));
+            sb.append(keys.getInt(i));
         }
         return sb.toString();
     }

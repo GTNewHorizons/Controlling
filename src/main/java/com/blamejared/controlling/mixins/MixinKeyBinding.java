@@ -296,7 +296,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Unique
     private void controlling$appendKeys(StringBuilder sb, boolean modifiersOnly) {
         for (int i = 0; i < this.controlling$comboKeys.size(); i++) {
-            final int key = this.controlling$comboKeys.get(i);
+            final int key = this.controlling$comboKeys.getInt(i);
             if (key == this.keyCode) {
                 continue; // skip combo key equal to main key
             }
