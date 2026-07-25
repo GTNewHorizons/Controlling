@@ -30,28 +30,19 @@ public enum KeyContexts implements KeyContext {
 
     @Override
     public boolean conflicts(KeyContext other) {
-        switch (this) {
-            case UNIVERSAL:
-                return true;
-            case IN_GAME:
-                return other == IN_GAME;
-            case GUI:
-                return other == GUI;
-            default:
-                return true;
-        }
+        return switch (this) {
+            case IN_GAME -> other == IN_GAME;
+            case GUI -> other == GUI;
+            default -> true;
+        };
     }
 
     @Override
     public boolean isActive() {
-        switch (this) {
-            case IN_GAME:
-                return Minecraft.getMinecraft().currentScreen == null;
-            case GUI:
-                return Minecraft.getMinecraft().currentScreen != null;
-            case UNIVERSAL:
-            default:
-                return true;
-        }
+        return switch (this) {
+            case IN_GAME -> Minecraft.getMinecraft().currentScreen == null;
+            case GUI -> Minecraft.getMinecraft().currentScreen != null;
+            default -> true;
+        };
     }
 }
