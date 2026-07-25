@@ -23,6 +23,7 @@ import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -39,6 +40,19 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private static final int CONTEXT_COLOR_CUSTOM = 0xFFBB55FF;
     private static final int CONTEXT_BAR_WIDTH = 2;
 
+    /**
+     * Angelica renders &#RRGGBB colour codes, and GTNHLib's font helpers treat them as zero width, so measuring and
+     * trimming stay correct. Without Angelica the code would be drawn literally, so fall back to a vanilla colour.
+     */
+    private static final boolean RGB_TEXT = Loader.isModLoaded("angelica");
+    /**
+     * Hard conflict marker. With RGB available this is the visual keyboard's conflict fill brightened for text on a
+     * dark background; the fill itself is only 2.9:1 there. Vanilla red is the fallback at 5.5:1.
+     */
+    private static final String MARK_HARD_COLOR = RGB_TEXT ? "&#E0762E" : EnumChatFormatting.RED.toString();
+    /** Soft conflict has no counterpart in the panel, and gold already reads well, so it stays a vanilla colour. */
+    private static final String MARK_SOFT_COLOR = EnumChatFormatting.GOLD.toString();
+
     // Row markers are fixed per state, so build them once instead of concatenating per row per frame. The combined
     // form exists so measuring the markers does not concatenate either.
     private static final String MARK_SELECTED_PREFIX = EnumChatFormatting.YELLOW + "> "
@@ -46,10 +60,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             + EnumChatFormatting.UNDERLINE;
     private static final String MARK_SELECTED_SUFFIX = EnumChatFormatting.RESET.toString() + EnumChatFormatting.YELLOW
             + " <";
-    private static final String MARK_SOFT_PREFIX = EnumChatFormatting.GOLD + "[ " + EnumChatFormatting.RESET;
-    private static final String MARK_SOFT_SUFFIX = EnumChatFormatting.GOLD + " ]";
-    private static final String MARK_HARD_PREFIX = EnumChatFormatting.RED + "[ " + EnumChatFormatting.RESET;
-    private static final String MARK_HARD_SUFFIX = EnumChatFormatting.RED + " ]";
+    private static final String MARK_SOFT_PREFIX = MARK_SOFT_COLOR + "[ " + EnumChatFormatting.RESET;
+    private static final String MARK_SOFT_SUFFIX = MARK_SOFT_COLOR + " ]";
+    private static final String MARK_HARD_PREFIX = MARK_HARD_COLOR + "[ " + EnumChatFormatting.RESET;
+    private static final String MARK_HARD_SUFFIX = MARK_HARD_COLOR + " ]";
     private static final String MARK_SELECTED = MARK_SELECTED_PREFIX + MARK_SELECTED_SUFFIX;
     private static final String MARK_SOFT = MARK_SOFT_PREFIX + MARK_SOFT_SUFFIX;
     private static final String MARK_HARD = MARK_HARD_PREFIX + MARK_HARD_SUFFIX;
@@ -562,7 +576,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             final ComboKeyBinding self = this.keybinding instanceof ComboKeyBinding combo ? combo : null;
             for (KeyBinding conflict : conflicts) {
                 final boolean modifierConflict = self != null && self.controlling$hasKeyCodeModifierConflict(conflict);
-                final EnumChatFormatting color = modifierConflict ? EnumChatFormatting.GOLD : EnumChatFormatting.RED;
+                final String color = modifierConflict ? MARK_SOFT_COLOR : MARK_HARD_COLOR;
                 final String name = StatCollector.translateToLocal(conflict.getKeyDescription());
                 final String keyDisplay = conflict instanceof ComboKeyBinding combo ? combo.controlling$getDisplayName()
                         : GameSettings.getKeyDisplayString(conflict.getKeyCode());

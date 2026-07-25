@@ -11,4 +11,6 @@ dependencies {
     // GTNHLib's transitive fastutil only reaches testCompileClasspath, not testRuntimeClasspath
     // under the gtnhconvention plugin's sourceset wiring; pin it explicitly for the test runtime.
     testRuntimeOnly 'it.unimi.dsi:fastutil:8.5.18'
+
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Angelica:2.1.56:dev")
 }

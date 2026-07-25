@@ -31,18 +31,22 @@ public class GuiVisualKeyboard {
     private static final int PANEL_BORDER_COLOR = 0xFF777777;
     private static final int KEY_NORMAL_COLOR = 0xFF555555;
     private static final int KEY_HOVER_COLOR = 0xFF888888;
-    private static final int KEY_BOUND_COLOR = 0xFF236B23;
-    private static final int KEY_CONFLICT_COLOR = 0xFF8A2525;
+    private static final int KEY_BOUND_COLOR = 0xFF1A6B3A;
+    private static final int KEY_CONFLICT_COLOR = 0xFFA34A16;
     private static final int KEY_SELECTED_COLOR = 0xFFD4A928;
-    private static final int KEY_DISABLED_COLOR = 0xFF303030;
+    private static final int KEY_DISABLED_COLOR = 0xFF262626;
     private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int MUTED_TEXT_COLOR = 0xA0A0A0;
 
     /** LMB, RMB, MMB and two extra buttons; matches what most mice report. */
     private static final int MOUSE_BUTTON_COUNT = 5;
-    private static final int KEY_CHORD_COLOR = 0xFF2F5FA8;
-    /** Bindable as a main key, but barred from this binding's chord; distinct from a key that cannot be bound. */
-    private static final int KEY_CHORD_BLOCKED_COLOR = 0xFF4A3A3A;
+    private static final int KEY_CHORD_COLOR = 0xFF4076C9;
+    /**
+     * Border for a key barred from this binding's chord. Blocked keys keep their fill: hue is the scarce channel here
+     * and a sixth fill colour could not be told apart from the disabled one, even with normal vision. Border and label
+     * are free because a blocked key can never also be in the chord.
+     */
+    private static final int CHORD_BLOCKED_BORDER_COLOR = 0xFFB0554F;
     /** Vertical gap between the last key row and the legend. */
     private static final int LEGEND_TOP_GAP = 6;
     /** Space below the legend for the hint line, only reserved when a binding is selected. */
@@ -52,7 +56,10 @@ public class GuiVisualKeyboard {
     /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
     private static final int GLYPH_TEXT_HEIGHT = 8;
     private static final int[] LEGEND_COLORS = { KEY_BOUND_COLOR, KEY_CONFLICT_COLOR, KEY_CHORD_COLOR,
-            KEY_SELECTED_COLOR, KEY_DISABLED_COLOR, KEY_CHORD_BLOCKED_COLOR };
+            KEY_SELECTED_COLOR, KEY_DISABLED_COLOR, KEY_NORMAL_COLOR };
+    /** Per-entry swatch border, so the blocked entry shows the border that actually marks a blocked key. */
+    private static final int[] LEGEND_BORDERS = { PANEL_BORDER_COLOR, PANEL_BORDER_COLOR, PANEL_BORDER_COLOR,
+            PANEL_BORDER_COLOR, PANEL_BORDER_COLOR, CHORD_BLOCKED_BORDER_COLOR };
     private static final String[] LEGEND_KEYS = { "options.legendBound", "options.legendConflict",
             "options.legendChord", "options.legendSelected", "options.legendDisabled", "options.legendNoChord" };
     /** Reused buffer for the localized legend labels; drawn every frame the panel is open. */
@@ -178,7 +185,7 @@ public class GuiVisualKeyboard {
         final int top = this.legendTop;
         for (int i = 0; i < shown; i++) {
             Gui.drawRect(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, colors[i]);
-            drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, PANEL_BORDER_COLOR);
+            drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, LEGEND_BORDERS[i]);
             left += LEGEND_SWATCH + LEGEND_SWATCH_GAP;
             mc.fontRenderer.drawStringWithShadow(labels[i], left, top, MUTED_TEXT_COLOR);
             left += mc.fontRenderer.getStringWidth(labels[i]) + LEGEND_ITEM_GAP;
@@ -769,8 +776,6 @@ public class GuiVisualKeyboard {
                 color = KEY_CHORD_COLOR;
             } else if (!this.enabled) {
                 color = KEY_DISABLED_COLOR;
-            } else if (chordBlocked) {
-                color = KEY_CHORD_BLOCKED_COLOR;
             } else if (this.isSelected(screen, chord)) {
                 color = KEY_SELECTED_COLOR;
             } else if (bindings > 1) {
@@ -782,12 +787,9 @@ public class GuiVisualKeyboard {
             }
 
             Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, color);
-            drawBorder(
-                    this.left,
-                    this.top,
-                    this.left + this.width,
-                    this.top + this.height,
-                    inChord ? CHORD_BORDER_COLOR : PANEL_BORDER_COLOR);
+            final int border = inChord ? CHORD_BORDER_COLOR
+                    : chordBlocked ? CHORD_BLOCKED_BORDER_COLOR : PANEL_BORDER_COLOR;
+            drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, border);
             drawCentered(
                     mc,
                     this.label,
@@ -795,7 +797,7 @@ public class GuiVisualKeyboard {
                     this.top,
                     this.width,
                     this.height,
-                    this.enabled || inChord ? TEXT_COLOR : MUTED_TEXT_COLOR);
+                    (this.enabled || inChord) && !chordBlocked ? TEXT_COLOR : MUTED_TEXT_COLOR);
         }
 
         // Bindings may opt out of mouse or keyboard input; the mouse row and the keys honor the matching flag.
