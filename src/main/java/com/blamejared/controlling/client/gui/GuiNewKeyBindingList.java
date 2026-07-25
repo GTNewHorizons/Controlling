@@ -36,6 +36,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private static final int CONTEXT_COLOR_GUI = 0xFF55AAFF;
     private static final int CONTEXT_COLOR_CUSTOM = 0xFFBB55FF;
     private static final int CONTEXT_BAR_WIDTH = 2;
+    private static final int LEGEND_TEXT_COLOR = 0xA0A0A0;
     /** Pixels trimmed off the bar's top and bottom so it sits inside the key button's bevel. */
     private static final int CONTEXT_BAR_INSET = 1;
     /** Width of the context bar's hover target, which reaches past the bar so 2px is still easy to hit. */
@@ -50,6 +51,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private static final ResourceLocation ICON_NO_MOUSE = icon("mouse_glyph");
     private static final ResourceLocation ICON_NO_KEYBOARD = icon("keyboard_glyph");
     private static final ResourceLocation ICON_KEYBOARD = icon("keyboard");
+
+    private static final int LEGEND_SWATCH_GAP = 3;
+    private static final int LEGEND_ITEM_GAP = 8;
 
     private static ResourceLocation icon(String name) {
         return new ResourceLocation(Controlling.MODID, "textures/gui/icon/" + name + ".png");

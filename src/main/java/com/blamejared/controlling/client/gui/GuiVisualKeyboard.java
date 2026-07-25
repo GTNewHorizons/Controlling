@@ -40,6 +40,11 @@ public class GuiVisualKeyboard {
     /** LMB, RMB, MMB and two extra buttons; matches what most mice report. */
     private static final int MOUSE_BUTTON_COUNT = 5;
     private static final int KEY_CHORD_COLOR = 0xFF2F5FA8;
+    /** Legend baseline, measured up from the panel bottom; leaves a gap between the key rows and the swatches. */
+    private static final int LEGEND_BOTTOM_OFFSET = 28;
+    private static final int LEGEND_SWATCH = 7;
+    private static final int LEGEND_SWATCH_GAP = 3;
+    private static final int LEGEND_ITEM_GAP = 8;
     private static final int CHORD_BORDER_COLOR = 0xFFD4A928;
 
     private Page page = Page.MAIN;
@@ -72,6 +77,8 @@ public class GuiVisualKeyboard {
             mc.fontRenderer.drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - 14, MUTED_TEXT_COLOR);
         }
 
+        this.drawLegend(mc);
+
         for (RectButton pageButton : this.pageButtons) {
             pageButton.draw(mc, mouseX, mouseY, pageButton.page == this.page);
         }
@@ -93,6 +100,42 @@ public class GuiVisualKeyboard {
                 screen.drawVisualKeyboardTooltip(matchingBindings, mouseX, mouseY);
             }
         }
+    }
+
+    /**
+     * Key to the button colors, along the top of the panel footer. Items are dropped from the right when the panel is
+     * too narrow to hold them all, so the most important ones survive on small screens.
+     */
+    private void drawLegend(Minecraft mc) {
+        final int[] colors = { KEY_BOUND_COLOR, KEY_CONFLICT_COLOR, KEY_CHORD_COLOR, KEY_SELECTED_COLOR,
+                KEY_DISABLED_COLOR };
+        final String[] labels = { I18n.format("options.legendBound"), I18n.format("options.legendConflict"),
+                I18n.format("options.legendChord"), I18n.format("options.legendSelected"),
+                I18n.format("options.legendDisabled") };
+
+        final int available = this.panelRight - this.panelLeft - 16;
+        int shown = labels.length;
+        while (shown > 0 && legendWidth(mc, labels, shown) > available) {
+            shown--;
+        }
+
+        int left = this.panelLeft + 8;
+        final int top = this.panelBottom - LEGEND_BOTTOM_OFFSET;
+        for (int i = 0; i < shown; i++) {
+            Gui.drawRect(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, colors[i]);
+            drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, PANEL_BORDER_COLOR);
+            left += LEGEND_SWATCH + LEGEND_SWATCH_GAP;
+            mc.fontRenderer.drawStringWithShadow(labels[i], left, top, MUTED_TEXT_COLOR);
+            left += mc.fontRenderer.getStringWidth(labels[i]) + LEGEND_ITEM_GAP;
+        }
+    }
+
+    private static int legendWidth(Minecraft mc, String[] labels, int count) {
+        int total = 0;
+        for (int i = 0; i < count; i++) {
+            total += LEGEND_SWATCH + LEGEND_SWATCH_GAP + mc.fontRenderer.getStringWidth(labels[i]) + LEGEND_ITEM_GAP;
+        }
+        return total - LEGEND_ITEM_GAP;
     }
 
     // Header line: the chord being built, plus a Clear button once it is non-empty.
@@ -197,7 +240,8 @@ public class GuiVisualKeyboard {
         this.keyHeight = Math.max(14, Math.min(24, (screen.height - 116) / 7));
 
         int headerHeight = 57;
-        int footerHeight = 24;
+        // Tall enough to clear the keys before the legend starts; see LEGEND_BOTTOM_OFFSET.
+        int footerHeight = 34;
         // keyboard rows, then the mouse row
         int bodyHeight = this.keyboardHeight() + this.keyGap + this.keyHeight;
         int panelHeight = headerHeight + bodyHeight + footerHeight;
@@ -500,11 +544,19 @@ public class GuiVisualKeyboard {
         };
     }
 
+    /**
+     * Advances in exact units and rounds each key's left and right edge, rather than rounding widths and summing them.
+     * Rounding widths lets a fractional unit round up once per key, so a full row overshoots and eats the right gutter;
+     * rounding edges keeps the error under half a pixel and lands the last key on keyboardLeft + keyboardWidth.
+     */
     private void addRow(double y, double unitWidth, KeyButton... row) {
         double x = this.keyboardLeft;
+        final int top = (int) Math.round(y);
         for (KeyButton key : row) {
-            int width = Math.max(10, (int) Math.round(unitWidth * key.units + this.keyGap * (key.units - 1.0D)));
-            key.setBounds((int) Math.round(x), (int) Math.round(y), width, this.keyHeight);
+            final double width = unitWidth * key.units + this.keyGap * (key.units - 1.0D);
+            final int left = (int) Math.round(x);
+            final int right = (int) Math.round(x + width);
+            key.setBounds(left, top, Math.max(10, right - left), this.keyHeight);
             this.keys.add(key);
             x += width + this.keyGap;
         }
