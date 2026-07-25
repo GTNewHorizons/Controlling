@@ -335,16 +335,21 @@ public class GuiVisualKeyboard {
         this.keyHeight = Math.max(14, Math.min(24, (screen.height - 116) / 7));
 
         int headerHeight = 57;
-        int footerHeight = LEGEND_TOP_GAP + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT
-                + FOOTER_BOTTOM_MARGIN
-                + (this.showHint ? HINT_BLOCK : 0);
+        final int legendHeight = LEGEND_TOP_GAP + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT
+                + FOOTER_BOTTOM_MARGIN;
+        int footerHeight = legendHeight + (this.showHint ? HINT_BLOCK : 0);
         // keyboard rows, then the mouse row
         int bodyHeight = this.keyboardHeight() + this.keyGap + this.keyHeight;
         int panelHeight = headerHeight + bodyHeight + footerHeight;
 
+        // Center on the tallest the panel can ever get, not on the current page, so the header does not jump when
+        // switching to a shorter page or when the hint row appears. Only the bottom edge moves.
+        final int tallestBody = keyboardHeight(Page.MAIN, this.keyHeight, this.keyGap) + this.keyGap + this.keyHeight;
+        final int tallestPanel = headerHeight + tallestBody + legendHeight + HINT_BLOCK;
+
         this.panelLeft = (screen.width - panelWidth) / 2;
         this.panelRight = this.panelLeft + panelWidth;
-        this.panelTop = Math.max(18, (screen.height - panelHeight) / 2);
+        this.panelTop = Math.max(18, (screen.height - tallestPanel) / 2);
         this.panelBottom = this.panelTop + panelHeight;
         this.keyboardLeft = this.panelLeft + 8;
         this.keyboardTop = this.panelTop + headerHeight;
@@ -423,8 +428,12 @@ public class GuiVisualKeyboard {
     }
 
     private int keyboardHeight() {
-        final int rows = this.page == Page.MAIN ? 6 : 4;
-        return rows * this.keyHeight + (rows - 1) * this.keyGap;
+        return keyboardHeight(this.page, this.keyHeight, this.keyGap);
+    }
+
+    private static int keyboardHeight(Page page, int keyHeight, int keyGap) {
+        final int rows = page == Page.MAIN ? 6 : 4;
+        return rows * keyHeight + (rows - 1) * keyGap;
     }
 
     private void layoutKeys() {
