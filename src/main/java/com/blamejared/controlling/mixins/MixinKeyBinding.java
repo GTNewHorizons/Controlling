@@ -27,6 +27,8 @@ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 
 @Mixin(KeyBinding.class)
 public abstract class MixinKeyBinding implements ComboKeyBinding {
@@ -52,7 +54,9 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Unique
     private KeyContext controlling$keyContext = KeyContexts.UNIVERSAL;
     @Unique
-    private boolean controlling$allowsComboModifier = true;
+    private boolean controlling$allowsChords = true;
+    @Unique
+    private final IntOpenHashSet controlling$blockedChordKeys = new IntOpenHashSet();
     @Unique
     private boolean controlling$allowsMouse = true;
     @Unique
@@ -239,13 +243,26 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     }
 
     @Override
-    public boolean controlling$allowsComboModifier() {
-        return this.controlling$allowsComboModifier;
+    public boolean controlling$allowsChords() {
+        return this.controlling$allowsChords;
     }
 
     @Override
-    public void controlling$setAllowsComboModifier(boolean allowsComboModifier) {
-        this.controlling$allowsComboModifier = allowsComboModifier;
+    public IntSet controlling$blockedChordKeys() {
+        return this.controlling$blockedChordKeys;
+    }
+
+    @Override
+    public void controlling$setBlockedChordKeys(IntList keys) {
+        this.controlling$blockedChordKeys.clear();
+        if (keys != null) {
+            this.controlling$blockedChordKeys.addAll(keys);
+        }
+    }
+
+    @Override
+    public void controlling$setAllowsChords(boolean allowsChords) {
+        this.controlling$allowsChords = allowsChords;
     }
 
     @Override

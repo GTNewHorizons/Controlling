@@ -193,9 +193,9 @@ public class GuiVisualKeyboard {
 
     // Header line: the chord being built, plus a Clear button once it is non-empty.
     private void drawChordRow(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
-        if (!this.allowsModifiers(screen)) {
+        if (!this.allowsChords(screen)) {
             mc.fontRenderer.drawStringWithShadow(
-                    StatCollector.translateToLocal("options.modifiersLocked"),
+                    StatCollector.translateToLocal("options.chordsLocked"),
                     this.panelLeft + 8,
                     this.panelTop + 38,
                     MUTED_TEXT_COLOR);
@@ -255,7 +255,7 @@ public class GuiVisualKeyboard {
         if (mouseButton == 1) {
             // Also works with nothing selected: the chord then filters which bindings the keys light up for.
             final KeyButton key = this.hit(mouseX, mouseY);
-            if (key != null && this.allowsModifiers(screen)) {
+            if (key != null && this.allowsChords(screen) && screen.acceptsChordKey(key.keyCode)) {
                 screen.toggleVisualKeyboardChordKey(key.keyCode);
             }
             return true;
@@ -305,9 +305,9 @@ public class GuiVisualKeyboard {
                 && mouseY < this.panelBottom;
     }
 
-    private boolean allowsModifiers(GuiNewControls screen) {
+    private boolean allowsChords(GuiNewControls screen) {
         return !(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)
-                || comboKeyBinding.controlling$allowsComboModifier();
+                || comboKeyBinding.controlling$allowsChords();
     }
 
     /**

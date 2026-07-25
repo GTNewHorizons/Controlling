@@ -5,8 +5,11 @@ import java.util.List;
 
 import net.minecraft.client.settings.KeyBinding;
 
+import com.blamejared.controlling.keybinding.ChordPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
+
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 /**
  * Public API surface for interacting with Controlling combo keybindings.
@@ -70,7 +73,7 @@ public final class ControllingApi {
             return false;
         }
         KeyModifier keyModifier = comboModifier == null ? KeyModifier.NONE : comboModifier.toInternal();
-        if (!comboKeyBinding.controlling$allowsComboModifier()) {
+        if (!comboKeyBinding.controlling$allowsChords()) {
             keyModifier = KeyModifier.NONE;
         }
         comboKeyBinding.controlling$setKeyModifierAndCode(keyModifier, keyCode);
@@ -131,28 +134,60 @@ public final class ControllingApi {
     }
 
     /**
-     * Controls whether a user may attach a combo modifier (Ctrl/Shift/Alt) to this keybinding. Use false for
-     * modifier-tied binds.
+     * Controls whether the user may attach chord keys to this binding at all. Use false for modifier-tied binds, or any
+     * binding whose meaning would break if extra keys were required.
+     *
+     * <p>
+     * This restricts the controls screen and the visual keyboard only; the owning mod can still set a chord through
+     * {@link #setComboKeys(KeyBinding, List)}.
      *
      * @return false when the keybinding does not support combos.
      */
-    public static boolean setAllowsComboModifier(KeyBinding keyBinding, boolean allows) {
+    public static boolean setAllowsChords(KeyBinding keyBinding, boolean allows) {
         if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
             return false;
         }
-        comboKeyBinding.controlling$setAllowsComboModifier(allows);
+        comboKeyBinding.controlling$setAllowsChords(allows);
         return true;
     }
 
     /**
-     * @return whether a combo modifier may be attached; true when the keybinding does not support combos (plain vanilla
-     *         binding).
+     * @return whether the user may build a chord on this binding; true when the keybinding does not support combos
+     *         (plain vanilla binding).
      */
-    public static boolean allowsComboModifier(KeyBinding keyBinding) {
+    public static boolean allowsChords(KeyBinding keyBinding) {
         if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return comboKeyBinding.controlling$allowsComboModifier();
+            return comboKeyBinding.controlling$allowsChords();
         }
         return true;
+    }
+
+    /**
+     * Bars specific keys from this binding's chord, leaving every other key usable. Use for a key the mod reads itself,
+     * such as a modifier that already means something for this binding.
+     *
+     * <p>
+     * Restricts the GUI only, as {@link #setAllowsChords(KeyBinding, boolean)} does. Passing no keys clears the list.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean setBlockedChordKeys(KeyBinding keyBinding, int... keys) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setBlockedChordKeys(new IntArrayList(keys));
+        return true;
+    }
+
+    /** @return true when {@code keyCode} may not be placed in this binding's chord by the user. */
+    public static boolean isChordKeyBlocked(KeyBinding keyBinding, int keyCode) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return !ChordPolicy.accepts(
+                    keyCode,
+                    comboKeyBinding.controlling$allowsChords(),
+                    comboKeyBinding.controlling$blockedChordKeys());
+        }
+        return false;
     }
 
     /**

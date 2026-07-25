@@ -57,17 +57,20 @@ public final class DebugKeyBindings {
         ControllingApi.setAllowsMouse(noMouse, false);
         final KeyBinding noKeyboard = registerBind("Debug: No Keyboard", Keyboard.KEY_N, KeyContexts.UNIVERSAL, true);
         ControllingApi.setAllowsKeyboard(noKeyboard, false);
+        // Chords allowed, but never on Ctrl: exercises the per-key block list.
+        final KeyBinding noCtrl = registerBind("Debug: No Ctrl Chord", Keyboard.KEY_B, KeyContexts.UNIVERSAL, true);
+        ControllingApi.setBlockedChordKeys(noCtrl, Keyboard.KEY_LCONTROL, Keyboard.KEY_RCONTROL);
+
         final KeyBinding allTest = registerBind("Debug: Multiple", Keyboard.KEY_Y, KeyContexts.GUI, false);
         ControllingApi.setAllowsKeyboard(allTest, false);
         ControllingApi.setAllowsMouse(allTest, false);
     }
 
-    private static KeyBinding registerBind(String description, int keyCode, KeyContext context,
-            boolean allowsComboModifier) {
+    private static KeyBinding registerBind(String description, int keyCode, KeyContext context, boolean allowsChords) {
         final KeyBinding keyBinding = new KeyBinding(description, keyCode, CATEGORY);
         ClientRegistry.registerKeyBinding(keyBinding);
         ControllingApi.setKeyConflictContext(keyBinding, context);
-        ControllingApi.setAllowsComboModifier(keyBinding, allowsComboModifier);
+        ControllingApi.setAllowsChords(keyBinding, allowsChords);
         return keyBinding;
     }
 }

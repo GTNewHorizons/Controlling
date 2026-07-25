@@ -574,7 +574,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         private void drawIndicators(int x, int y, int mouseX, int mouseY) {
             final ComboKeyBinding combo = this.keybinding instanceof ComboKeyBinding c ? c : null;
             final KeyContext context = combo != null ? combo.controlling$getKeyContext() : KeyContexts.UNIVERSAL;
-            final boolean lockedModifier = combo != null && !combo.controlling$allowsComboModifier();
+            final boolean lockedChords = combo != null && !combo.controlling$allowsChords();
             final boolean noMouse = combo != null && !combo.controlling$allowsMouse();
             final boolean noKeyboard = combo != null && !combo.controlling$allowsKeyboard();
 
@@ -600,9 +600,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                             .translateToLocalFormatted("options.contextLabel", contextDisplayName(context));
                 }
             }
-            if (lockedModifier) {
+            if (lockedChords) {
                 this.drawLockIcon(slotLock, slotTop);
-                this.setIndicatorHover(mouseX, mouseY, slotLock, slotTop, "options.modifiersLocked");
+                this.setIndicatorHover(mouseX, mouseY, slotLock, slotTop, "options.chordsLocked");
             }
             if (noMouse) {
                 this.drawMouseGlyph(slotMouse, slotTop);

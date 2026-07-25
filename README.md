@@ -89,7 +89,7 @@ if (ControllingApi.isChordActive(myKeyBinding)) { /* ... */ }
 
 Controlling assigns each keybinding a conflict *context* so that bindings on the same key only conflict when they truly clash. Built-in contexts are `UNIVERSAL`, `IN_GAME`, and `GUI` (`com.blamejared.controlling.api.KeyContexts`). Vanilla movement/attack/use binds default to `IN_GAME`; most others stay `UNIVERSAL`.
 
-Mods can set a binding's context, register custom contexts, and block combo modifiers on modifier-tied binds:
+Mods can set a binding's context, register custom contexts, and restrict what the user may put in a chord:
 
 ```java
 import com.blamejared.controlling.api.ControllingApi;
@@ -98,6 +98,11 @@ import com.blamejared.controlling.api.KeyContexts;
 // Only conflicts with other GUI-context binds.
 ControllingApi.setKeyConflictContext(myGuiKeyBinding, KeyContexts.GUI);
 
-// Prevent users from attaching Ctrl/Shift/Alt to a modifier-tied bind.
-ControllingApi.setAllowsComboModifier(myModifierTiedBinding, false);
+// Prevent users from attaching any chord keys to a modifier-tied bind.
+ControllingApi.setAllowsChords(myModifierTiedBinding, false);
+
+// Or allow chords generally, but keep one key out of them: useful when the mod
+// reads that key itself. Blocking restricts the GUI only, so the mod can still
+// ship a default chord via setComboKeys.
+ControllingApi.setBlockedChordKeys(myBinding, Keyboard.KEY_LCONTROL, Keyboard.KEY_RCONTROL);
 ```

@@ -7,6 +7,7 @@ import net.minecraft.client.settings.KeyBinding;
 import com.blamejared.controlling.api.KeyContext;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSet;
 
 public interface ComboKeyBinding {
 
@@ -69,9 +70,15 @@ public interface ComboKeyBinding {
 
     void controlling$setKeyContext(KeyContext keyContext);
 
-    boolean controlling$allowsComboModifier();
+    /** Whether the user may attach any chord keys to this binding at all. */
+    boolean controlling$allowsChords();
 
-    void controlling$setAllowsComboModifier(boolean allowsComboModifier);
+    void controlling$setAllowsChords(boolean allowsChords);
+
+    /** Keys the user may not put in this binding's chord; never null, empty when unrestricted. */
+    IntSet controlling$blockedChordKeys();
+
+    void controlling$setBlockedChordKeys(IntList keys);
 
     boolean controlling$allowsMouse();
 
