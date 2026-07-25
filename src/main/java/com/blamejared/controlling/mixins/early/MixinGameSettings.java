@@ -2,6 +2,8 @@ package com.blamejared.controlling.mixins.early;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
@@ -16,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.ComboKeyCodec;
+import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 import com.blamejared.controlling.keybinding.KeyModifier;
 import com.llamalad7.mixinextras.sugar.Local;
 
@@ -26,6 +29,10 @@ public abstract class MixinGameSettings {
 
     @Unique
     private static final String KEY_OPTION_PREFIX = "key_";
+
+    /** Description -> bind, rebuilt per save; the per-line scan was quadratic in the binding count. */
+    @Unique
+    private final Map<String, ComboKeyBinding> controlling$saveLookup = new HashMap<>();
 
     @Shadow
     public KeyBinding[] keyBindings;
@@ -46,6 +53,27 @@ public abstract class MixinGameSettings {
         } else {
             comboKeyBinding.controlling$setComboKeysRaw(parsed.comboKeys);
         }
+    }
+
+    /**
+     * A save can run inside a GUI key event, where getKeyCode() is chord-masked; without suspending it a bind whose
+     * chord is not held would be persisted as 0.
+     */
+    @Inject(method = "saveOptions", at = @At("HEAD"))
+    private void controlling$beginSaveOptions(CallbackInfo ci) {
+        GuiKeyDispatch.suspend();
+        this.controlling$saveLookup.clear();
+        for (KeyBinding keyBinding : this.keyBindings) {
+            if (keyBinding instanceof ComboKeyBinding combo) {
+                this.controlling$saveLookup.putIfAbsent(keyBinding.getKeyDescription(), combo);
+            }
+        }
+    }
+
+    @Inject(method = "saveOptions", at = @At("RETURN"))
+    private void controlling$endSaveOptions(CallbackInfo ci) {
+        this.controlling$saveLookup.clear();
+        GuiKeyDispatch.resume();
     }
 
     @Redirect(
@@ -78,13 +106,7 @@ public abstract class MixinGameSettings {
 
     @Unique
     private ComboKeyBinding controlling$getComboBindForOptionKey(String optionKey) {
-        // optionKey is "key_" + description; compare the tail directly to avoid a concat per binding.
-        final String description = optionKey.substring(KEY_OPTION_PREFIX.length());
-        for (KeyBinding keyBinding : this.keyBindings) {
-            if (description.equals(keyBinding.getKeyDescription()) && keyBinding instanceof ComboKeyBinding combo) {
-                return combo;
-            }
-        }
-        return null;
+        // optionKey is "key_" + description; the map is keyed on the description alone to avoid a concat per binding.
+        return this.controlling$saveLookup.get(optionKey.substring(KEY_OPTION_PREFIX.length()));
     }
 }

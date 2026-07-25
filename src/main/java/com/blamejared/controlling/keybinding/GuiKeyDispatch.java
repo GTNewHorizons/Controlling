@@ -12,8 +12,23 @@ public final class GuiKeyDispatch {
     private static boolean inDispatch = false;
     private static int eventKey = 0;
     private static boolean evaluating = false;
+    private static int suspendDepth = 0;
 
     private GuiKeyDispatch() {}
+
+    /**
+     * Closes the window for code reading {@code getKeyCode()} for a non-input purpose, such as writing options.txt.
+     * Depth counted so a nested suspend cannot reopen it early.
+     */
+    public static void suspend() {
+        suspendDepth++;
+    }
+
+    public static void resume() {
+        if (suspendDepth > 0) {
+            suspendDepth--;
+        }
+    }
 
     /** Open the window for the given LWJGL event key. */
     public static void begin(int key) {
@@ -28,7 +43,7 @@ public final class GuiKeyDispatch {
     }
 
     public static boolean inGuiKeyDispatch() {
-        return inDispatch;
+        return inDispatch && suspendDepth == 0;
     }
 
     /** The LWJGL event key currently being dispatched to the GUI. */
