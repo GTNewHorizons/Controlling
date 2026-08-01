@@ -71,14 +71,14 @@ public class GuiVisualKeyboard {
                 this.panelTop + 38,
                 MUTED_TEXT_COLOR);
         for (ModifierButton modifierButton : this.modifierButtons) {
-            modifierButton.draw(mc, mouseX, mouseY, modifierButton.modifier == screen.getVisualKeyboardModifier());
+            modifierButton.draw(mc, mouseX, mouseY, modifierButton.modifier == KeyModifier.NONE);
         }
 
         for (KeyButton key : this.keys) {
             key.draw(screen, mc, mouseX, mouseY);
         }
 
-        KeyModifier modifier = screen.getVisualKeyboardModifier();
+        KeyModifier modifier = KeyModifier.NONE;
         for (KeyButton key : this.keys) {
             if (key.contains(mouseX, mouseY)) {
                 List<String> matchingBindings = key.getMatchingBindings(mc, modifier);
@@ -108,7 +108,6 @@ public class GuiVisualKeyboard {
 
         for (ModifierButton modifierButton : this.modifierButtons) {
             if (modifierButton.contains(mouseX, mouseY)) {
-                screen.setVisualKeyboardModifier(modifierButton.modifier);
                 return true;
             }
         }
@@ -117,7 +116,7 @@ public class GuiVisualKeyboard {
             if (key.contains(mouseX, mouseY) && key.enabled) {
                 if (screen.getSelectedKeyBinding() == null) {
                     List<KeyBinding> matchingBindings = key
-                            .getMatchingKeyBindings(Minecraft.getMinecraft(), screen.getVisualKeyboardModifier());
+                            .getMatchingKeyBindings(Minecraft.getMinecraft(), KeyModifier.NONE);
                     if (!matchingBindings.isEmpty()) {
                         screen.showKeyBinding(matchingBindings.get(0));
                     }
@@ -528,7 +527,7 @@ public class GuiVisualKeyboard {
         }
 
         private void draw(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
-            KeyModifier modifier = screen.getVisualKeyboardModifier();
+            KeyModifier modifier = KeyModifier.NONE;
             this.enabled = !modifier.matches(this.keyCode);
 
             int bindings = this.getMatchingBindings(mc, modifier).size();
