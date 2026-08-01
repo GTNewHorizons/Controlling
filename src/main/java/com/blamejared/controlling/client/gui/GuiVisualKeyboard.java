@@ -563,9 +563,6 @@ public class GuiVisualKeyboard {
             if (selected == null || selected.getKeyCode() != this.keyCode) {
                 return false;
             }
-            if (selected instanceof ComboKeyBinding comboKeyBinding) {
-                return comboKeyBinding.controlling$getKeyModifier() == modifier;
-            }
             return modifier == KeyModifier.NONE;
         }
 
@@ -583,10 +580,7 @@ public class GuiVisualKeyboard {
                 if (keyBinding.getKeyCode() != this.keyCode || keyBinding.getKeyCategory().endsWith(".hidden")) {
                     continue;
                 }
-                KeyModifier bindingModifier = keyBinding instanceof ComboKeyBinding comboKeyBinding
-                        ? comboKeyBinding.controlling$getKeyModifier()
-                        : KeyModifier.NONE;
-                if (bindingModifier == modifier) {
+                if (modifier == KeyModifier.NONE) {
                     bindings.add(keyBinding);
                 }
             }
