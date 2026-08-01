@@ -5,15 +5,19 @@ import net.minecraftforge.common.MinecraftForge;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.blamejared.controlling.config.ControllingConfig;
 import com.blamejared.controlling.events.ClientEventHandler;
 import com.blamejared.controlling.events.ComboPoller;
 import com.blamejared.controlling.keybinding.DebugKeyBindings;
 import com.blamejared.controlling.keybinding.VanillaKeyContexts;
+import com.gtnewhorizon.gtnhlib.config.ConfigException;
+import com.gtnewhorizon.gtnhlib.config.ConfigurationManager;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 
 @Mod(
         modid = Controlling.MODID,
@@ -25,6 +29,16 @@ public class Controlling {
 
     public static final String MODID = "controlling";
     public static final Logger LOGGER = LogManager.getLogger(MODID);
+
+    @Mod.EventHandler
+    private void preInit(final FMLPreInitializationEvent event) {
+        if (event.getSide().isServer()) return;
+        try {
+            ConfigurationManager.registerConfig(ControllingConfig.class);
+        } catch (ConfigException e) {
+            LOGGER.error("Failed to register the Controlling config; falling back to defaults", e);
+        }
+    }
 
     @Mod.EventHandler
     private void init(final FMLInitializationEvent event) {
