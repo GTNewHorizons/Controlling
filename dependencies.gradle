@@ -1,2 +1,6 @@
 dependencies {
+    // GTNHLib provides fastutil (it.unimi.dsi.fastutil) on the compile/runtime classpath.
+    api("com.github.GTNewHorizons:GTNHLib:0.11.31")
+
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Angelica:2.1.56:dev")
 }
