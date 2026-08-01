@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 
+import com.blamejared.controlling.keybinding.ChordPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
 
 /**
@@ -114,6 +115,109 @@ public final class ControllingApi {
     /** @return the registered context for {@code id}, or {@code null} if unknown. */
     public static KeyContext getKeyContext(String id) {
         return KeyContextRegistry.get(id);
+    }
+
+    /**
+     * Controls whether the user may attach chord keys to this binding at all. Use false for modifier-tied binds, or any
+     * binding whose meaning would break if extra keys were required.
+     *
+     * <p>
+     * This restricts the controls screen and the visual keyboard only; the owning mod can still set a chord through
+     * {@link #setComboKeys(KeyBinding, List)}.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean setAllowsChords(KeyBinding keyBinding, boolean allows) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setAllowsChords(allows);
+        return true;
+    }
+
+    /**
+     * @return whether the user may build a chord on this binding; true when the keybinding does not support combos
+     *         (plain vanilla binding).
+     */
+    public static boolean allowsChords(KeyBinding keyBinding) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return comboKeyBinding.controlling$allowsChords();
+        }
+        return true;
+    }
+
+    /**
+     * Bars specific keys from this binding's chord, leaving every other key usable. Use for a key the mod reads itself,
+     * such as a modifier that already means something for this binding.
+     *
+     * <p>
+     * Restricts the GUI only, as {@link #setAllowsChords(KeyBinding, boolean)} does. Passing no keys clears the list.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean setBlockedChordKeys(KeyBinding keyBinding, int... keys) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setBlockedChordKeys(keys);
+        return true;
+    }
+
+    /** @return true when {@code keyCode} may not be placed in this binding's chord by the user. */
+    public static boolean isChordKeyBlocked(KeyBinding keyBinding, int keyCode) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return !ChordPolicy.accepts(
+                    keyCode,
+                    comboKeyBinding.controlling$allowsChords(),
+                    comboKeyBinding.controlling$blockedChordKeys());
+        }
+        return false;
+    }
+
+    /**
+     * Controls whether the main key of this binding may be set to a mouse button. Use false to forbid mouse binds.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean setAllowsMouse(KeyBinding keyBinding, boolean allows) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setAllowsMouse(allows);
+        return true;
+    }
+
+    /**
+     * @return whether the main key may be bound to a mouse button; true when the keybinding does not support combos.
+     */
+    public static boolean allowsMouse(KeyBinding keyBinding) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return comboKeyBinding.controlling$allowsMouse();
+        }
+        return true;
+    }
+
+    /**
+     * Controls whether the main key of this binding may be set to a keyboard key. Use false to forbid keyboard binds.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean setAllowsKeyboard(KeyBinding keyBinding, boolean allows) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setAllowsKeyboard(allows);
+        return true;
+    }
+
+    /**
+     * @return whether the main key may be bound to a keyboard key; true when the keybinding does not support combos.
+     */
+    public static boolean allowsKeyboard(KeyBinding keyBinding) {
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            return comboKeyBinding.controlling$allowsKeyboard();
+        }
+        return true;
     }
 
     /** @return the extra chord keycodes for this bind, or an empty list when combos are unavailable. */
