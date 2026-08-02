@@ -1,2 +1,3 @@
 dependencies {
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Angelica:2.1.56:dev")
 }

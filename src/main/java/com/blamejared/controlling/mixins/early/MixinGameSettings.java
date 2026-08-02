@@ -1,4 +1,4 @@
-package com.blamejared.controlling.mixins;
+package com.blamejared.controlling.mixins.early;
 
 import java.io.File;
 import java.io.PrintWriter;
