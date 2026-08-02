@@ -15,7 +15,6 @@ import net.minecraft.client.settings.KeyBinding;
 
 import org.lwjgl.input.Keyboard;
 
-import com.blamejared.controlling.keybinding.ComboKeyBinding;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
 import cpw.mods.fml.common.Loader;
