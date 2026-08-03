@@ -20,4 +20,14 @@ public interface KeyContext {
     default boolean isActive() {
         return true;
     }
+
+    /**
+     * Lang key for this context's display name, shown in the controls screen. Defaults to
+     * {@code "options.context." + id()}, so a custom context only needs to add that key to its lang files.
+     *
+     * @return the translation key for this context's display name.
+     */
+    default String translationKey() {
+        return "options.context." + id();
+    }
 }
