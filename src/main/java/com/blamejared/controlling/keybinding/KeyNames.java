@@ -1,6 +1,7 @@
 package com.blamejared.controlling.keybinding;
 
 import java.util.Arrays;
+import java.util.StringJoiner;
 
 import net.minecraft.client.settings.GameSettings;
 
@@ -48,33 +49,21 @@ public final class KeyNames {
      * collection because the caller's set has no order of its own.
      */
     public static String joinSorted(IntCollection keys, String separator) {
-        if (keys.isEmpty()) {
-            return "";
-        }
         final int[] sorted = keys.toIntArray();
         Arrays.sort(sorted);
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < sorted.length; i++) {
-            if (i > 0) {
-                sb.append(separator);
-            }
-            sb.append(display(sorted[i]));
+        final StringJoiner joiner = new StringJoiner(separator);
+        for (int key : sorted) {
+            joiner.add(display(key));
         }
-        return sb.toString();
+        return joiner.toString();
     }
 
     /** Joins a key list as "A + B + C"; empty list yields an empty string. */
     public static String joinChord(IntList keys) {
-        if (keys.isEmpty()) {
-            return "";
-        }
-        final StringBuilder sb = new StringBuilder();
+        final StringJoiner joiner = new StringJoiner(" + ");
         for (int i = 0; i < keys.size(); i++) {
-            if (i > 0) {
-                sb.append(" + ");
-            }
-            sb.append(display(keys.getInt(i)));
+            joiner.add(display(keys.getInt(i)));
         }
-        return sb.toString();
+        return joiner.toString();
     }
 }
