@@ -17,7 +17,7 @@ public final class KeyContextRegistry {
     private KeyContextRegistry() {}
 
     /**
-     * Registers a custom context. A custom id overwrites a prior custom entry; the three built-in ids
+     * Registers a custom context. A custom ID overwrites a prior custom entry; the three built-in IDs
      * ({@code universal}, {@code in_game}, {@code gui}) are reserved and such registrations are ignored.
      */
     public static void register(KeyContext context) {
