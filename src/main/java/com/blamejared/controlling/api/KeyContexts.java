@@ -1,49 +1,49 @@
 package com.blamejared.controlling.api;
 
-import java.util.Locale;
-
 import net.minecraft.client.Minecraft;
 
-/** Built-in {@link KeyContext} values. */
-public enum KeyContexts implements KeyContext {
+/** Built-in {@link KeyContext} singletons. Their ids are reserved by {@link KeyContextRegistry}. */
+public final class KeyContexts {
 
     /** Active/relevant everywhere; conflicts with every context. */
-    UNIVERSAL,
+    public static final KeyContext UNIVERSAL = new KeyContext("universal") {
+
+        @Override
+        public boolean conflicts(KeyContext other) {
+            return true;
+        }
+    };
+
     /** World-only binds; conflicts only with other IN_GAME binds. */
-    IN_GAME,
+    public static final KeyContext IN_GAME = new KeyContext("in_game") {
+
+        @Override
+        public boolean conflicts(KeyContext other) {
+            return other == this;
+        }
+
+        @Override
+        public boolean isActive() {
+            return Minecraft.getMinecraft().currentScreen == null;
+        }
+    };
+
     /** GUI-only binds; conflicts only with other GUI binds. */
-    GUI;
+    public static final KeyContext GUI = new KeyContext("gui") {
 
-    /** Precomputed: id() is called per row per frame by the controls list, so it must not build a string. */
-    private final String id = name().toLowerCase(Locale.ROOT);
-    private final String translationKey = "options.context." + this.id;
+        @Override
+        public boolean conflicts(KeyContext other) {
+            return other == this;
+        }
 
-    @Override
-    public String id() {
-        return this.id;
-    }
+        @Override
+        public boolean isActive() {
+            return Minecraft.getMinecraft().currentScreen != null;
+        }
+    };
 
-    /** Precomputed rather than built per call, for the same reason as {@link #id()}. */
-    @Override
-    public String translationKey() {
-        return this.translationKey;
-    }
+    /** The built-ins, in declaration order. Package-private: only the registry seeds from it. */
+    static final KeyContext[] VALUES = { UNIVERSAL, IN_GAME, GUI };
 
-    @Override
-    public boolean conflicts(KeyContext other) {
-        return switch (this) {
-            case IN_GAME -> other == IN_GAME;
-            case GUI -> other == GUI;
-            default -> true;
-        };
-    }
-
-    @Override
-    public boolean isActive() {
-        return switch (this) {
-            case IN_GAME -> Minecraft.getMinecraft().currentScreen == null;
-            case GUI -> Minecraft.getMinecraft().currentScreen != null;
-            default -> true;
-        };
-    }
+    private KeyContexts() {}
 }
