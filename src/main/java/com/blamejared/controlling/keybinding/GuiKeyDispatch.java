@@ -5,7 +5,7 @@ package com.blamejared.controlling.keybinding;
  * keyTyped). While the window is open, KeyBinding.getKeyCode() is made modifier/sibling-aware so GUI code that matches
  * bindings via {@code eventKey == keyBinding.getKeyCode()} disambiguates combos.
  *
- * Single-threaded (client keyboard loop); no synchronization required.
+ * Single-threaded (should only get called from the client keyboard loop); no synchronization required.
  */
 public final class GuiKeyDispatch {
 
