@@ -25,7 +25,10 @@ public final class VanillaKeyContexts {
                     "key.use",
                     "key.pickItem",
                     "key.togglePerspective",
-                    "key.smoothCamera"));
+                    "key.smoothCamera",
+                    "key.chat",
+                    "key.command",
+                    "key.playerlist"));
 
     private VanillaKeyContexts() {}
 
