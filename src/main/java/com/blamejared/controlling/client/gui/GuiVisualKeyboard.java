@@ -47,7 +47,7 @@ public class GuiVisualKeyboard {
     /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
     private static final int GLYPH_TEXT_HEIGHT = 8;
     private static final String[] LEGEND_KEYS = { "options.legendBound", "options.legendConflict",
-            "options.legendChord", "options.legendSelected", "options.legendDisabled", "options.legendNoChord" };
+            "options.legendCombo", "options.legendSelected", "options.legendDisabled", "options.legendNoCombo" };
     /** Reused buffer for the localized legend labels; drawn every frame the panel is open. */
     private static final String[] LEGEND_LABELS = new String[LEGEND_KEYS.length];
     private static final int LEGEND_SWATCH = 7;
@@ -108,20 +108,20 @@ public class GuiVisualKeyboard {
             pageButton.draw(mc, mouseX, mouseY, pageButton.page == this.page);
         }
 
-        this.drawChordRow(screen, mc, mouseX, mouseY);
+        this.drawComboRow(screen, mc, mouseX, mouseY);
 
-        final IntList chord = screen.getVisualKeyboardChord();
-        this.tallyMatches(mc, chord);
+        final IntList combo = screen.getVisualKeyboardCombo();
+        this.tallyMatches(mc, combo);
         for (KeyButton key : this.keys) {
-            key.draw(screen, mc, chord, this.matchCounts.get(key.keyCode), mouseX, mouseY);
+            key.draw(screen, mc, combo, this.matchCounts.get(key.keyCode), mouseX, mouseY);
         }
         for (KeyButton key : this.mouseKeys) {
-            key.draw(screen, mc, chord, this.matchCounts.get(key.keyCode), mouseX, mouseY);
+            key.draw(screen, mc, combo, this.matchCounts.get(key.keyCode), mouseX, mouseY);
         }
 
         final KeyButton hovered = this.hit(mouseX, mouseY);
         if (hovered != null) {
-            List<String> matchingBindings = hovered.getMatchingBindings(mc, screen.getVisualKeyboardChord());
+            List<String> matchingBindings = hovered.getMatchingBindings(mc, screen.getVisualKeyboardCombo());
             if (!matchingBindings.isEmpty()) {
                 screen.drawVisualKeyboardTooltip(matchingBindings, mouseX, mouseY);
             }
@@ -175,7 +175,7 @@ public class GuiVisualKeyboard {
         for (int i = 0; i < shown; i++) {
             Gui.drawRect(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, colors[i]);
             // the blocked entry shows the border that actually marks a blocked key
-            final int swatchBorder = i == LEGEND_KEYS.length - 1 ? palette.chordBlockedBorder : PANEL_BORDER_COLOR;
+            final int swatchBorder = i == LEGEND_KEYS.length - 1 ? palette.comboBlockedBorder : PANEL_BORDER_COLOR;
             drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, swatchBorder);
             left += LEGEND_SWATCH + LEGEND_SWATCH_GAP;
             mc.fontRenderer.drawStringWithShadow(labels[i], left, top, MUTED_TEXT_COLOR);
@@ -191,41 +191,41 @@ public class GuiVisualKeyboard {
         return total - LEGEND_ITEM_GAP;
     }
 
-    // Header line: the chord being built, plus a Clear button once it is non-empty.
-    private void drawChordRow(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
-        if (!allowsChordsFor(screen)) {
+    // Header line: the combo being built, plus a Clear button once it is non-empty.
+    private void drawComboRow(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
+        if (!allowsCombosFor(screen)) {
             mc.fontRenderer.drawStringWithShadow(
-                    StatCollector.translateToLocal("options.chordsLocked"),
+                    StatCollector.translateToLocal("options.combosLocked"),
                     this.panelLeft + 8,
                     this.panelTop + 38,
                     MUTED_TEXT_COLOR);
             return;
         }
-        final IntList chord = screen.getVisualKeyboardChord();
-        final String label = chord.isEmpty() ? StatCollector.translateToLocal("options.visualKeyboardChordEmpty")
-                : StatCollector.translateToLocalFormatted("options.visualKeyboardChord", KeyNames.joinChord(chord));
+        final IntList combo = screen.getVisualKeyboardCombo();
+        final String label = combo.isEmpty() ? StatCollector.translateToLocal("options.visualKeyboardComboEmpty")
+                : StatCollector.translateToLocalFormatted("options.visualKeyboardCombo", KeyNames.joinCombo(combo));
         mc.fontRenderer.drawStringWithShadow(label, this.panelLeft + 8, this.panelTop + 38, MUTED_TEXT_COLOR);
-        if (this.clearButton != null && !chord.isEmpty()) {
+        if (this.clearButton != null && !combo.isEmpty()) {
             this.clearButton.draw(mc, mouseX, mouseY, false);
         }
     }
 
     /**
-     * Counts, per main keycode, how many bindings match the chord being built. Done once per frame rather than once per
+     * Counts, per main keycode, how many bindings match the combo being built. Done once per frame rather than once per
      * key button: the per-button form walked every binding 80-odd times a frame, and the keycode getter inside that
      * inner loop was the single hottest thing this panel did.
      */
-    private void tallyMatches(Minecraft mc, IntList chord) {
+    private void tallyMatches(Minecraft mc, IntList combo) {
         this.matchCounts.clear();
         for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
             if (keyBinding.getKeyCategory().endsWith(".hidden")) {
                 continue;
             }
             final int mainKey = keyBinding.getKeyCode();
-            final IntList bindingChord = keyBinding instanceof ComboKeyBinding comboKeyBinding
+            final IntList bindingCombo = keyBinding instanceof ComboKeyBinding comboKeyBinding
                     ? comboKeyBinding.controlling$comboKeysRaw()
                     : IntLists.EMPTY_LIST;
-            if (ComboState.sameKeySet(mainKey, chord, mainKey, bindingChord)) {
+            if (ComboState.sameKeySet(mainKey, combo, mainKey, bindingCombo)) {
                 this.matchCounts.addTo(mainKey, 1);
             }
         }
@@ -251,12 +251,12 @@ public class GuiVisualKeyboard {
             return false;
         }
 
-        // Right-click toggles a key in or out of the chord that will be attached to the next key picked.
+        // Right-click toggles a key in or out of the combo that will be attached to the next key picked.
         if (mouseButton == 1) {
-            // Also works with nothing selected: the chord then filters which bindings the keys light up for.
+            // Also works with nothing selected: the combo then filters which bindings the keys light up for.
             final KeyButton key = this.hit(mouseX, mouseY);
-            if (key != null && allowsChordsFor(screen) && screen.acceptsChordKey(key.keyCode)) {
-                screen.toggleVisualKeyboardChordKey(key.keyCode);
+            if (key != null && allowsCombosFor(screen) && screen.acceptsComboKey(key.keyCode)) {
+                screen.toggleVisualKeyboardComboKey(key.keyCode);
             }
             return true;
         }
@@ -277,9 +277,9 @@ public class GuiVisualKeyboard {
             }
         }
 
-        if (this.clearButton != null && !screen.getVisualKeyboardChord().isEmpty()
+        if (this.clearButton != null && !screen.getVisualKeyboardCombo().isEmpty()
                 && this.clearButton.contains(mouseX, mouseY)) {
-            screen.clearVisualKeyboardChord();
+            screen.clearVisualKeyboardCombo();
             return true;
         }
 
@@ -287,7 +287,7 @@ public class GuiVisualKeyboard {
         if (key != null && key.enabled) {
             if (screen.getSelectedKeyBinding() == null) {
                 List<KeyBinding> matchingBindings = key
-                        .getMatchingKeyBindings(Minecraft.getMinecraft(), screen.getVisualKeyboardChord());
+                        .getMatchingKeyBindings(Minecraft.getMinecraft(), screen.getVisualKeyboardCombo());
                 if (!matchingBindings.isEmpty()) {
                     screen.showKeyBinding(matchingBindings.get(0));
                 }
@@ -305,9 +305,9 @@ public class GuiVisualKeyboard {
                 && mouseY < this.panelBottom;
     }
 
-    private static boolean allowsChordsFor(GuiNewControls screen) {
+    private static boolean allowsCombosFor(GuiNewControls screen) {
         return !(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)
-                || comboKeyBinding.controlling$allowsChords();
+                || comboKeyBinding.controlling$allowsCombos();
     }
 
     /**
@@ -356,7 +356,7 @@ public class GuiVisualKeyboard {
         this.legendTop = this.panelBottom - footerHeight + LEGEND_TOP_GAP;
 
         this.layoutPageButtons();
-        this.layoutChordRow();
+        this.layoutComboRow();
         this.layoutKeys();
         this.layoutMouseKeys();
     }
@@ -401,7 +401,7 @@ public class GuiVisualKeyboard {
                         StatCollector.translateToLocal("options.visualKeyboardAux")));
     }
 
-    private void layoutChordRow() {
+    private void layoutComboRow() {
         final int buttonWidth = 40;
         this.clearButton = new RectButton(
                 null,
@@ -412,7 +412,7 @@ public class GuiVisualKeyboard {
                 StatCollector.translateToLocal("options.visualKeyboardClear"));
     }
 
-    // Mouse buttons live on their own row below the keyboard so mouse chords and mouse main keys are reachable here.
+    // Mouse buttons live on their own row below the keyboard so mouse combos and mouse main keys are reachable here.
     private void layoutMouseKeys() {
         this.mouseKeys.clear();
         final int count = Math.max(MIN_MOUSE_BUTTONS, Math.min(Mouse.getButtonCount(), MAX_MOUSE_BUTTONS));
@@ -433,7 +433,11 @@ public class GuiVisualKeyboard {
     }
 
     private static int keyboardHeight(Page page, int keyHeight, int keyGap) {
-        final int rows = page == Page.MAIN ? 6 : 4;
+        final int rows = switch (page) {
+            case MAIN -> 6;
+            case NUMPAD -> 5;
+            case AUX -> 4;
+        };
         return rows * keyHeight + (rows - 1) * keyGap;
     }
 
@@ -591,6 +595,8 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_NUMPAD2, "2", 1.0D),
                 key(Keyboard.KEY_NUMPAD3, "3", 1.0D),
                 key(Keyboard.KEY_DECIMAL, ".", 1.0D));
+        y += this.keyHeight + this.keyGap;
+        this.addRow(y, unit, key(Keyboard.KEY_NUMPAD0, "0", 1.0D));
     }
 
     private void layoutAuxKeys() {
@@ -756,24 +762,24 @@ public class GuiVisualKeyboard {
                     && mouseY < this.top + this.height;
         }
 
-        private void draw(GuiNewControls screen, Minecraft mc, IntList chord, int bindings, int mouseX, int mouseY) {
-            final boolean inChord = screen.isVisualKeyboardChordKey(this.keyCode);
-            // A key held right now is part of the chord being captured, but it is not a toggle: show it with the
+        private void draw(GuiNewControls screen, Minecraft mc, IntList combo, int bindings, int mouseX, int mouseY) {
+            final boolean inCombo = screen.isVisualKeyboardComboKey(this.keyCode);
+            // A key held right now is part of the combo being captured, but it is not a toggle: show it with the
             // selected border so it reads as transient rather than as something clicked on.
-            final boolean heldNow = !inChord && InputState.isDown(this.keyCode);
-            // A chord member cannot also be the main key, so it is not selectable while toggled on.
-            this.enabled = this.allowsInputType(screen) && !inChord;
-            // Only per-key blocks are painted. When the binding bars chords outright every key would qualify, and
+            final boolean heldNow = !inCombo && InputState.isDown(this.keyCode);
+            // A combo member cannot also be the main key, so it is not selectable while toggled on.
+            this.enabled = this.allowsInputType(screen) && !inCombo;
+            // Only per-key blocks are painted. When the binding bars combos outright every key would qualify, and
             // grinding the whole keyboard grey would wrongly imply the main key cannot be bound either; the header
-            // says "chords disabled" for that case.
-            final boolean chordBlocked = allowsChordsFor(screen) && !screen.acceptsChordKey(this.keyCode);
+            // says "combos disabled" for that case.
+            final boolean comboBlocked = allowsCombosFor(screen) && !screen.acceptsComboKey(this.keyCode);
 
             int color = palette.keyNormal;
-            if (inChord) {
-                color = palette.keyChord;
+            if (inCombo) {
+                color = palette.keyCombo;
             } else if (!this.enabled) {
                 color = palette.keyDisabled;
-            } else if (this.isSelected(screen, chord)) {
+            } else if (this.isSelected(screen, combo)) {
                 color = palette.keySelected;
             } else if (bindings > 1) {
                 color = palette.keyConflict;
@@ -784,8 +790,8 @@ public class GuiVisualKeyboard {
             }
 
             Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, color);
-            final int border = inChord || heldNow ? palette.keySelected
-                    : chordBlocked ? palette.chordBlockedBorder : PANEL_BORDER_COLOR;
+            final int border = inCombo || heldNow ? palette.keySelected
+                    : comboBlocked ? palette.comboBlockedBorder : PANEL_BORDER_COLOR;
             drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, border);
             drawCentered(
                     mc,
@@ -794,7 +800,7 @@ public class GuiVisualKeyboard {
                     this.top,
                     this.width,
                     this.height,
-                    (this.enabled || inChord) && !chordBlocked ? ColorPalette.labelColor(color) : MUTED_TEXT_COLOR);
+                    (this.enabled || inCombo) && !comboBlocked ? ColorPalette.labelColor(color) : MUTED_TEXT_COLOR);
         }
 
         // Bindings may opt out of mouse or keyboard input; the mouse row and the keys honor the matching flag.
@@ -806,45 +812,45 @@ public class GuiVisualKeyboard {
                     : comboKeyBinding.controlling$allowsKeyboard();
         }
 
-        private boolean isSelected(GuiNewControls screen, IntList chord) {
+        private boolean isSelected(GuiNewControls screen, IntList combo) {
             KeyBinding selected = screen.getSelectedKeyBinding();
             if (selected == null || selected.getKeyCode() != this.keyCode) {
                 return false;
             }
-            return this.chordMatches(selected, chord);
+            return this.comboMatches(selected, combo);
         }
 
-        private List<String> getMatchingBindings(Minecraft mc, IntList chord) {
+        private List<String> getMatchingBindings(Minecraft mc, IntList combo) {
             List<String> bindings = new ArrayList<>();
-            for (KeyBinding keyBinding : this.getMatchingKeyBindings(mc, chord)) {
+            for (KeyBinding keyBinding : this.getMatchingKeyBindings(mc, combo)) {
                 bindings.add(StatCollector.translateToLocal(keyBinding.getKeyDescription()));
             }
             return bindings;
         }
 
-        private List<KeyBinding> getMatchingKeyBindings(Minecraft mc, IntList chord) {
+        private List<KeyBinding> getMatchingKeyBindings(Minecraft mc, IntList combo) {
             List<KeyBinding> bindings = new ArrayList<>();
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                if (this.isMatch(keyBinding, chord)) {
+                if (this.isMatch(keyBinding, combo)) {
                     bindings.add(keyBinding);
                 }
             }
             return bindings;
         }
 
-        private boolean isMatch(KeyBinding keyBinding, IntList chord) {
+        private boolean isMatch(KeyBinding keyBinding, IntList combo) {
             if (keyBinding.getKeyCode() != this.keyCode || keyBinding.getKeyCategory().endsWith(".hidden")) {
                 return false;
             }
-            return this.chordMatches(keyBinding, chord);
+            return this.comboMatches(keyBinding, combo);
         }
 
-        // A binding lights up under this key only when its whole chord equals the one being built.
-        private boolean chordMatches(KeyBinding keyBinding, IntList chord) {
-            final IntList bindingChord = keyBinding instanceof ComboKeyBinding comboKeyBinding
+        // A binding lights up under this key only when its whole combo equals the one being built.
+        private boolean comboMatches(KeyBinding keyBinding, IntList combo) {
+            final IntList bindingCombo = keyBinding instanceof ComboKeyBinding comboKeyBinding
                     ? comboKeyBinding.controlling$comboKeysRaw()
                     : IntLists.EMPTY_LIST;
-            return ComboState.sameKeySet(this.keyCode, chord, this.keyCode, bindingChord);
+            return ComboState.sameKeySet(this.keyCode, combo, this.keyCode, bindingCombo);
         }
     }
 
