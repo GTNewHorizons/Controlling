@@ -49,9 +49,15 @@ public abstract class KeyContext {
 
     /**
      * Whether a binding in this context clashes with one in {@code other}, i.e. both could fire from the same key
-     * press. {@code true} means the two contexts cannot share a key; {@code false} means they can. For example,
-     * {@code IN_GAME.conflicts(GUI)} is {@code false}, since only one of the two is ever active, so the same key can
-     * serve both.
+     * press. {@code true} means the two contexts cannot share a key; {@code false} means they can.
+     * <p>
+     * Examples, using the built-ins:
+     * <ul>
+     * <li>{@code UNIVERSAL.conflicts(GUI)} is {@code true} - a universal bind is live inside GUIs too.</li>
+     * <li>{@code IN_GAME.conflicts(GUI)} is {@code false} - one is only live with a screen open, the other only with no
+     * screen open, so the same key can serve both.</li>
+     * <li>{@code IN_GAME.conflicts(IN_GAME)} is {@code true} - both are live at the same time.</li>
+     * </ul>
      * <p>
      * Returning {@code false} for an unrecognized context is safe: callers evaluate both directions and
      * {@link KeyContexts#UNIVERSAL} returns {@code true} from its own side.
