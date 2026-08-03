@@ -22,7 +22,6 @@ public abstract class MixinNEIGuiContainerManager {
 
     @Inject(method = "handleKeyboardInput", at = @At("HEAD"))
     private void controlling$openKeyDispatch(CallbackInfo ci) {
-        GuiKeyDispatch.end();
         GuiKeyDispatch.begin(Keyboard.getEventKey());
     }
 
