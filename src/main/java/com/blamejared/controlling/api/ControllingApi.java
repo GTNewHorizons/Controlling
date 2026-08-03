@@ -4,8 +4,8 @@ import java.util.List;
 
 import net.minecraft.client.settings.KeyBinding;
 
-import com.blamejared.controlling.keybinding.ComboPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ComboPolicy;
 
 /**
  * Public API surface for interacting with Controlling combo keybindings.

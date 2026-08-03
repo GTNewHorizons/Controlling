@@ -16,13 +16,8 @@ public final class DebugKeyBindings {
 
     private static final String CATEGORY = "Controlling Debug";
 
-    /** Custom conflict context; conflicts only with itself (plus UNIVERSAL via the a||b rule). */
+    /** Custom context; always active, so it keeps the default conflicts-with-everything. */
     private static final KeyContext DEBUG_CONTEXT = new KeyContext("controlling_debug") {
-
-        @Override
-        public boolean conflicts(KeyContext other) {
-            return other == this;
-        }
 
         @Override
         public boolean isActive() {
