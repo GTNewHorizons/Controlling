@@ -221,10 +221,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     }
 
     private static String contextDisplayName(KeyContext context) {
-        if (context instanceof KeyContexts builtin) {
-            return StatCollector.translateToLocal(builtin.translationKey());
-        }
-        return context.id();
+        final String key = context.translationKey();
+        final String name = StatCollector.translateToLocal(key);
+        // translateToLocal echoes the key when it is missing; fall back to the raw id for unlocalized custom contexts.
+        return name.equals(key) ? context.id() : name;
     }
 
     @Override
