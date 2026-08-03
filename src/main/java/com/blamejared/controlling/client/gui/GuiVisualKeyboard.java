@@ -433,7 +433,11 @@ public class GuiVisualKeyboard {
     }
 
     private static int keyboardHeight(Page page, int keyHeight, int keyGap) {
-        final int rows = page == Page.MAIN ? 6 : 4;
+        final int rows = switch (page) {
+            case MAIN -> 6;
+            case NUMPAD -> 5;
+            case AUX -> 4;
+        };
         return rows * keyHeight + (rows - 1) * keyGap;
     }
 
@@ -591,6 +595,8 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_NUMPAD2, "2", 1.0D),
                 key(Keyboard.KEY_NUMPAD3, "3", 1.0D),
                 key(Keyboard.KEY_DECIMAL, ".", 1.0D));
+        y += this.keyHeight + this.keyGap;
+        this.addRow(y, unit, key(Keyboard.KEY_NUMPAD0, "0", 1.0D));
     }
 
     private void layoutAuxKeys() {
