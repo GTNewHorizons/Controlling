@@ -23,7 +23,8 @@ public enum KeyContexts implements KeyContext {
         return this.id;
     }
 
-    /** Lang key for this context's display name. */
+    /** Precomputed rather than built per call, for the same reason as {@link #id()}. */
+    @Override
     public String translationKey() {
         return this.translationKey;
     }
