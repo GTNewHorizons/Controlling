@@ -76,7 +76,7 @@ ControllingApi.setComboKeyBinding(myKeyBinding, Keyboard.KEY_G, Arrays.asList(Ke
 For tooltips and help text, ask for the binding's full display string rather than building one from the keycode, so it stays in step with the controls screen.
 
 ```java
-// "LCtrl+G" for a comboed binding, "G" for a plain one.
+// "LCtrl+G" for a binding with a combo, "G" for a plain one.
 String keyText = ControllingApi.getDisplayName(myKeyBinding);
 ```
 
@@ -137,15 +137,21 @@ ControllingApi.setAllowsCombos(myModifierTiedBinding, false);
 ControllingApi.setBlockedComboKeys(myBinding, Keyboard.KEY_LCONTROL, Keyboard.KEY_RCONTROL);
 ```
 
-To define a custom context, extend `KeyContext` and implement `conflicts`; `isActive` is optional and defaults to always-active. The display name comes from `options.context.<id>` in your lang file, or pass an existing key via the two-argument constructor `KeyContext(String id, String translationKey)`.
+To define a custom context, extend `KeyContext` and implement `isActive`, which says when your binds are live. `conflicts` defaults to clashing with every context, which is always safe; override it only to narrow, and only where `isActive` makes the two windows genuinely disjoint. An always-active context must not narrow it, since it overlaps everything by definition - that is just `UNIVERSAL`. The display name comes from `options.context.<id>` in your lang file, or pass an existing key via the two-argument constructor `KeyContext(String id, String translationKey)`.
 
 ```java
-// Custom context: conflicts only with itself (plus UNIVERSAL, via the a||b rule).
+// Live only while this mod's terminal is open.
 public static final KeyContext AE2 = new KeyContext("ae2") {
 
     @Override
+    public boolean isActive() {
+        return Minecraft.getMinecraft().currentScreen instanceof GuiTerminal;
+    }
+
+    @Override
     public boolean conflicts(KeyContext other) {
-        return other == this;
+        // Disjoint from world-only binds. Still clashes with anything else that can be live in a GUI.
+        return other != KeyContexts.IN_GAME;
     }
 };
 
