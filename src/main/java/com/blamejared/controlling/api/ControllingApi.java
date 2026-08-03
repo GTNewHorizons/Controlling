@@ -101,7 +101,12 @@ public final class ControllingApi {
         return KeyContexts.UNIVERSAL;
     }
 
-    /** Registers a custom conflict context (built-in ids are reserved). */
+    /**
+     * Registers a custom conflict context (built-in ids are reserved).
+     *
+     * @throws IllegalArgumentException when the id is reserved or already registered.
+     * @throws NullPointerException     when {@code keyContext} is {@code null}.
+     */
     public static void registerKeyContext(KeyContext keyContext) {
         KeyContextRegistry.register(keyContext);
     }
