@@ -12,9 +12,9 @@ import com.blamejared.controlling.keybinding.GuiKeyDispatch;
 /**
  * NotEnoughItems compat. NEI ASM-replaces {@code GuiContainer.handleKeyboardInput} with a body that routes to
  * {@code GuiContainerManager.handleKeyboardInput} without calling super, so
- * {@link com.blamejared.controlling.mixins.early.MixinGuiScreen} never fires for container GUIs when NEI is installed.
- * This opens the GUI key-dispatch window around NEI's handler instead, restoring combo disambiguation in container
- * GUIs.
+ * {@link com.blamejared.controlling.mixins.early.MixinGuiScreen MixinGuiScreen} never fires for container GUIs when NEI
+ * is installed. This opens the GUI key-dispatch window around NEI's handler instead, restoring combo disambiguation in
+ * container GUIs.
  */
 @Pseudo
 @Mixin(targets = "codechicken.nei.guihook.GuiContainerManager", remap = false)
