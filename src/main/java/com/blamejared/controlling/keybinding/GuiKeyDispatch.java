@@ -1,9 +1,13 @@
 package com.blamejared.controlling.keybinding;
 
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.settings.KeyBinding;
+
 /**
- * Tracks the brief window during which a GUI is dispatching a keyboard event (GuiScreen.handleKeyboardInput ->
- * keyTyped). While the window is open, KeyBinding.getKeyCode() is made modifier/sibling-aware so GUI code that matches
- * bindings via {@code eventKey == keyBinding.getKeyCode()} disambiguates combos.
+ * Tracks the brief window during which a GUI is dispatching a keyboard event ({@link GuiScreen#handleKeyboardInput} ->
+ * {@link GuiScreen#keyTyped(char, int)}). While the window is open, {@link KeyBinding#getKeyCode()} is made
+ * modifier/sibling-aware so GUI code that matches bindings via {@code eventKey == keyBinding.getKeyCode()}
+ * disambiguates combos.
  *
  * Single-threaded (should only get called from the client keyboard loop); no synchronization required.
  */
