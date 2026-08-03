@@ -134,3 +134,19 @@ ControllingApi.setAllowsChords(myModifierTiedBinding, false);
 // ship a default chord via setComboKeys.
 ControllingApi.setBlockedChordKeys(myBinding, Keyboard.KEY_LCONTROL, Keyboard.KEY_RCONTROL);
 ```
+
+To define a custom context, extend `KeyContext` and implement `conflicts`; `isActive` is optional and defaults to always-active. The display name comes from `options.context.<id>` in your lang file, or pass an existing key via the two-argument constructor `KeyContext(String id, String translationKey)`.
+
+```java
+// Custom context: conflicts only with itself (plus UNIVERSAL, via the a||b rule).
+public static final KeyContext AE2 = new KeyContext("ae2") {
+
+    @Override
+    public boolean conflicts(KeyContext other) {
+        return other == this;
+    }
+};
+
+// During client init. Throws IllegalArgumentException on a reserved or duplicate id.
+ControllingApi.registerKeyContext(AE2);
+```
