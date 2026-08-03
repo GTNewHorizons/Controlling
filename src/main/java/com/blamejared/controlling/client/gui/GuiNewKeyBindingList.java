@@ -130,7 +130,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     private String lowerSearch = "";
     private List<String> hoveredConflictLines;
     private String hoveredIndicatorText;
-    private String hoveredChordText;
+    private String hoveredComboText;
 
     public GuiNewKeyBindingList(GuiNewControls controls, Minecraft mcIn) {
         super(controls, mcIn);
@@ -177,7 +177,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         this.hoveredKeyDescription = null;
         this.hoveredConflictLines = null;
         this.hoveredIndicatorText = null;
-        this.hoveredChordText = null;
+        this.hoveredComboText = null;
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
@@ -199,9 +199,9 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
     }
 
-    public void drawHoveredChordTooltip(int mouseX, int mouseY) {
-        if (this.hoveredChordText != null) {
-            this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredChordText, mouseX, mouseY);
+    public void drawHoveredComboTooltip(int mouseX, int mouseY) {
+        if (this.hoveredComboText != null) {
+            this.controlsScreen.drawKeyDescriptionTooltip(this.hoveredComboText, mouseX, mouseY);
         }
     }
 
@@ -221,10 +221,10 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
     }
 
     private static String contextDisplayName(KeyContext context) {
-        if (context instanceof KeyContexts builtin) {
-            return StatCollector.translateToLocal(builtin.translationKey());
-        }
-        return context.id();
+        final String key = context.translationKey();
+        final String name = StatCollector.translateToLocal(key);
+        // translateToLocal echoes the key when it is missing; fall back to the raw id for unlocalized custom contexts.
+        return name.equals(key) ? context.id() : name;
     }
 
     @Override
@@ -348,7 +348,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
         private String cachedName;
         private int cachedKeyCode = Integer.MIN_VALUE;
-        private final IntArrayList cachedChord = new IntArrayList();
+        private final IntArrayList cachedCombo = new IntArrayList();
 
         private final GuiButton btnChangeKeyBinding;
         private final GuiButton btnVisualKeyboard;
@@ -393,7 +393,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                     : this.keybinding.getKeyCode() != this.keybinding.getKeyCodeDefault();
             this.btnResetKeyBinding.drawButton(mc, mouseX, mouseY);
 
-            final String fullChordName = this.displayName();
+            final String fullComboName = this.displayName();
 
             boolean hasConflict = false;
             boolean modConflict = true; // less severe form of conflict, like SHIFT conflicting with SHIFT+G
@@ -441,11 +441,11 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 markers = modConflict ? MARK_SOFT : MARK_HARD;
             }
 
-            // Fit the chord label to the button: shrink the font first, then clip with an ellipsis as a last resort.
+            // Fit the combo label to the button: shrink the font first, then clip with an ellipsis as a last resort.
             final int available = this.btnChangeKeyBinding.width - 6;
             final int markerWidth = mc.fontRenderer.getStringWidth(markers);
-            final int fullWidth = markerWidth + mc.fontRenderer.getStringWidth(fullChordName);
-            String shownName = fullChordName;
+            final int fullWidth = markerWidth + mc.fontRenderer.getStringWidth(fullComboName);
+            String shownName = fullComboName;
             boolean truncated = false;
             float scale = 1.0F;
             if (fullWidth > available) {
@@ -454,13 +454,13 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                     scale = MIN_LABEL_SCALE;
                     final int budget = (int) (available / MIN_LABEL_SCALE) - markerWidth
                             - mc.fontRenderer.getStringWidth("...");
-                    shownName = mc.fontRenderer.trimStringToWidth(fullChordName, Math.max(0, budget)) + "...";
+                    shownName = mc.fontRenderer.trimStringToWidth(fullComboName, Math.max(0, budget)) + "...";
                     truncated = true;
                 }
             }
-            // Show the full chord on hover only when it still had to be clipped (conflict tooltip already lists names).
+            // Show the full combo on hover only when it still had to be clipped (conflict tooltip already lists names).
             if (truncated && overChangeButton && !hasConflict) {
-                hoveredChordText = fullChordName;
+                hoveredComboText = fullComboName;
             }
 
             final boolean searching = shouldHighlightKeyName();
@@ -499,7 +499,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
             drawIcon(ICON_KEYBOARD, left, top, KEYBOARD_ICON_SIZE);
         }
 
-        // Draws the button background, then the label centered and scaled down (scale < 1) so long chords fit.
+        // Draws the button background, then the label centered and scaled down (scale < 1) so long combos fit.
         private void drawScaledButtonLabel(int mouseX, int mouseY, float scale, String buttonLabel, String prefix,
                 String shownName, String suffix, boolean highlight, String textStart, String textMiddle,
                 String textEnd) {
@@ -559,17 +559,17 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         }
 
         /**
-         * The bound-key label, recomputed only when the binding actually changes. Building it walks the chord and ends
+         * The bound-key label, recomputed only when the binding actually changes. Building it walks the combo and ends
          * in Keyboard.getKeyName, which was the most expensive thing this list did per row per frame.
          */
         private String displayName() {
             final int keyCode = this.keybinding.getKeyCode();
             if (this.keybinding instanceof ComboKeyBinding combo) {
-                final IntList chord = combo.controlling$comboKeysRaw();
-                if (this.cachedName == null || keyCode != this.cachedKeyCode || !this.cachedChord.equals(chord)) {
+                final IntList comboKeys = combo.controlling$comboKeysRaw();
+                if (this.cachedName == null || keyCode != this.cachedKeyCode || !this.cachedCombo.equals(comboKeys)) {
                     this.cachedKeyCode = keyCode;
-                    this.cachedChord.clear();
-                    this.cachedChord.addAll(chord);
+                    this.cachedCombo.clear();
+                    this.cachedCombo.addAll(comboKeys);
                     this.cachedName = combo.controlling$getDisplayName();
                 }
                 return this.cachedName;
@@ -606,8 +606,8 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
         private void drawIndicators(int x, int y, int mouseX, int mouseY) {
             final ComboKeyBinding combo = this.keybinding instanceof ComboKeyBinding c ? c : null;
             final KeyContext context = combo != null ? combo.controlling$getKeyContext() : KeyContexts.UNIVERSAL;
-            final boolean lockedChords = combo != null && !combo.controlling$allowsChords();
-            final boolean blockedChordKeys = combo != null && !combo.controlling$blockedChordKeys().isEmpty();
+            final boolean lockedCombos = combo != null && !combo.controlling$allowsCombos();
+            final boolean blockedComboKeys = combo != null && !combo.controlling$blockedComboKeys().isEmpty();
             final boolean noMouse = combo != null && !combo.controlling$allowsMouse();
             final boolean noKeyboard = combo != null && !combo.controlling$allowsKeyboard();
 
@@ -633,15 +633,15 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                             .translateToLocalFormatted("options.contextLabel", contextDisplayName(context));
                 }
             }
-            // The lock covers both restrictions: chords barred outright, or only certain keys barred. The tooltip
+            // The lock covers both restrictions: combos barred outright, or only certain keys barred. The tooltip
             // says which, and is only built for the row under the cursor.
-            if (lockedChords || blockedChordKeys) {
+            if (lockedCombos || blockedComboKeys) {
                 this.drawLockIcon(slotLock, slotTop);
                 if (isOver(mouseX, mouseY, slotLock, slotTop, GLYPH_SIZE, GLYPH_SIZE)) {
-                    hoveredIndicatorText = lockedChords ? StatCollector.translateToLocal("options.chordsLocked")
+                    hoveredIndicatorText = lockedCombos ? StatCollector.translateToLocal("options.combosLocked")
                             : StatCollector.translateToLocalFormatted(
-                                    "options.chordsBlocked",
-                                    KeyNames.joinSorted(combo.controlling$blockedChordKeys(), ", "));
+                                    "options.combosBlocked",
+                                    KeyNames.joinSorted(combo.controlling$blockedComboKeys(), ", "));
                 }
             }
             if (noMouse) {

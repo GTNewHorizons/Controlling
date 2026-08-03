@@ -23,8 +23,8 @@ import org.lwjgl.input.Mouse;
 
 import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.api.ControllingApi;
-import com.blamejared.controlling.keybinding.ChordPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ComboPolicy;
 import com.blamejared.controlling.keybinding.InputState;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
@@ -73,11 +73,11 @@ public class GuiNewControls extends GuiControls {
     private boolean confirmingReset = false;
     private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
     private boolean showVisualKeyboard = false;
-    private final IntArrayList visualKeyboardChord = new IntArrayList();
+    private final IntArrayList visualKeyboardCombo = new IntArrayList();
     private KeyBinding highlightedBinding;
     private long highlightExpiry;
-    /** Scratch buffer for {@link #getVisualKeyboardChord()}; avoids allocating every frame. */
-    private final IntArrayList effectiveChord = new IntArrayList();
+    /** Scratch buffer for {@link #getVisualKeyboardCombo()}; avoids allocating every frame. */
+    private final IntArrayList effectiveCombo = new IntArrayList();
     private int selectedModifierKeyCode = Keyboard.KEY_NONE;
     private KeyBinding pendingBinding;
     private int pendingKeyCode = Keyboard.KEY_NONE;
@@ -280,7 +280,7 @@ public class GuiNewControls extends GuiControls {
             this.guiNewKeyBindingList.drawHoveredKeyDescriptionTooltip(mouseX, mouseY);
             this.guiNewKeyBindingList.drawHoveredConflictTooltip(mouseX, mouseY);
             this.guiNewKeyBindingList.drawHoveredIndicatorTooltip(mouseX, mouseY);
-            this.guiNewKeyBindingList.drawHoveredChordTooltip(mouseX, mouseY);
+            this.guiNewKeyBindingList.drawHoveredComboTooltip(mouseX, mouseY);
         }
     }
 
@@ -341,7 +341,7 @@ public class GuiNewControls extends GuiControls {
         } else if (button.id == VISUAL_KEYBOARD_BUTTON_ID) {
             this.showVisualKeyboard = !this.showVisualKeyboard;
             this.buttonId = null;
-            this.visualKeyboardChord.clear();
+            this.visualKeyboardCombo.clear();
         } else if (button.id == SORT_TYPE_BUTTON_ID) {
             sortOrder = sortOrder.getNext();
             button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNextName();
@@ -451,7 +451,7 @@ public class GuiNewControls extends GuiControls {
                 this.pendingKeyCode = Keyboard.KEY_NONE;
                 this.pendingComboKeys = new ArrayList<>();
                 this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-            } else if (isModifierKey && comboKeyBinding != null && this.acceptsChordKey(comboKeyBinding, keyCode)) {
+            } else if (isModifierKey && comboKeyBinding != null && this.acceptsComboKey(comboKeyBinding, keyCode)) {
                 this.selectedModifierKeyCode = keyCode;
                 shouldCloseBindSelection = false;
             } else if (inputKeyCode != Keyboard.KEY_NONE) {
@@ -496,13 +496,13 @@ public class GuiNewControls extends GuiControls {
         this.pendingBinding = keyBinding;
         this.pendingKeyCode = keyCode;
         this.pendingComboKeys = this.captureHeldComboKeys(keyCode);
-        // The capture replaces the chord rather than adding to it, so drop the binding's old chord that was seeded
-        // when the panel opened. Leaving it would show a chord the release is about to discard.
-        this.visualKeyboardChord.clear();
+        // The capture replaces the combo rather than adding to it, so drop the binding's old combo that was seeded
+        // when the panel opened. Leaving it would show a combo the release is about to discard.
+        this.visualKeyboardCombo.clear();
     }
 
-    // Collect every currently-held key/mouse button except the main key, to become the combo (chord) keys. Keys the
-    // binding refuses are dropped here: this is the path that actually creates chords, so the check has to be here.
+    // Collect every currently-held key/mouse button except the main key, to become the combo (combo) keys. Keys the
+    // binding refuses are dropped here: this is the path that actually creates combos, so the check has to be here.
     private List<Integer> captureHeldComboKeys(int mainKeyCode) {
         final List<Integer> combo = new ArrayList<>();
         final ComboKeyBinding bind = this.buttonId instanceof ComboKeyBinding c ? c : null;
@@ -510,13 +510,13 @@ public class GuiNewControls extends GuiControls {
             if (key == mainKeyCode) {
                 continue;
             }
-            if (Keyboard.isKeyDown(key) && this.acceptsChordKey(bind, key)) {
+            if (Keyboard.isKeyDown(key) && this.acceptsComboKey(bind, key)) {
                 combo.add(key);
             }
         }
         for (int button = 0; button < Mouse.getButtonCount(); button++) {
             final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
-            if (keyCode != mainKeyCode && Mouse.isButtonDown(button) && this.acceptsChordKey(bind, keyCode)) {
+            if (keyCode != mainKeyCode && Mouse.isButtonDown(button) && this.acceptsComboKey(bind, keyCode)) {
                 combo.add(keyCode);
             }
         }
@@ -526,10 +526,10 @@ public class GuiNewControls extends GuiControls {
     void selectKeyBinding(KeyBinding keyBinding, boolean showVisualKeyboard) {
         this.buttonId = keyBinding;
         this.showVisualKeyboard = showVisualKeyboard;
-        // Seed the chord from the binding so an existing combo can be edited rather than rebuilt.
-        this.visualKeyboardChord.clear();
+        // Seed the combo from the binding so an existing combo can be edited rather than rebuilt.
+        this.visualKeyboardCombo.clear();
         if (showVisualKeyboard && keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            this.visualKeyboardChord.addAll(comboKeyBinding.controlling$comboKeysRaw());
+            this.visualKeyboardCombo.addAll(comboKeyBinding.controlling$comboKeysRaw());
         }
     }
 
@@ -544,14 +544,14 @@ public class GuiNewControls extends GuiControls {
         }
 
         if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
-            final IntList chord = this.getVisualKeyboardChord();
-            final int mainIndex = chord.indexOf(keyCode);
+            final IntList combo = this.getVisualKeyboardCombo();
+            final int mainIndex = combo.indexOf(keyCode);
             if (mainIndex >= 0) {
-                chord.removeInt(mainIndex); // the main key is not also a chord key
+                combo.removeInt(mainIndex); // the main key is not also a combo key
             }
-            comboKeyBinding.controlling$setComboKeysRaw(chord);
+            comboKeyBinding.controlling$setComboKeysRaw(combo);
         }
-        this.visualKeyboardChord.clear();
+        this.visualKeyboardCombo.clear();
         this.options.setOptionKeyBinding(this.buttonId, keyCode);
         this.pendingBinding = null;
         this.pendingKeyCode = Keyboard.KEY_NONE;
@@ -564,7 +564,7 @@ public class GuiNewControls extends GuiControls {
     }
 
     private void captureModifierOnlyBinding() {
-        // The visual keyboard builds chords by toggling keys, so a modifier press there is never a binding on its own.
+        // The visual keyboard builds combos by toggling keys, so a modifier press there is never a binding on its own.
         if (this.showVisualKeyboard) {
             return;
         }
@@ -601,7 +601,7 @@ public class GuiNewControls extends GuiControls {
     }
 
     private boolean isPendingInputStillActive() {
-        // The binding stays pending while any captured chord key is still held, so releasing them commits it.
+        // The binding stays pending while any captured combo key is still held, so releasing them commits it.
         for (int i = 0; i < this.pendingComboKeys.size(); i++) {
             if (InputState.isDown(this.pendingComboKeys.get(i))) {
                 return true;
@@ -638,72 +638,72 @@ public class GuiNewControls extends GuiControls {
     }
 
     /**
-     * The chord the visual keyboard will attach to the next key picked: keys toggled in the panel plus any modifier
-     * physically held right now, so both ways of building a chord work. Returns a shared buffer, valid until the next
+     * The combo the visual keyboard will attach to the next key picked: keys toggled in the panel plus any modifier
+     * physically held right now, so both ways of building a combo work. Returns a shared buffer, valid until the next
      * call.
      */
-    IntList getVisualKeyboardChord() {
+    IntList getVisualKeyboardCombo() {
         final ComboKeyBinding bind = this.buttonId instanceof ComboKeyBinding c ? c : null;
-        this.effectiveChord.clear();
-        if (bind != null && !bind.controlling$allowsChords()) {
-            return this.effectiveChord;
+        this.effectiveCombo.clear();
+        if (bind != null && !bind.controlling$allowsCombos()) {
+            return this.effectiveCombo;
         }
-        for (int i = 0; i < this.visualKeyboardChord.size(); i++) {
-            final int key = this.visualKeyboardChord.getInt(i);
-            if (this.acceptsChordKey(bind, key)) {
-                this.effectiveChord.add(key);
+        for (int i = 0; i < this.visualKeyboardCombo.size(); i++) {
+            final int key = this.visualKeyboardCombo.getInt(i);
+            if (this.acceptsComboKey(bind, key)) {
+                this.effectiveCombo.add(key);
             }
         }
-        // Every physically held key joins the chord, not just modifiers, so holding any key filters the keyboard
-        // the same way and can be captured into a chord.
+        // Every physically held key joins the combo, not just modifiers, so holding any key filters the keyboard
+        // the same way and can be captured into a combo.
         for (int key = 1; key < Keyboard.getKeyCount(); key++) {
-            if (Keyboard.isKeyDown(key) && !this.effectiveChord.contains(key) && this.acceptsChordKey(bind, key)) {
-                this.effectiveChord.add(key);
+            if (Keyboard.isKeyDown(key) && !this.effectiveCombo.contains(key) && this.acceptsComboKey(bind, key)) {
+                this.effectiveCombo.add(key);
             }
         }
-        // Left and right click drive this panel (pick a key / toggle a chord key), so a held one is UI input, not chord
+        // Left and right click drive this panel (pick a key / toggle a combo key), so a held one is UI input, not combo
         // intent - this runs during mouseClicked with the button still down. Add them from the mouse row instead.
         for (int button = 2; button < Mouse.getButtonCount(); button++) {
             final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
-            if (Mouse.isButtonDown(button) && !this.effectiveChord.contains(keyCode)
-                    && this.acceptsChordKey(bind, keyCode)) {
-                this.effectiveChord.add(keyCode);
+            if (Mouse.isButtonDown(button) && !this.effectiveCombo.contains(keyCode)
+                    && this.acceptsComboKey(bind, keyCode)) {
+                this.effectiveCombo.add(keyCode);
             }
         }
-        return this.effectiveChord;
+        return this.effectiveCombo;
     }
 
-    /** @return true when the binding under edit accepts this key into its chord. */
-    private boolean acceptsChordKey(ComboKeyBinding bind, int keyCode) {
+    /** @return true when the binding under edit accepts this key into its combo. */
+    private boolean acceptsComboKey(ComboKeyBinding bind, int keyCode) {
         if (bind == null) {
             return true;
         }
-        return ChordPolicy.accepts(keyCode, bind.controlling$allowsChords(), bind.controlling$blockedChordKeys());
+        return ComboPolicy.accepts(keyCode, bind.controlling$allowsCombos(), bind.controlling$blockedComboKeys());
     }
 
-    boolean acceptsChordKey(int keyCode) {
-        return this.acceptsChordKey(this.buttonId instanceof ComboKeyBinding c ? c : null, keyCode);
+    boolean acceptsComboKey(int keyCode) {
+        return this.acceptsComboKey(this.buttonId instanceof ComboKeyBinding c ? c : null, keyCode);
     }
 
-    /** Adds or removes a key from the chord being built in the visual keyboard. */
-    void toggleVisualKeyboardChordKey(int keyCode) {
-        if (!this.acceptsChordKey(keyCode)) {
+    /** Adds or removes a key from the combo being built in the visual keyboard. */
+    void toggleVisualKeyboardComboKey(int keyCode) {
+        if (!this.acceptsComboKey(keyCode)) {
             return;
         }
-        final int index = this.visualKeyboardChord.indexOf(keyCode);
+        final int index = this.visualKeyboardCombo.indexOf(keyCode);
         if (index >= 0) {
-            this.visualKeyboardChord.removeInt(index);
+            this.visualKeyboardCombo.removeInt(index);
         } else {
-            this.visualKeyboardChord.add(keyCode);
+            this.visualKeyboardCombo.add(keyCode);
         }
     }
 
-    boolean isVisualKeyboardChordKey(int keyCode) {
-        return this.visualKeyboardChord.contains(keyCode);
+    boolean isVisualKeyboardComboKey(int keyCode) {
+        return this.visualKeyboardCombo.contains(keyCode);
     }
 
-    void clearVisualKeyboardChord() {
-        this.visualKeyboardChord.clear();
+    void clearVisualKeyboardCombo() {
+        this.visualKeyboardCombo.clear();
     }
 
     /** Flashes a row in the list so a jump from the visual keyboard lands somewhere visible. */
@@ -729,7 +729,7 @@ public class GuiNewControls extends GuiControls {
     void closeVisualKeyboard() {
         this.showVisualKeyboard = false;
         this.buttonId = null;
-        this.visualKeyboardChord.clear();
+        this.visualKeyboardCombo.clear();
         this.pendingBinding = null;
         this.pendingKeyCode = Keyboard.KEY_NONE;
         this.pendingComboKeys = new ArrayList<>();
