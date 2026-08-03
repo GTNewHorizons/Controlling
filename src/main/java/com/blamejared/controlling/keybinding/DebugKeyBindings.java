@@ -16,12 +16,7 @@ public final class DebugKeyBindings {
     private static final String CATEGORY = "Controlling Debug";
 
     /** Custom conflict context; conflicts only with itself (plus UNIVERSAL via the a||b rule). */
-    private static final KeyContext DEBUG_CONTEXT = new KeyContext() {
-
-        @Override
-        public String id() {
-            return "controlling_debug";
-        }
+    private static final KeyContext DEBUG_CONTEXT = new KeyContext("controlling_debug") {
 
         @Override
         public boolean conflicts(KeyContext other) {
