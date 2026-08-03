@@ -48,8 +48,22 @@ public abstract class KeyContext {
     }
 
     /**
+     * Whether binds in this context may fire right now. Polled every client tick, so keep it cheap.
+     * <p>
+     * Abstract because it is the one fact only the implementor knows. Everything else about a context follows from it:
+     * a context that is always active overlaps every other live context, and so clashes with all of them.
+     *
+     * @return {@code true} if currently active.
+     */
+    public abstract boolean isActive();
+
+    /**
      * Whether a binding in this context clashes with one in {@code other}, i.e. both could fire from the same key
      * press. {@code true} means the two contexts cannot share a key; {@code false} means they can.
+     * <p>
+     * Defaults to {@code true}, which is always safe: a missed clash is worse than a spurious warning. Override only to
+     * narrow it, and only when {@link #isActive()} makes the two windows genuinely disjoint. An always-active context
+     * must not narrow this, since it overlaps everything by definition.
      * <p>
      * Examples, using the built-ins:
      * <ul>
@@ -65,14 +79,7 @@ public abstract class KeyContext {
      * @param other the other binding's context, never {@code null}.
      * @return {@code true} when the two contexts clash.
      */
-    public abstract boolean conflicts(KeyContext other);
-
-    /**
-     * Whether binds in this context may fire right now. Polled every client tick, so keep it cheap.
-     *
-     * @return {@code true} if currently active. Defaults to always active.
-     */
-    public boolean isActive() {
+    public boolean conflicts(KeyContext other) {
         return true;
     }
 

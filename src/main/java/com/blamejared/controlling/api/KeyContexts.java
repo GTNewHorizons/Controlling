@@ -5,11 +5,11 @@ import net.minecraft.client.Minecraft;
 /** Built-in {@link KeyContext} singletons. Their ids are reserved by {@link KeyContextRegistry}. */
 public final class KeyContexts {
 
-    /** Active/relevant everywhere; conflicts with every context. */
+    /** Active/relevant everywhere; conflicts with every context, which follows from being always active. */
     public static final KeyContext UNIVERSAL = new KeyContext("universal") {
 
         @Override
-        public boolean conflicts(KeyContext other) {
+        public boolean isActive() {
             return true;
         }
     };
