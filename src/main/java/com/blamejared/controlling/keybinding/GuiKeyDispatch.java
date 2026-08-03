@@ -21,8 +21,9 @@ public final class GuiKeyDispatch {
     private GuiKeyDispatch() {}
 
     /**
-     * Closes the window for code reading {@code getKeyCode()} for a non-input purpose, such as writing options.txt.
-     * Depth counted so a nested suspend cannot reopen it early.
+     * Closes the window for code reading {@link KeyBinding#getKeyCode()} for a non-input purpose, such as
+     * {@link net.minecraft.client.settings.GameSettings#saveOptions()} serializing binds to options.txt, where the raw
+     * keycode is required rather than the disambiguated one. Depth counted so a nested suspend cannot reopen it early.
      */
     public static void suspend() {
         suspendDepth++;
@@ -56,9 +57,9 @@ public final class GuiKeyDispatch {
     }
 
     /**
-     * True while the modifier/sibling decision is being computed. The decision reads {@code KeyBinding.getKeyCode()}
-     * internally, so the getKeyCode override must return the real keycode (not the disambiguated one) during this
-     * window to avoid infinite recursion.
+     * True while the modifier/sibling decision is being computed. The decision reads {@link KeyBinding#getKeyCode()}
+     * internally, so the {@code getKeyCode} mixin that consults this class must return the real keycode (not the
+     * disambiguated one) during this window to avoid infinite recursion.
      */
     public static boolean isEvaluating() {
         return evaluating;
