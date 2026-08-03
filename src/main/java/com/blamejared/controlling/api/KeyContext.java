@@ -1,9 +1,8 @@
 package com.blamejared.controlling.api;
 
 /**
- * A keybinding conflict context, modelled on Forge's IKeyConflictContext. Two bindings on the same key only conflict
- * when their contexts clash. Overall clash is computed by callers as {@code a.conflicts(b) || b.conflicts(a)}, so
- * {@link #conflicts(KeyContext)} may be asymmetric.
+ * A keybinding conflict context, modelled on Forge's IKeyConflictContext. Callers compute overall clash as
+ * {@code a.conflicts(b) || b.conflicts(a)}, so {@link #conflicts(KeyContext)} may be asymmetric.
  * <p>
  * Instances are singletons compared by identity and registered once with {@link KeyContextRegistry}; see
  * {@link KeyContexts} for the built-ins.
@@ -13,20 +12,14 @@ public abstract class KeyContext {
     private final String id;
     private final String translationKey;
 
-    /**
-     * Uses {@code "options.context." + id} as the translation key.
-     *
-     * @param id the stable identifier for this context.
-     */
+    /** Uses {@code "options.context." + id} as the translation key. */
     protected KeyContext(String id) {
         this(id, "options.context." + id);
     }
 
     /**
-     * @param id             a stable identifier, e.g. "universal", "in_game", "gui", "ae2". Must be unique across all
-     *                       registered contexts.
-     * @param translationKey the lang key for this context's display name. Pass an existing key to avoid adding an
-     *                       {@code options.context.<id>} entry.
+     * @param id             a stable, unique identifier, e.g. "universal", "in_game", "gui", "ae2".
+     * @param translationKey the lang key for this context's display name.
      */
     protected KeyContext(String id, String translationKey) {
         if (id == null || id.isEmpty()) {
@@ -39,43 +32,31 @@ public abstract class KeyContext {
         this.translationKey = translationKey;
     }
 
-    /** @return this context's identifier. Fixed at construction. */
+    /** @return this context's identifier. */
     public final String id() {
         return this.id;
     }
 
-    /** @return the lang key for this context's display name. Fixed at construction. */
+    /** @return the lang key for this context's display name. */
     public final String translationKey() {
         return this.translationKey;
     }
 
     /**
-     * Whether a binding in this context clashes with one in {@code other}, i.e. whether both could fire from the same
-     * key press. Returning {@code true} means the two contexts cannot share a key; {@code false} means they can.
-     * <p>
-     * Examples, using the built-ins:
-     * <ul>
-     * <li>{@code UNIVERSAL.conflicts(GUI)} is {@code true} - a universal bind is live inside GUIs too.</li>
-     * <li>{@code IN_GAME.conflicts(GUI)} is {@code false} - one is only live with a screen open, the other only with no
-     * screen open, so the same key can serve both.</li>
-     * <li>{@code IN_GAME.conflicts(IN_GAME)} is {@code true} - both are live at the same time.</li>
-     * </ul>
-     * <p>
-     * Returning {@code false} for an unrecognized context is safe. Callers evaluate both directions, and
-     * {@link KeyContexts#UNIVERSAL} already returns {@code true} from its own side, so a custom context never has to
-     * special-case the built-ins.
+     * Whether a binding in this context clashes with one in {@code other}, i.e. both could fire from the same key
+     * press. {@code true} means the two contexts cannot share a key; {@code false} means they can. For example,
+     * {@code IN_GAME.conflicts(GUI)} is {@code false}, since only one of the two is ever active, so the same key can
+     * serve both.
      *
-     * @param other the context of the other binding, never {@code null}.
+     * @param other the other binding's context, never {@code null}.
      * @return {@code true} when the two contexts clash.
      */
     public abstract boolean conflicts(KeyContext other);
 
     /**
-     * Whether binds in this context may fire right now. Consulted every client tick by the combo poller, so keep it
-     * cheap.
+     * Whether binds in this context may fire right now. Polled every client tick, so keep it cheap.
      *
-     * @return {@code true} when binds in this context are currently allowed to fire. Defaults to always active, for
-     *         implementors that only care about conflicts.
+     * @return {@code true} if currently active. Defaults to always active.
      */
     public boolean isActive() {
         return true;
