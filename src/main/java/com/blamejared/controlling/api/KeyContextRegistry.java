@@ -34,6 +34,7 @@ public final class KeyContextRegistry {
      *                                  {@code in_game}, {@code gui}), or when another context is already registered
      *                                  under that ID. Registration is not silently dropped, so a load-order clash
      *                                  between two mods is visible instead of picking an arbitrary winner.
+     * @throws NullPointerException     when {@code context} is {@code null}.
      */
     public static void register(KeyContext context) {
         Objects.requireNonNull(context, "context must not be null");
