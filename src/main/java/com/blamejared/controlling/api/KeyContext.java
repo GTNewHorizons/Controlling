@@ -12,7 +12,11 @@ public abstract class KeyContext {
     private final String id;
     private final String translationKey;
 
-    /** Uses {@code "options.context." + id} as the translation key. */
+    /**
+     * Uses {@code "options.context." + id} as the translation key.
+     *
+     * @param id a stable, unique identifier, e.g. "universal", "in_game", "gui", "ae2".
+     */
     protected KeyContext(String id) {
         this(id, "options.context." + id);
     }
@@ -20,6 +24,7 @@ public abstract class KeyContext {
     /**
      * @param id             a stable, unique identifier, e.g. "universal", "in_game", "gui", "ae2".
      * @param translationKey the lang key for this context's display name.
+     * @throws IllegalArgumentException when {@code id} or {@code translationKey} is {@code null} or empty.
      */
     protected KeyContext(String id, String translationKey) {
         if (id == null || id.isEmpty()) {
@@ -47,6 +52,9 @@ public abstract class KeyContext {
      * press. {@code true} means the two contexts cannot share a key; {@code false} means they can. For example,
      * {@code IN_GAME.conflicts(GUI)} is {@code false}, since only one of the two is ever active, so the same key can
      * serve both.
+     * <p>
+     * Returning {@code false} for an unrecognized context is safe: callers evaluate both directions and
+     * {@link KeyContexts#UNIVERSAL} returns {@code true} from its own side.
      *
      * @param other the other binding's context, never {@code null}.
      * @return {@code true} when the two contexts clash.
@@ -60,5 +68,10 @@ public abstract class KeyContext {
      */
     public boolean isActive() {
         return true;
+    }
+
+    @Override
+    public String toString() {
+        return this.id;
     }
 }
