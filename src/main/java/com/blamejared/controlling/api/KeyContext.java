@@ -61,9 +61,9 @@ public abstract class KeyContext {
      * Whether a binding in this context clashes with one in {@code other}, i.e. both could fire from the same key
      * press. {@code true} means the two contexts cannot share a key; {@code false} means they can.
      * <p>
-     * Defaults to {@code true}, which is always safe: a missed clash is worse than a spurious warning. Override only to
-     * narrow it, and only when {@link #isActive()} makes the two windows genuinely disjoint. An always-active context
-     * must not narrow this, since it overlaps everything by definition.
+     * Defaults to {@code true}, which is always safe: failing to warn a player of a potential clash is worse than warning them spuriously. Override only to
+     * narrow it, and only when {@link #isActive()} makes the two contexts impossible to activate at the same time.
+     * Every implementation of this method should return {@code true} when {@code other == this}, since every context conflicts with itself.
      * <p>
      * Examples, using the built-ins:
      * <ul>
