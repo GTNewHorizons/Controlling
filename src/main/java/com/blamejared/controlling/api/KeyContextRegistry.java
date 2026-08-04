@@ -51,6 +51,8 @@ public final class KeyContextRegistry {
     }
 
     /**
+     * Look up a `KeyContext` by its unique ID.
+     *
      * @param id the ID to look up.
      * @return the context registered under {@code id}, or {@code null} if unknown.
      */
