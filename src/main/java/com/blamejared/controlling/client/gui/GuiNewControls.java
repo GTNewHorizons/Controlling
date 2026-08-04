@@ -25,6 +25,7 @@ import com.blamejared.controlling.Controlling;
 import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.keybinding.ChordPolicy;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ControlsGuiKeyBindings;
 import com.blamejared.controlling.keybinding.InputState;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
@@ -82,6 +83,7 @@ public class GuiNewControls extends GuiControls {
     private KeyBinding pendingBinding;
     private int pendingKeyCode = Keyboard.KEY_NONE;
     private List<Integer> pendingComboKeys = new ArrayList<>();
+    private final UndoRedoManager undoRedoManager = new UndoRedoManager();
 
     public GuiNewControls(GuiScreen screen, GameSettings settings) {
         super(screen, settings);
@@ -301,6 +303,15 @@ public class GuiNewControls extends GuiControls {
             confirmingReset = false;
             button.displayString = StatCollector.translateToLocal("controls.resetAll");
 
+            // Begin batch operation so all resets are undone together
+            undoRedoManager.beginBatch();
+
+            // Record all keybinding states BEFORE modifying any of them
+            for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
+                undoRedoManager.recordChange(keyBinding);
+            }
+
+            // Now reset all keybindings
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
                 if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
                     comboKeyBinding.controlling$setToDefault();
@@ -308,6 +319,10 @@ public class GuiNewControls extends GuiControls {
                     keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
                 }
             }
+
+            // End batch after modifying to properly detect changes
+            undoRedoManager.endBatch();
+
             this.options.saveOptions();
             KeyBinding.resetKeyBindingArrayAndHash();
         } else if (button.id == SHOW_UNBOUD_BUTTON_ID) {
@@ -363,7 +378,9 @@ public class GuiNewControls extends GuiControls {
                     KeyBinding.resetKeyBindingArrayAndHash();
                 }
             } else {
+                undoRedoManager.recordChange(this.buttonId);
                 this.options.setOptionKeyBinding(this.buttonId, ControllingApi.mouseButtonToKeyCode(mb));
+                undoRedoManager.discardIfUnchanged();
                 this.buttonId = null;
                 this.showVisualKeyboard = false;
                 this.field_152177_g = Minecraft.getSystemTime();
@@ -433,6 +450,38 @@ public class GuiNewControls extends GuiControls {
 
     @Override
     public void keyTyped(char typedChar, int keyCode) {
+        // Handle global shortcuts (undo, redo, search) first
+        if (!this.searchTextBox.isFocused() && this.buttonId == null) {
+            // Check for undo keybinding (default Ctrl+Z)
+            if (ControlsGuiKeyBindings.UNDO != null && keyCode == ControlsGuiKeyBindings.UNDO.getKeyCode()
+                    && ControllingApi.isChordActive(ControlsGuiKeyBindings.UNDO)
+                    && undoRedoManager.canUndo()) {
+                int count = undoRedoManager.undo();
+                if (count > 0) {
+                    KeyBinding.resetKeyBindingArrayAndHash();
+                    this.options.saveOptions();
+                }
+                return;
+            }
+            // Check for redo keybinding (default Ctrl+Y)
+            else if (ControlsGuiKeyBindings.REDO != null && keyCode == ControlsGuiKeyBindings.REDO.getKeyCode()
+                    && ControllingApi.isChordActive(ControlsGuiKeyBindings.REDO)
+                    && undoRedoManager.canRedo()) {
+                        int count = undoRedoManager.redo();
+                        if (count > 0) {
+                            KeyBinding.resetKeyBindingArrayAndHash();
+                            this.options.saveOptions();
+                        }
+                        return;
+                    }
+            // Check for search keybinding (default Ctrl+F)
+            else if (ControlsGuiKeyBindings.SEARCH != null && keyCode == ControlsGuiKeyBindings.SEARCH.getKeyCode()
+                    && ControllingApi.isChordActive(ControlsGuiKeyBindings.SEARCH)) {
+                        this.searchTextBox.setFocused(true);
+                        return;
+                    }
+        }
+
         if (this.buttonId != null) {
             final ComboKeyBinding comboKeyBinding = this.buttonId instanceof ComboKeyBinding
                     ? (ComboKeyBinding) this.buttonId
@@ -443,10 +492,12 @@ public class GuiNewControls extends GuiControls {
                     : typedChar > 0 ? typedChar + 256 : Keyboard.KEY_NONE;
 
             if (keyCode == Keyboard.KEY_ESCAPE) {
+                undoRedoManager.recordChange(this.buttonId);
                 if (comboKeyBinding != null) {
                     comboKeyBinding.controlling$setComboKeysRaw(IntLists.EMPTY_LIST);
                 }
                 this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
+                undoRedoManager.discardIfUnchanged();
                 this.pendingBinding = null;
                 this.pendingKeyCode = Keyboard.KEY_NONE;
                 this.pendingComboKeys = new ArrayList<>();
@@ -464,7 +515,9 @@ public class GuiNewControls extends GuiControls {
                     }
                     shouldCloseBindSelection = false;
                 } else {
+                    undoRedoManager.recordChange(this.buttonId);
                     this.options.setOptionKeyBinding(this.buttonId, inputKeyCode);
+                    undoRedoManager.discardIfUnchanged();
                 }
             }
 
@@ -533,6 +586,23 @@ public class GuiNewControls extends GuiControls {
         }
     }
 
+    /**
+     * Resets a single keybinding to its default value with undo support.
+     * 
+     * @param keyBinding The keybinding to reset
+     */
+    void resetKeyBinding(KeyBinding keyBinding) {
+        undoRedoManager.recordChange(keyBinding);
+        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            comboKeyBinding.controlling$setToDefault();
+        } else {
+            keyBinding.setKeyCode(keyBinding.getKeyCodeDefault());
+        }
+        this.options.setOptionKeyBinding(keyBinding, keyBinding.getKeyCodeDefault());
+        undoRedoManager.discardIfUnchanged();
+        KeyBinding.resetKeyBindingArrayAndHash();
+    }
+
     void selectVisualKeyboardKey(int keyCode) {
         if (this.buttonId == null) {
             return;
@@ -552,7 +622,9 @@ public class GuiNewControls extends GuiControls {
             comboKeyBinding.controlling$setComboKeysRaw(chord);
         }
         this.visualKeyboardChord.clear();
+        undoRedoManager.recordChange(this.buttonId);
         this.options.setOptionKeyBinding(this.buttonId, keyCode);
+        undoRedoManager.discardIfUnchanged();
         this.pendingBinding = null;
         this.pendingKeyCode = Keyboard.KEY_NONE;
         this.pendingComboKeys = new ArrayList<>();
@@ -587,10 +659,12 @@ public class GuiNewControls extends GuiControls {
             return;
         }
 
+        undoRedoManager.recordChange(this.pendingBinding);
         if (this.pendingBinding instanceof ComboKeyBinding comboKeyBinding) {
             comboKeyBinding.controlling$setComboKeys(this.pendingComboKeys);
         }
         this.options.setOptionKeyBinding(this.pendingBinding, this.pendingKeyCode);
+        undoRedoManager.discardIfUnchanged();
         this.pendingBinding = null;
         this.pendingKeyCode = Keyboard.KEY_NONE;
         this.pendingComboKeys = new ArrayList<>();
