@@ -42,8 +42,23 @@ public final class KeyContexts {
         }
     };
 
+    /** Settings screen only; conflicts only with other SETTINGS binds. */
+    public static final KeyContext SETTINGS = new KeyContext("settings") {
+
+        @Override
+        public boolean conflicts(KeyContext other) {
+            return other == this;
+        }
+
+        @Override
+        public boolean isActive() {
+            return Minecraft
+                    .getMinecraft().currentScreen instanceof com.blamejared.controlling.client.gui.GuiNewControls;
+        }
+    };
+
     /** The built-ins, in declaration order. Package-private: only the registry seeds from it. */
-    static final KeyContext[] VALUES = { UNIVERSAL, IN_GAME, GUI };
+    static final KeyContext[] VALUES = { UNIVERSAL, IN_GAME, GUI, SETTINGS };
 
     private KeyContexts() {}
 }

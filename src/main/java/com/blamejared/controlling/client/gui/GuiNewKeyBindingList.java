@@ -731,13 +731,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                 controlsScreen.selectKeyBinding(this.keybinding, true);
                 return true;
             } else if (this.btnResetKeyBinding.mousePressed(mc, mouseX, mouseY)) {
-                if (keybinding instanceof ComboKeyBinding comboKeyBinding) {
-                    comboKeyBinding.controlling$setToDefault();
-                } else {
-                    this.keybinding.setKeyCode(this.keybinding.getKeyCodeDefault());
-                }
-                mc.gameSettings.setOptionKeyBinding(this.keybinding, this.keybinding.getKeyCodeDefault());
-                KeyBinding.resetKeyBindingArrayAndHash();
+                controlsScreen.resetKeyBinding(this.keybinding);
                 return true;
             }
 

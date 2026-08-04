@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import com.blamejared.controlling.config.ControllingConfig;
 import com.blamejared.controlling.events.ClientEventHandler;
 import com.blamejared.controlling.events.ComboPoller;
+import com.blamejared.controlling.keybinding.ControlsGuiKeyBindings;
 import com.blamejared.controlling.keybinding.DebugKeyBindings;
 import com.blamejared.controlling.keybinding.VanillaKeyContexts;
 import com.gtnewhorizon.gtnhlib.config.ConfigException;
@@ -52,6 +53,7 @@ public class Controlling {
         MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
         FMLCommonHandler.instance().bus().register(new ComboPoller());
 
+        ControlsGuiKeyBindings.register();
         DebugKeyBindings.registerIfDevEnvironment();
 
         VanillaKeyContexts.apply();
