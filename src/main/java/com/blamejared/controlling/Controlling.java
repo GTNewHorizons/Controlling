@@ -19,7 +19,7 @@ import cpw.mods.fml.common.event.FMLInitializationEvent;
         name = "Controlling",
         version = Tags.VERSION,
         acceptableRemoteVersions = "*",
-        dependencies = "required-after:gtnhlib")
+        dependencies = "required-after:gtnhlib@[0.9.0,)")
 public class Controlling {
 
     public static final String MODID = "controlling";
