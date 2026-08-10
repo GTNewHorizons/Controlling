@@ -3,3 +3,7 @@
 plugins {
     id 'com.gtnewhorizons.gtnhconvention'
 }
+
+test {
+    useJUnitPlatform()
+}

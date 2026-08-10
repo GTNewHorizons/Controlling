@@ -423,7 +423,7 @@ public class GuiNewControls extends GuiControls {
 
             if (keyCode == Keyboard.KEY_ESCAPE) {
                 if (comboKeyBinding != null) {
-                    comboKeyBinding.controlling$setKeyModifierAndCode(KeyModifier.NONE, Keyboard.KEY_NONE);
+                    comboKeyBinding.controlling$setComboKeys(java.util.Collections.emptyList());
                 }
                 this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
                 this.pendingBinding = null;
@@ -479,9 +479,7 @@ public class GuiNewControls extends GuiControls {
     void selectKeyBinding(KeyBinding keyBinding, boolean showVisualKeyboard) {
         this.buttonId = keyBinding;
         this.showVisualKeyboard = showVisualKeyboard;
-        this.visualKeyboardModifier = showVisualKeyboard && keyBinding instanceof ComboKeyBinding comboKeyBinding
-                ? comboKeyBinding.controlling$getKeyModifier()
-                : KeyModifier.NONE;
+        this.visualKeyboardModifier = KeyModifier.NONE;
     }
 
     void selectVisualKeyboardKey(int keyCode) {
@@ -490,7 +488,7 @@ public class GuiNewControls extends GuiControls {
         }
 
         if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
-            comboKeyBinding.controlling$setKeyModifierAndCode(this.getVisualKeyboardModifier(), keyCode);
+            comboKeyBinding.controlling$setComboKeys(java.util.Collections.emptyList());
         }
         this.options.setOptionKeyBinding(this.buttonId, keyCode);
         this.pendingBinding = null;
@@ -543,7 +541,7 @@ public class GuiNewControls extends GuiControls {
         }
 
         if (this.pendingBinding instanceof ComboKeyBinding comboKeyBinding) {
-            comboKeyBinding.controlling$setKeyModifierAndCode(this.pendingModifier, this.pendingKeyCode);
+            comboKeyBinding.controlling$setComboKeys(java.util.Collections.emptyList());
         }
         this.options.setOptionKeyBinding(this.pendingBinding, this.pendingKeyCode);
         this.pendingBinding = null;
