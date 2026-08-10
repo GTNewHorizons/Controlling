@@ -13,7 +13,7 @@ import com.blamejared.controlling.api.ControllingApi;
  *
  * <p>
  * Codes at or above {@link Keyboard#getKeyCount()} (vanilla's {@code typedChar + 256} encoding) are unpollable and
- * always read as up, so such binds work through vanilla dispatch but never through the chord API.
+ * always read as up, so such binds work through vanilla dispatch but never through the combo API.
  */
 public final class InputState {
 
@@ -30,6 +30,6 @@ public final class InputState {
             final int button = keyCode - ControllingApi.MOUSE_KEYCODE_OFFSET;
             return button >= 0 && button < Mouse.getButtonCount() && Mouse.isButtonDown(button);
         }
-        return keyCode > 0 && keyCode < Keyboard.getKeyCount() && Keyboard.isKeyDown(keyCode);
+        return keyCode < Keyboard.getKeyCount() && Keyboard.isKeyDown(keyCode);
     }
 }

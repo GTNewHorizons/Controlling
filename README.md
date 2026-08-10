@@ -23,15 +23,31 @@ The visual keyboard overlay includes code adapted from [Keyboard Wizard](https:/
 ## API
 
 Controlling exposes a small client-side API for combo keybindings in `com.blamejared.controlling.api.ControllingApi`.
+Every `KeyBinding` gains combo support, so these calls work on any binding, yours or another mod's.
 
 ```java
-import com.blamejared.controlling.api.ComboModifier;
 import com.blamejared.controlling.api.ControllingApi;
+import com.blamejared.controlling.api.KeyContexts;
+import java.util.Arrays;
 import org.lwjgl.input.Keyboard;
 
-// Set Ctrl as the default modifier for a key whose default key code is Keyboard.KEY_G.
-ControllingApi.setDefaultComboKeyBinding(myKeyBinding, ComboModifier.CONTROL);
+// Default the binding to Ctrl + G. Bindings still on their old default are moved to the new one.
+ControllingApi.setDefaultComboKeys(myKeyBinding, Arrays.asList(Keyboard.KEY_LCONTROL));
 
-// Set the runtime combo binding to Shift + G.
-ControllingApi.setComboKeyBinding(myKeyBinding, ComboModifier.SHIFT, Keyboard.KEY_G);
+// Set the live binding to Shift + G in one call, so it is never briefly half applied.
+ControllingApi.setComboKeyBinding(myKeyBinding, Keyboard.KEY_G, Arrays.asList(Keyboard.KEY_LSHIFT));
+
+// Only conflict with, and only fire alongside, other in-game binds.
+ControllingApi.setKeyConflictContext(myKeyBinding, KeyContexts.IN_GAME);
+
+// "LShift+G", the same string the controls screen shows.
+String label = ControllingApi.getDisplayName(myKeyBinding);
+
+// Live poll, valid in game and inside any GUI. isComboDown ignores context and more
+// specific binds; isComboActive is the "would it fire right now" question.
+if (ControllingApi.isComboActive(myKeyBinding)) {
+    // ...
+}
 ```
+
+Custom conflict contexts are registered through `com.blamejared.controlling.api.KeyContextRegistry`.

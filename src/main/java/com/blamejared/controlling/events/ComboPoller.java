@@ -10,7 +10,7 @@ import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent;
 import cpw.mods.fml.common.gameevent.TickEvent.Phase;
 
 /**
- * Maintains a held-tick counter per combo bind from controlling$isChordActive at the end of each client tick. Works
+ * Maintains a held-tick counter per combo bind from controlling$isComboActive at the end of each client tick. Works
  * while a GUI is open (Keyboard.isKeyDown / Mouse.isButtonDown stay live), so mouse-in-GUI combos resolve here rather
  * than through vanilla dispatch. Only writes controlling$comboHeldTicks; never touches vanilla pressed/pressTime.
  */
@@ -32,7 +32,7 @@ public final class ComboPoller {
                 continue;
             }
             final int held = combo.controlling$getComboHeldTicks();
-            combo.controlling$setComboHeldTicks(combo.controlling$isChordActive() ? (held < 0 ? 0 : held + 1) : -1);
+            combo.controlling$setComboHeldTicks(combo.controlling$isComboActive() ? (held < 0 ? 0 : held + 1) : -1);
         }
     }
 }

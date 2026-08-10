@@ -89,7 +89,7 @@ class ComboStateTest {
 
     @Test
     void resolvedByPrecedence_equalSetsAreNot() {
-        // identical chords always fire together; precedence cannot separate them
+        // identical combos always fire together; precedence cannot separate them
         assertFalse(ComboState.resolvedByPrecedence(20, list(29), 20, list(29)));
     }
 

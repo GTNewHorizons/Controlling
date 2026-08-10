@@ -8,11 +8,10 @@ import net.minecraft.client.settings.KeyBinding;
 import org.lwjgl.input.Keyboard;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.blamejared.controlling.api.KeyContext;
 import com.blamejared.controlling.api.KeyContexts;
@@ -30,7 +29,9 @@ import it.unimi.dsi.fastutil.ints.IntLists;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 
-@Mixin(KeyBinding.class)
+// priority 1500: this class overwrites setKeyBindState/onTick, which Hodgepodge also overwrites at the default 1000.
+// The higher priority makes Controlling win that merge deterministically instead of by config load order.
+@Mixin(value = KeyBinding.class, priority = 1500)
 public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Final
@@ -54,9 +55,9 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Unique
     private KeyContext controlling$keyContext = KeyContexts.UNIVERSAL;
     @Unique
-    private boolean controlling$allowsChords = true;
+    private boolean controlling$allowsCombos = true;
     @Unique
-    private final IntOpenHashSet controlling$blockedChordKeys = new IntOpenHashSet();
+    private final IntOpenHashSet controlling$blockedComboKeys = new IntOpenHashSet();
     @Unique
     private boolean controlling$allowsMouse = true;
     @Unique
@@ -64,12 +65,20 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     @Unique
     private int controlling$comboHeldTicks = -1; // -1 = not satisfied; 0 = first tick; increments while held
 
-    // Fully replaces vanilla: a bind only counts as pressed when its whole chord is held, its context is active, and no
-    // more specific sibling wins. Kept as a cancellable inject rather than @Overwrite so other mods' injections still
-    // apply.
-    @Inject(method = "setKeyBindState", at = @At("HEAD"), cancellable = true)
-    private static void controlling$setKeyBindState(int keyCode, boolean pressed, CallbackInfo ci) {
-        ci.cancel();
+    /**
+     * @author Caedis
+     * @reason A bind only counts as pressed when its whole combo is held, its context is active, and no more specific
+     *         sibling wins. Vanilla dispatches through a single-binding hash lookup, which cannot express any of that,
+     *         so the whole method is replaced rather than injected into.
+     *         <p>
+     *         Three mods replace this method. NEI rewrites the body from a coremod ASM transformer, Hodgepodge
+     *         overwrites it via mixin at the default priority, and this does so at 1500. Coremod transformers run
+     *         before the mixin transformer and higher priority merges last, so the final body is always this one. An
+     *         {@link Overwrite} is used rather than a cancelling inject so a fourth mod is reported by Mixin as a
+     *         conflict instead of being silently discarded.
+     */
+    @Overwrite
+    public static void setKeyBindState(int keyCode, boolean pressed) {
         if (keyCode == 0) {
             return;
         }
@@ -82,7 +91,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
                         && controlling$contextActive(keyBinding);
                 continue;
             }
-            // A chord member changed, so binds on other main keys may have become (un)satisfied. A held main key emits
+            // A combo member changed, so binds on other main keys may have become (un)satisfied. A held main key emits
             // no event, so without this releasing Ctrl leaves a bare W bind suppressed until W is pressed again.
             if (mainKey != ComboState.KEY_NONE && InputState.isDown(mainKey)) {
                 ((MixinKeyBinding) (Object) keyBinding).pressed = controlling$isBindingActiveWithModifier(
@@ -92,11 +101,14 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         }
     }
 
-    // Combo-aware replacement of the press-time counter; see controlling$setKeyBindState. Only the pressed key's own
-    // bindings tick, so completing a chord with a modifier does not manufacture an extra edge for isPressed().
-    @Inject(method = "onTick", at = @At("HEAD"), cancellable = true)
-    private static void controlling$onTick(int keyCode, CallbackInfo ci) {
-        ci.cancel();
+    /**
+     * @author Caedis
+     * @reason Combo-aware replacement of the press-time counter; see {@link #setKeyBindState(int, boolean)} for why
+     *         this is an overwrite. Only the pressed key's own bindings tick, so completing a combo with a modifier
+     *         does not manufacture an extra edge for isPressed().
+     */
+    @Overwrite
+    public static void onTick(int keyCode) {
         if (keyCode == 0) {
             return;
         }
@@ -130,7 +142,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     }
 
     /**
-     * Not gated on {@link KeyContext#isActive()}: this only disambiguates chords, and masking IN_GAME binds would hide
+     * Not gated on {@link KeyContext#isActive()}: this only disambiguates combos, and masking IN_GAME binds would hide
      * keys like sneak from every mod GUI that looks them up. Firing is gated in setKeyBindState/onTick/isPressed.
      */
     @ModifyReturnValue(method = "getKeyCode", at = @At("RETURN"))
@@ -228,34 +240,34 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     }
 
     @Override
-    public boolean controlling$allowsChords() {
-        return this.controlling$allowsChords;
+    public boolean controlling$allowsCombos() {
+        return this.controlling$allowsCombos;
     }
 
     @Override
-    public IntSet controlling$blockedChordKeys() {
-        return this.controlling$blockedChordKeys;
+    public IntSet controlling$blockedComboKeys() {
+        return this.controlling$blockedComboKeys;
     }
 
     @Override
-    public void controlling$setBlockedChordKeys(IntList keys) {
-        this.controlling$blockedChordKeys.clear();
+    public void controlling$setBlockedComboKeys(IntList keys) {
+        this.controlling$blockedComboKeys.clear();
         if (keys != null) {
-            this.controlling$blockedChordKeys.addAll(keys);
+            this.controlling$blockedComboKeys.addAll(keys);
         }
     }
 
     @Override
-    public void controlling$setBlockedChordKeys(int[] keys) {
-        this.controlling$blockedChordKeys.clear();
+    public void controlling$setBlockedComboKeys(int[] keys) {
+        this.controlling$blockedComboKeys.clear();
         if (keys != null) {
-            this.controlling$blockedChordKeys.addAll(IntArrayList.wrap(keys));
+            this.controlling$blockedComboKeys.addAll(IntArrayList.wrap(keys));
         }
     }
 
     @Override
-    public void controlling$setAllowsChords(boolean allowsChords) {
-        this.controlling$allowsChords = allowsChords;
+    public void controlling$setAllowsCombos(boolean allowsCombos) {
+        this.controlling$allowsCombos = allowsCombos;
     }
 
     @Override
@@ -349,7 +361,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
         if (!this.controlling$conflicts(other)) {
             return false;
         }
-        // Softer case: the chords are incomparable (Ctrl+Q vs Shift+Q), so both fire only while the union is held.
+        // Softer case: the combos are incomparable (Ctrl+Q vs Shift+Q), so both fire only while the union is held.
         return !ComboState.sameKeySet(
                 this.keyCode,
                 this.controlling$comboKeys,
@@ -433,13 +445,13 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     }
 
     @Override
-    public boolean controlling$isChordDown() {
+    public boolean controlling$isComboDown() {
         return ComboState.satisfied(this.keyCode, this.controlling$comboKeys, InputState.IS_DOWN);
     }
 
     @Override
-    public boolean controlling$isChordActive() {
-        return this.controlling$keyContext.isActive() && this.controlling$isChordDown()
+    public boolean controlling$isComboActive() {
+        return this.controlling$keyContext.isActive() && this.controlling$isComboDown()
                 && !controlling$hasSatisfiedSuperset((KeyBinding) (Object) this);
     }
 
@@ -464,7 +476,7 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
                     otherCombo.controlling$comboKeysRaw(),
                     self.controlling$mainKeyCode(),
                     self.controlling$comboKeysRaw()) && otherCombo.controlling$getKeyContext().isActive()
-                    && otherCombo.controlling$isChordDown()) {
+                    && otherCombo.controlling$isComboDown()) {
                 return true;
             }
         }

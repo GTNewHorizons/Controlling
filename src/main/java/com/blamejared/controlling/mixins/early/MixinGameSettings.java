@@ -63,8 +63,8 @@ public abstract class MixinGameSettings {
     }
 
     /**
-     * A save can run inside a GUI key event, where getKeyCode() is chord-masked; without suspending it a bind whose
-     * chord is not held would be persisted as 0.
+     * A save can run inside a GUI key event, where getKeyCode() is combo-masked; without suspending it a bind whose
+     * combo is not held would be persisted as 0.
      */
     @Inject(method = "saveOptions", at = @At("HEAD"))
     private void controlling$beginSaveOptions(CallbackInfo ci) {

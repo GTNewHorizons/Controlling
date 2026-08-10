@@ -1,9 +1,7 @@
 package com.blamejared.controlling.api;
 
-import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
@@ -12,8 +10,16 @@ import com.blamejared.controlling.keybinding.ComboKeyBinding;
  * Public API surface for interacting with Controlling combo keybindings.
  *
  * <p>
+ * Controlling mixes {@link ComboKeyBinding} into {@link KeyBinding} itself, so every keybinding implements it whenever
+ * this class is reachable. These methods therefore cast unconditionally: a {@link ClassCastException} means the mixin
+ * did not apply, which is a hard error worth surfacing rather than something to silently fall back from.
+ *
+ * <p>
  * Internal types appear only inside method bodies, never in a signature, so the api artifact compiles against nothing
  * but Minecraft. The full mod is still required at runtime.
+ *
+ * <p>
+ * Conflict contexts are registered through {@link KeyContextRegistry}.
  */
 public final class ControllingApi {
 
@@ -38,119 +44,63 @@ public final class ControllingApi {
     }
 
     /**
-     * @return true when the keybinding supports combo modifiers.
-     */
-    public static boolean supportsComboKeyBinding(KeyBinding keyBinding) {
-        return keyBinding instanceof ComboKeyBinding;
-    }
-
-    /**
-     * Sets the main key and the chord in one call, which the GUI's own reset then picks up. Prefer this over
+     * Sets the main key and the combo in one call, which the GUI's own reset then picks up. Prefer this over
      * {@link #setComboKeys(KeyBinding, List)} when the main key changes too, so the binding is never briefly half
      * applied.
-     *
-     * @return false when the keybinding does not support combos.
      */
-    public static boolean setComboKeyBinding(KeyBinding keyBinding, int keyCode, List<Integer> chordKeys) {
-        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
-            return false;
-        }
-        comboKeyBinding.controlling$setComboKeys(chordKeys);
+    public static void setComboKeyBinding(KeyBinding keyBinding, int keyCode, List<Integer> comboKeys) {
+        ((ComboKeyBinding) keyBinding).controlling$setComboKeys(comboKeys);
         keyBinding.setKeyCode(keyCode);
         KeyBinding.resetKeyBindingArrayAndHash();
-        return true;
     }
 
     /**
-     * The binding's full display string including its chord, for tooltips and help text: "LCtrl+G" rather than just
+     * The binding's full display string including its combo, for tooltips and help text: "LCtrl+G" rather than just
      * "G". This is the same string the controls screen shows, so a tooltip and the keybind list cannot disagree.
      *
      * <p>
-     * Safe for any keybinding: one without combo support falls back to the vanilla key name. An unbound binding gives
-     * whatever vanilla names keycode 0, so test {@link KeyBinding#getKeyCode()} first if that matters.
+     * An unbound binding gives whatever vanilla names keycode 0, so test {@link KeyBinding#getKeyCode()} first if that
+     * matters.
      *
      * @return the display string, never null.
      */
     public static String getDisplayName(KeyBinding keyBinding) {
-        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return comboKeyBinding.controlling$getDisplayName();
-        }
-        return GameSettings.getKeyDisplayString(keyBinding.getKeyCode());
+        return ((ComboKeyBinding) keyBinding).controlling$getDisplayName();
     }
 
-    /**
-     * Sets the conflict context used when detecting keybinding conflicts.
-     *
-     * @return false when the keybinding does not support combos.
-     */
-    public static boolean setKeyConflictContext(KeyBinding keyBinding, KeyContext keyContext) {
-        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
-            return false;
-        }
-        comboKeyBinding.controlling$setKeyContext(keyContext);
-        return true;
+    /** Sets the conflict context used when detecting keybinding conflicts. */
+    public static void setKeyConflictContext(KeyBinding keyBinding, KeyContext keyContext) {
+        ((ComboKeyBinding) keyBinding).controlling$setKeyContext(keyContext);
     }
 
-    /**
-     * @return the keybinding's conflict context, or {@link KeyContexts#UNIVERSAL} when combos are unavailable.
-     */
+    /** @return the keybinding's conflict context, never null. */
     public static KeyContext getKeyConflictContext(KeyBinding keyBinding) {
-        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return comboKeyBinding.controlling$getKeyContext();
-        }
-        return KeyContexts.UNIVERSAL;
+        return ((ComboKeyBinding) keyBinding).controlling$getKeyContext();
     }
 
-    /**
-     * Registers a custom conflict context (built-in ids are reserved).
-     *
-     * @throws IllegalArgumentException when the id is reserved or already registered.
-     * @throws NullPointerException     when {@code keyContext} is {@code null}.
-     */
-    public static void registerKeyContext(KeyContext keyContext) {
-        KeyContextRegistry.register(keyContext);
-    }
-
-    /** @return the registered context for {@code id}, or {@code null} if unknown. */
-    public static KeyContext getKeyContext(String id) {
-        return KeyContextRegistry.get(id);
-    }
-
-    /** @return the extra chord keycodes for this bind, or an empty list when combos are unavailable. */
+    /** @return the extra combo keycodes for this bind, empty when it is a plain single-key bind. */
     public static List<Integer> getComboKeys(KeyBinding keyBinding) {
-        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return comboKeyBinding.controlling$getComboKeys();
-        }
-        return Collections.emptyList();
+        return ((ComboKeyBinding) keyBinding).controlling$getComboKeys();
     }
 
-    /** @return false when the keybinding does not support combos. */
-    public static boolean setComboKeys(KeyBinding keyBinding, List<Integer> keys) {
-        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
-            return false;
-        }
-        comboKeyBinding.controlling$setComboKeys(keys);
+    /** Replaces the extra combo keycodes for this bind. */
+    public static void setComboKeys(KeyBinding keyBinding, List<Integer> keys) {
+        ((ComboKeyBinding) keyBinding).controlling$setComboKeys(keys);
         KeyBinding.resetKeyBindingArrayAndHash();
-        return true;
     }
 
     /**
-     * Sets the chord this binding resets to. A binding still sitting on its old default is moved to the new one, so
+     * Sets the combo this binding resets to. A binding still sitting on its old default is moved to the new one, so
      * changing a shipped default reaches players who never customised it while leaving customised bindings alone.
-     *
-     * @return false when the keybinding does not support combos.
      */
-    public static boolean setDefaultComboKeys(KeyBinding keyBinding, List<Integer> keys) {
-        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
-            return false;
-        }
+    public static void setDefaultComboKeys(KeyBinding keyBinding, List<Integer> keys) {
+        final ComboKeyBinding comboKeyBinding = (ComboKeyBinding) keyBinding;
         final boolean wasDefault = comboKeyBinding.controlling$isSetToDefaultValue();
         comboKeyBinding.controlling$setDefaultComboKeys(keys);
         if (wasDefault) {
             comboKeyBinding.controlling$setComboKeys(keys);
             KeyBinding.resetKeyBindingArrayAndHash();
         }
-        return true;
     }
 
     /**
@@ -159,32 +109,25 @@ public final class ControllingApi {
      * reads input state directly rather than vanilla's press flags.
      *
      * <p>
-     * Ignores conflict context and more specific bindings; use {@link #isChordActive(KeyBinding)} to ask whether the
+     * Ignores conflict context and more specific bindings; use {@link #isComboActive(KeyBinding)} to ask whether the
      * binding would actually fire.
-     *
-     * @return false when the keybinding does not support combos.
      */
-    public static boolean isChordDown(KeyBinding keyBinding) {
-        return keyBinding instanceof ComboKeyBinding comboKeyBinding && comboKeyBinding.controlling$isChordDown();
+    public static boolean isComboDown(KeyBinding keyBinding) {
+        return ((ComboKeyBinding) keyBinding).controlling$isComboDown();
     }
 
     /**
-     * Live poll as {@link #isChordDown(KeyBinding)}, additionally requiring the binding's {@link KeyContext} to be
+     * Live poll as {@link #isComboDown(KeyBinding)}, additionally requiring the binding's {@link KeyContext} to be
      * active and no more specific binding to be held. With both {@code G} and {@code Ctrl+G} bound, holding Ctrl+G
      * reports only {@code Ctrl+G} as active.
-     *
-     * @return false when the keybinding does not support combos.
      */
-    public static boolean isChordActive(KeyBinding keyBinding) {
-        return keyBinding instanceof ComboKeyBinding comboKeyBinding && comboKeyBinding.controlling$isChordActive();
+    public static boolean isComboActive(KeyBinding keyBinding) {
+        return ((ComboKeyBinding) keyBinding).controlling$isComboActive();
     }
 
-    /** @return ticks the combo has been held (0 = first tick), or -1 when not held / unsupported. */
+    /** @return ticks the combo has been held (0 = first tick), or -1 when not held. */
     public static int getComboHeldTicks(KeyBinding keyBinding) {
-        if (keyBinding instanceof ComboKeyBinding comboKeyBinding) {
-            return comboKeyBinding.controlling$getComboHeldTicks();
-        }
-        return -1;
+        return ((ComboKeyBinding) keyBinding).controlling$getComboHeldTicks();
     }
 
     /** @return true while the combo is satisfied this tick. */

@@ -29,16 +29,16 @@ public interface ComboKeyBinding {
     /**
      * Live poll: true when the main key and every combo key are physically down right now. Reads the keyboard and mouse
      * directly, so it is valid anywhere on the client - in game, inside any GUI, and between ticks. Ignores conflict
-     * context and more specific bindings; see {@link #controlling$isChordActive()} for the firing decision.
+     * context and more specific bindings; see {@link #controlling$isComboActive()} for the firing decision.
      */
-    boolean controlling$isChordDown();
+    boolean controlling$isComboDown();
 
     /**
-     * Live poll: true when {@link #controlling$isChordDown()} holds, this binding's {@link KeyContext} is active, and
+     * Live poll: true when {@link #controlling$isComboDown()} holds, this binding's {@link KeyContext} is active, and
      * no more specific binding (one whose key set strictly contains this one's) is also held. This is the "would it
      * fire right now" question, so Ctrl+G being held does not report a bare G binding as active.
      */
-    boolean controlling$isChordActive();
+    boolean controlling$isComboActive();
 
     int controlling$getComboHeldTicks();
 
@@ -60,18 +60,18 @@ public interface ComboKeyBinding {
 
     void controlling$setKeyContext(KeyContext keyContext);
 
-    /** Whether the user may attach any chord keys to this binding at all. */
-    boolean controlling$allowsChords();
+    /** Whether the user may attach any combo keys to this binding at all. */
+    boolean controlling$allowsCombos();
 
-    void controlling$setAllowsChords(boolean allowsChords);
+    void controlling$setAllowsCombos(boolean allowsCombos);
 
-    /** Keys the user may not put in this binding's chord; never null, empty when unrestricted. */
-    IntSet controlling$blockedChordKeys();
+    /** Keys the user may not put in this binding's combo; never null, empty when unrestricted. */
+    IntSet controlling$blockedComboKeys();
 
-    void controlling$setBlockedChordKeys(IntList keys);
+    void controlling$setBlockedComboKeys(IntList keys);
 
     /** Array counterpart, so the api package never has to name a fastutil type. */
-    void controlling$setBlockedChordKeys(int[] keys);
+    void controlling$setBlockedComboKeys(int[] keys);
 
     boolean controlling$allowsMouse();
 

@@ -59,7 +59,7 @@ public final class KeyNames {
     }
 
     /** Joins a key list as "A + B + C"; empty list yields an empty string. */
-    public static String joinChord(IntList keys) {
+    public static String joinCombo(IntList keys) {
         final StringJoiner joiner = new StringJoiner(" + ");
         for (int i = 0; i < keys.size(); i++) {
             joiner.add(display(keys.getInt(i)));
