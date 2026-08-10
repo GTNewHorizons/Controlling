@@ -3,7 +3,7 @@ package com.blamejared.controlling.client.gui;
 import java.util.Comparator;
 import java.util.List;
 
-import net.minecraft.client.resources.I18n;
+import net.minecraft.util.StatCollector;
 
 public enum SortOrder {
 
@@ -32,9 +32,9 @@ public enum SortOrder {
 
     public String getName() {
         return switch (this) {
-            case VANILLA -> I18n.format("options.sortNone");
-            case AZ -> I18n.format("options.sortAZ");
-            case ZA -> I18n.format("options.sortZA");
+            case VANILLA -> StatCollector.translateToLocal("options.sortNone");
+            case AZ -> StatCollector.translateToLocal("options.sortAZ");
+            case ZA -> StatCollector.translateToLocal("options.sortZA");
         };
 
     }

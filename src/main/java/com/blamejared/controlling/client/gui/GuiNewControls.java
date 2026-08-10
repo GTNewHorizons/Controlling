@@ -2,6 +2,7 @@ package com.blamejared.controlling.client.gui;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -21,12 +22,18 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
 import com.blamejared.controlling.Controlling;
+import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ComboPolicy;
+import com.blamejared.controlling.keybinding.InputState;
 import com.blamejared.controlling.keybinding.KeyModifier;
 
 import cpw.mods.fml.client.config.GuiCheckBox;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 @SideOnly(Side.CLIENT)
 public class GuiNewControls extends GuiControls {
@@ -42,6 +49,10 @@ public class GuiNewControls extends GuiControls {
     private static final int SEARCH_CATEGORYNAME_BUTTON_ID = 1006;
     private static final int VISUAL_KEYBOARD_BUTTON_ID = 1007;
     private static final int SORT_TYPE_BUTTON_ID = 1008;
+
+    private static final long HIGHLIGHT_DURATION_MS = 2500L;
+    /** The flash holds full strength until this much time is left, then fades out. */
+    private static final float HIGHLIGHT_FADE_MS = 700.0F;
 
     private final GuiScreen parentScreen;
     private final GameSettings options;
@@ -62,12 +73,15 @@ public class GuiNewControls extends GuiControls {
     private boolean confirmingReset = false;
     private final GuiVisualKeyboard visualKeyboard = new GuiVisualKeyboard();
     private boolean showVisualKeyboard = false;
-    private KeyModifier visualKeyboardModifier = KeyModifier.NONE;
-    private KeyModifier selectedModifier = KeyModifier.NONE;
+    private final IntArrayList visualKeyboardCombo = new IntArrayList();
+    private KeyBinding highlightedBinding;
+    private long highlightExpiry;
+    /** Scratch buffer for {@link #getVisualKeyboardCombo()}; avoids allocating every frame. */
+    private final IntArrayList effectiveCombo = new IntArrayList();
     private int selectedModifierKeyCode = Keyboard.KEY_NONE;
     private KeyBinding pendingBinding;
-    private KeyModifier pendingModifier = KeyModifier.NONE;
     private int pendingKeyCode = Keyboard.KEY_NONE;
+    private List<Integer> pendingComboKeys = new ArrayList<>();
 
     public GuiNewControls(GuiScreen screen, GameSettings settings) {
         super(screen, settings);
@@ -264,6 +278,9 @@ public class GuiNewControls extends GuiControls {
             this.visualKeyboard.draw(this, this.mc, mouseX, mouseY);
         } else {
             this.guiNewKeyBindingList.drawHoveredKeyDescriptionTooltip(mouseX, mouseY);
+            this.guiNewKeyBindingList.drawHoveredConflictTooltip(mouseX, mouseY);
+            this.guiNewKeyBindingList.drawHoveredIndicatorTooltip(mouseX, mouseY);
+            this.guiNewKeyBindingList.drawHoveredComboTooltip(mouseX, mouseY);
         }
     }
 
@@ -324,7 +341,7 @@ public class GuiNewControls extends GuiControls {
         } else if (button.id == VISUAL_KEYBOARD_BUTTON_ID) {
             this.showVisualKeyboard = !this.showVisualKeyboard;
             this.buttonId = null;
-            this.visualKeyboardModifier = KeyModifier.NONE;
+            this.visualKeyboardCombo.clear();
         } else if (button.id == SORT_TYPE_BUTTON_ID) {
             sortOrder = sortOrder.getNext();
             button.displayString = StatCollector.translateToLocal("options.sort") + ": " + sortOrder.getNextName();
@@ -338,17 +355,21 @@ public class GuiNewControls extends GuiControls {
             searchTextBox.setFocused(false);
             return;
         } else if (this.buttonId != null) {
-            if (this.buttonId instanceof ComboKeyBinding) {
-                this.schedulePendingBinding(this.buttonId, -100 + mb, this.getSelectedModifierForBinding());
+            if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
+                // Only bind a mouse button when mouse binds are allowed; otherwise ignore and keep the selection open.
+                if (comboKeyBinding.controlling$allowsMouse()) {
+                    this.schedulePendingBinding(this.buttonId, ControllingApi.mouseButtonToKeyCode(mb));
+                    this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                    KeyBinding.resetKeyBindingArrayAndHash();
+                }
             } else {
-                this.options.setOptionKeyBinding(this.buttonId, -100 + mb);
+                this.options.setOptionKeyBinding(this.buttonId, ControllingApi.mouseButtonToKeyCode(mb));
                 this.buttonId = null;
                 this.showVisualKeyboard = false;
                 this.field_152177_g = Minecraft.getSystemTime();
+                this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                KeyBinding.resetKeyBindingArrayAndHash();
             }
-            this.selectedModifier = KeyModifier.NONE;
-            this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-            KeyBinding.resetKeyBindingArrayAndHash();
             searchTextBox.setFocused(false);
         } else if (mb == 0 && !this.guiNewKeyBindingList.func_148179_a(mx, my, mb)) {
             // func_148179_a is mouseClicked but still obfuscated in 1.7.10
@@ -423,23 +444,24 @@ public class GuiNewControls extends GuiControls {
 
             if (keyCode == Keyboard.KEY_ESCAPE) {
                 if (comboKeyBinding != null) {
-                    comboKeyBinding.controlling$setComboKeys(java.util.Collections.emptyList());
+                    comboKeyBinding.controlling$setComboKeysRaw(IntLists.EMPTY_LIST);
                 }
                 this.options.setOptionKeyBinding(this.buttonId, Keyboard.KEY_NONE);
                 this.pendingBinding = null;
-                this.pendingModifier = KeyModifier.NONE;
                 this.pendingKeyCode = Keyboard.KEY_NONE;
-                this.selectedModifier = KeyModifier.NONE;
+                this.pendingComboKeys = new ArrayList<>();
                 this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-            } else if (isModifierKey && comboKeyBinding != null) {
-                this.selectedModifier = KeyModifier.fromKeyCode(keyCode);
+            } else if (isModifierKey && comboKeyBinding != null && this.acceptsComboKey(comboKeyBinding, keyCode)) {
                 this.selectedModifierKeyCode = keyCode;
                 shouldCloseBindSelection = false;
             } else if (inputKeyCode != Keyboard.KEY_NONE) {
                 if (comboKeyBinding != null) {
-                    this.schedulePendingBinding(this.buttonId, inputKeyCode, this.getSelectedModifierForBinding());
-                    this.selectedModifier = KeyModifier.NONE;
-                    this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                    // Keep the bind selection open when keyboard binds are disallowed so a mouse button can still be
+                    // used; only actually bind when the keyboard key is allowed.
+                    if (comboKeyBinding.controlling$allowsKeyboard()) {
+                        this.schedulePendingBinding(this.buttonId, inputKeyCode);
+                        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
+                    }
                     shouldCloseBindSelection = false;
                 } else {
                     this.options.setOptionKeyBinding(this.buttonId, inputKeyCode);
@@ -455,7 +477,7 @@ public class GuiNewControls extends GuiControls {
             KeyBinding.resetKeyBindingArrayAndHash();
         } else {
             if (this.showVisualKeyboard && keyCode == Keyboard.KEY_ESCAPE) {
-                this.showVisualKeyboard = false;
+                this.closeVisualKeyboard();
                 return;
             }
             if (this.searchTextBox.isFocused()) {
@@ -470,31 +492,70 @@ public class GuiNewControls extends GuiControls {
         }
     }
 
-    private void schedulePendingBinding(KeyBinding keyBinding, int keyCode, KeyModifier keyModifier) {
+    private void schedulePendingBinding(KeyBinding keyBinding, int keyCode) {
         this.pendingBinding = keyBinding;
         this.pendingKeyCode = keyCode;
-        this.pendingModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+        this.pendingComboKeys = this.captureHeldComboKeys(keyCode);
+        // The capture replaces the combo rather than adding to it, so drop the binding's old combo that was seeded
+        // when the panel opened. Leaving it would show a combo the release is about to discard.
+        this.visualKeyboardCombo.clear();
+    }
+
+    // Collect every currently-held key/mouse button except the main key, to become the combo (combo) keys. Keys the
+    // binding refuses are dropped here: this is the path that actually creates combos, so the check has to be here.
+    private List<Integer> captureHeldComboKeys(int mainKeyCode) {
+        final List<Integer> combo = new ArrayList<>();
+        final ComboKeyBinding bind = this.buttonId instanceof ComboKeyBinding c ? c : null;
+        for (int key = 1; key < Keyboard.getKeyCount(); key++) {
+            if (key == mainKeyCode) {
+                continue;
+            }
+            if (Keyboard.isKeyDown(key) && this.acceptsComboKey(bind, key)) {
+                combo.add(key);
+            }
+        }
+        for (int button = 0; button < Mouse.getButtonCount(); button++) {
+            final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
+            if (keyCode != mainKeyCode && Mouse.isButtonDown(button) && this.acceptsComboKey(bind, keyCode)) {
+                combo.add(keyCode);
+            }
+        }
+        return combo;
     }
 
     void selectKeyBinding(KeyBinding keyBinding, boolean showVisualKeyboard) {
         this.buttonId = keyBinding;
         this.showVisualKeyboard = showVisualKeyboard;
-        this.visualKeyboardModifier = KeyModifier.NONE;
+        // Seed the combo from the binding so an existing combo can be edited rather than rebuilt.
+        this.visualKeyboardCombo.clear();
+        if (showVisualKeyboard && keyBinding instanceof ComboKeyBinding comboKeyBinding) {
+            this.visualKeyboardCombo.addAll(comboKeyBinding.controlling$comboKeysRaw());
+        }
     }
 
     void selectVisualKeyboardKey(int keyCode) {
         if (this.buttonId == null) {
             return;
         }
+        if (this.buttonId instanceof ComboKeyBinding cb
+                && !(ControllingApi.isMouseKeyCode(keyCode) ? cb.controlling$allowsMouse()
+                        : cb.controlling$allowsKeyboard())) {
+            return; // this input type is disallowed for this binding
+        }
 
         if (this.buttonId instanceof ComboKeyBinding comboKeyBinding) {
-            comboKeyBinding.controlling$setComboKeys(java.util.Collections.emptyList());
+            final IntList combo = this.getVisualKeyboardCombo();
+            final int mainIndex = combo.indexOf(keyCode);
+            if (mainIndex >= 0) {
+                combo.removeInt(mainIndex); // the main key is not also a combo key
+            }
+            comboKeyBinding.controlling$setComboKeysRaw(combo);
         }
+        this.visualKeyboardCombo.clear();
         this.options.setOptionKeyBinding(this.buttonId, keyCode);
         this.pendingBinding = null;
-        this.pendingModifier = KeyModifier.NONE;
         this.pendingKeyCode = Keyboard.KEY_NONE;
-        this.selectedModifier = KeyModifier.NONE;
+        this.pendingComboKeys = new ArrayList<>();
         this.selectedModifierKeyCode = Keyboard.KEY_NONE;
         this.buttonId = null;
         this.showVisualKeyboard = false;
@@ -503,33 +564,19 @@ public class GuiNewControls extends GuiControls {
     }
 
     private void captureModifierOnlyBinding() {
+        // The visual keyboard builds combos by toggling keys, so a modifier press there is never a binding on its own.
         if (this.showVisualKeyboard) {
-            if (this.selectedModifierKeyCode != Keyboard.KEY_NONE
-                    && !Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
-                this.visualKeyboardModifier = KeyModifier.NONE;
-                this.selectedModifier = KeyModifier.NONE;
-                this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-            }
             return;
         }
         if (!(this.buttonId instanceof ComboKeyBinding) || this.pendingBinding != null
-                || this.selectedModifier == KeyModifier.NONE
                 || this.selectedModifierKeyCode == Keyboard.KEY_NONE) {
             return;
         }
         if (Keyboard.isKeyDown(this.selectedModifierKeyCode)) {
             return;
         }
-        this.schedulePendingBinding(this.buttonId, this.selectedModifierKeyCode, KeyModifier.NONE);
-        this.selectedModifier = KeyModifier.NONE;
+        this.schedulePendingBinding(this.buttonId, this.selectedModifierKeyCode);
         this.selectedModifierKeyCode = Keyboard.KEY_NONE;
-    }
-
-    private KeyModifier getSelectedModifierForBinding() {
-        if (this.showVisualKeyboard) {
-            return this.getVisualKeyboardModifier();
-        }
-        return this.selectedModifier == KeyModifier.NONE ? KeyModifier.getActiveModifier() : this.selectedModifier;
     }
 
     private void applyPendingBindingIfReleased() {
@@ -541,12 +588,12 @@ public class GuiNewControls extends GuiControls {
         }
 
         if (this.pendingBinding instanceof ComboKeyBinding comboKeyBinding) {
-            comboKeyBinding.controlling$setComboKeys(java.util.Collections.emptyList());
+            comboKeyBinding.controlling$setComboKeys(this.pendingComboKeys);
         }
         this.options.setOptionKeyBinding(this.pendingBinding, this.pendingKeyCode);
         this.pendingBinding = null;
-        this.pendingModifier = KeyModifier.NONE;
         this.pendingKeyCode = Keyboard.KEY_NONE;
+        this.pendingComboKeys = new ArrayList<>();
         this.buttonId = null;
         this.showVisualKeyboard = false;
         this.field_152177_g = Minecraft.getSystemTime();
@@ -554,11 +601,15 @@ public class GuiNewControls extends GuiControls {
     }
 
     private boolean isPendingInputStillActive() {
-        if (this.pendingModifier != KeyModifier.NONE && this.pendingModifier.isActive()) {
-            return true;
+        // The binding stays pending while any captured combo key is still held, so releasing them commits it.
+        for (int i = 0; i < this.pendingComboKeys.size(); i++) {
+            if (InputState.isDown(this.pendingComboKeys.get(i))) {
+                return true;
+            }
         }
-        if (this.pendingKeyCode <= -100) {
-            final int mouseButton = this.pendingKeyCode + 100;
+        // Mouse codes count up from the offset (-100, -99, ...), so test the encoding, not "<= -100".
+        if (ControllingApi.isMouseKeyCode(this.pendingKeyCode)) {
+            final int mouseButton = this.pendingKeyCode - ControllingApi.MOUSE_KEYCODE_OFFSET;
             return mouseButton >= 0 && mouseButton < Mouse.getButtonCount() && Mouse.isButtonDown(mouseButton);
         }
         return this.pendingKeyCode > Keyboard.KEY_NONE && this.pendingKeyCode < 256
@@ -586,13 +637,103 @@ public class GuiNewControls extends GuiControls {
         return this.buttonId;
     }
 
-    KeyModifier getVisualKeyboardModifier() {
-        KeyModifier activeModifier = KeyModifier.getActiveModifier();
-        return activeModifier == KeyModifier.NONE ? this.visualKeyboardModifier : activeModifier;
+    /**
+     * The combo the visual keyboard will attach to the next key picked: keys toggled in the panel plus any modifier
+     * physically held right now, so both ways of building a combo work. Returns a shared buffer, valid until the next
+     * call.
+     */
+    IntList getVisualKeyboardCombo() {
+        final ComboKeyBinding bind = this.buttonId instanceof ComboKeyBinding c ? c : null;
+        this.effectiveCombo.clear();
+        if (bind != null && !bind.controlling$allowsCombos()) {
+            return this.effectiveCombo;
+        }
+        for (int i = 0; i < this.visualKeyboardCombo.size(); i++) {
+            final int key = this.visualKeyboardCombo.getInt(i);
+            if (this.acceptsComboKey(bind, key)) {
+                this.effectiveCombo.add(key);
+            }
+        }
+        // Every physically held key joins the combo, not just modifiers, so holding any key filters the keyboard
+        // the same way and can be captured into a combo.
+        for (int key = 1; key < Keyboard.getKeyCount(); key++) {
+            if (Keyboard.isKeyDown(key) && !this.effectiveCombo.contains(key) && this.acceptsComboKey(bind, key)) {
+                this.effectiveCombo.add(key);
+            }
+        }
+        // Left and right click drive this panel (pick a key / toggle a combo key), so a held one is UI input, not combo
+        // intent - this runs during mouseClicked with the button still down. Add them from the mouse row instead.
+        for (int button = 2; button < Mouse.getButtonCount(); button++) {
+            final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
+            if (Mouse.isButtonDown(button) && !this.effectiveCombo.contains(keyCode)
+                    && this.acceptsComboKey(bind, keyCode)) {
+                this.effectiveCombo.add(keyCode);
+            }
+        }
+        return this.effectiveCombo;
     }
 
-    void setVisualKeyboardModifier(KeyModifier visualKeyboardModifier) {
-        this.visualKeyboardModifier = visualKeyboardModifier == null ? KeyModifier.NONE : visualKeyboardModifier;
+    /** @return true when the binding under edit accepts this key into its combo. */
+    private boolean acceptsComboKey(ComboKeyBinding bind, int keyCode) {
+        if (bind == null) {
+            return true;
+        }
+        return ComboPolicy.accepts(keyCode, bind.controlling$allowsCombos(), bind.controlling$blockedComboKeys());
+    }
+
+    boolean acceptsComboKey(int keyCode) {
+        return this.acceptsComboKey(this.buttonId instanceof ComboKeyBinding c ? c : null, keyCode);
+    }
+
+    /** Adds or removes a key from the combo being built in the visual keyboard. */
+    void toggleVisualKeyboardComboKey(int keyCode) {
+        if (!this.acceptsComboKey(keyCode)) {
+            return;
+        }
+        final int index = this.visualKeyboardCombo.indexOf(keyCode);
+        if (index >= 0) {
+            this.visualKeyboardCombo.removeInt(index);
+        } else {
+            this.visualKeyboardCombo.add(keyCode);
+        }
+    }
+
+    boolean isVisualKeyboardComboKey(int keyCode) {
+        return this.visualKeyboardCombo.contains(keyCode);
+    }
+
+    void clearVisualKeyboardCombo() {
+        this.visualKeyboardCombo.clear();
+    }
+
+    /** Flashes a row in the list so a jump from the visual keyboard lands somewhere visible. */
+    private void highlightBinding(KeyBinding keyBinding) {
+        this.highlightedBinding = keyBinding;
+        this.highlightExpiry = Minecraft.getSystemTime() + HIGHLIGHT_DURATION_MS;
+    }
+
+    /** @return how far through the highlight flash this binding is, 0 when it is not highlighted. */
+    float getHighlightStrength(KeyBinding keyBinding) {
+        if (keyBinding != this.highlightedBinding) {
+            return 0.0F;
+        }
+        final long remaining = this.highlightExpiry - Minecraft.getSystemTime();
+        if (remaining <= 0) {
+            this.highlightedBinding = null;
+            return 0.0F;
+        }
+        return Math.min(1.0F, (float) remaining / HIGHLIGHT_FADE_MS);
+    }
+
+    /** Closes the panel leaving every binding untouched, unlike picking a key or pressing escape. */
+    void closeVisualKeyboard() {
+        this.showVisualKeyboard = false;
+        this.buttonId = null;
+        this.visualKeyboardCombo.clear();
+        this.pendingBinding = null;
+        this.pendingKeyCode = Keyboard.KEY_NONE;
+        this.pendingComboKeys = new ArrayList<>();
+        this.selectedModifierKeyCode = Keyboard.KEY_NONE;
     }
 
     void drawVisualKeyboardTooltip(List<String> lines, int mouseX, int mouseY) {
@@ -600,10 +741,15 @@ public class GuiNewControls extends GuiControls {
     }
 
     void drawKeyDescriptionTooltip(String text, int mouseX, int mouseY) {
-        this.func_146283_a(java.util.Collections.singletonList(text), mouseX, mouseY);
+        this.func_146283_a(Collections.singletonList(text), mouseX, mouseY);
+    }
+
+    void drawConflictTooltip(List<String> lines, int mouseX, int mouseY) {
+        this.func_146283_a(lines, mouseX, mouseY);
     }
 
     void showKeyBinding(KeyBinding keyBinding) {
+        this.highlightBinding(keyBinding);
         if (this.guiNewKeyBindingList.scrollToKeyBinding(keyBinding)) {
             this.showVisualKeyboard = false;
             return;
