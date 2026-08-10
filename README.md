@@ -10,9 +10,23 @@ Controlling is a client-side quality-of-life mod for Minecraft 1.7.10 that repla
 - Sort keybindings in vanilla order, A-Z, or Z-A.
 - Reset individual keybindings or confirm-reset all keybindings.
 - Toggle default movement keys between QWERTY and AZERTY presets.
-- Use combo keybindings with modifier keys (`Ctrl`, `Shift`, `Alt`).
-- Bind keys from a visual keyboard overlay with main, numpad, and auxiliary key pages.
+- Use combo keybindings, correctly disambiguated from bare keybindings even while a GUI is open.
+- Build N-key combos: a main key plus any number of extra held keys, including non-modifiers and mouse buttons. Hold the combo and press the final key in the controls screen to capture it.
+- Resolve combos (including mouse-button combos) while a GUI is open, via a central client-tick poller.
+- Bind keys from a visual keyboard overlay with main, numpad, auxiliary key pages and a mouse-button row. Left-click a key to bind it; right-click keys to build the combo that will be attached, shown live in the header with a `Clear` button. Keys already in the combo are highlighted and cannot double as the main key. Holding any keys filters the keyboard to bindings using them; left and right click drive the overlay itself, so put those in a combo from the mouse row instead of holding them.
 
+
+## Color palettes
+
+The controls list and visual keyboard color-code binding state. `config/controlling.cfg` selects the palette:
+
+| Palette | For |
+|---|---|
+| `DEFAULT` | readable with any one of the three common types of color blindness |
+| `PROTANOPIA` / `DEUTERANOPIA` / `TRITANOPIA` | trades the other types away for more separation in one |
+| `HIGH_CONTRAST` | separates by lightness rather than hue, for greyscale vision or a washed out display |
+
+Each was picked by simulating it under the relevant vision type and maximising the smallest perceptual distance between any two states, so no two collapse into each other.
 
 Incompatible with ModernKeybinding (`mkb`) because combo support is now built in.
 
@@ -25,29 +39,122 @@ The visual keyboard overlay includes code adapted from [Keyboard Wizard](https:/
 Controlling exposes a small client-side API for combo keybindings in `com.blamejared.controlling.api.ControllingApi`.
 Every `KeyBinding` gains combo support, so these calls work on any binding, yours or another mod's.
 
+The published `api` artifact holds only `com.blamejared.controlling.api`, and no signature in it names an internal or fastutil type, so it compiles against Minecraft alone. The full mod is still required at runtime.
+
+### Combos
+
+A binding carries a main key plus an ordered list of extra "combo" keys held alongside it. Any keycode works, including mouse buttons and non-modifiers. A mouse button `b` encodes as keycode `b - 100` (LMB `0` -> `-100`); use the helpers instead of hardcoding the offset.
+
+```java
+import com.blamejared.controlling.api.ControllingApi;
+import java.util.Arrays;
+import java.util.List;
+import org.lwjgl.input.Keyboard;
+
+// Ctrl + Space + G, where G is the binding's main key.
+ControllingApi.setComboKeys(myKeyBinding, Arrays.asList(Keyboard.KEY_LCONTROL, Keyboard.KEY_SPACE));
+
+// Read it back; the list is empty for a plain single-key bind.
+List<Integer> comboKeys = ControllingApi.getComboKeys(myKeyBinding);
+
+// mouseButtonToKeyCode(0) == -100 (LMB); isMouseKeyCode(-100) == true.
+```
+
+### Setting a whole binding
+
+`setComboKeys` changes only the combo. When the main key changes too, set both at once so the binding is never briefly half applied:
+
+```java
+// Ctrl + G, main key and combo together.
+ControllingApi.setComboKeyBinding(myKeyBinding, Keyboard.KEY_G, Arrays.asList(Keyboard.KEY_LCONTROL));
+```
+
+`setDefaultComboKeys` sets the combo a binding resets to. A binding still sitting on its old default is moved to the new one, so changing a shipped default reaches players who never customised it, while customised bindings are left alone.
+
+### Display strings
+
+For tooltips and help text, ask for the binding's full display string rather than building one from the keycode, so it stays in step with the controls screen.
+
+```java
+// "LCtrl+G" for a binding with a combo, "G" for a plain one.
+String keyText = ControllingApi.getDisplayName(myKeyBinding);
+```
+
+### Held-state API
+
+A client-tick poller tracks how long each combo has been satisfied (it works inside GUIs and never touches vanilla `pressed`/`pressTime`). Consumers query held-state instead of polling raw input.
+
+```java
+// First-press this tick (edge trigger).
+if (ControllingApi.isComboFirstPressed(moveAllBind)) { /* ... */ }
+
+// First press, then repeat once held at least 15 ticks (key-repeat style).
+if (ControllingApi.isComboPressedOrHeld(moveSingleBind, 15)) { /* ... */ }
+
+// Raw counter: -1 not held, 0 first tick, then increments.
+int ticks = ControllingApi.getComboHeldTicks(myKeyBinding);
+```
+
+Note: the poller reads raw key state, so a combo can fire while a GUI text field is focused. Gate that in your handler if it matters.
+
+### Instant state queries
+
+The held-state counters above update once per client tick. When you need the answer *now* - inside a GUI event handler, a render pass, or anywhere a tick boundary has not passed - poll the input state directly instead. Both work everywhere on the client.
+
+```java
+// Is the whole combo physically held this instant?
+if (ControllingApi.isComboDown(myKeyBinding)) { /* ... */ }
+
+// Same, but also requires the binding's context to be active and no more
+// specific binding to be held: with G and Ctrl+G bound, holding Ctrl+G
+// reports true only for Ctrl+G.
+if (ControllingApi.isComboActive(myKeyBinding)) { /* ... */ }
+```
+
+`isComboActive` is the same decision the tick poller uses, so `isComboPressed` is its tick-quantized form. Use `isComboDown` when you want the literal key state and will do your own disambiguation.
+
+### Keybinding conflict contexts
+
+Controlling assigns each keybinding a conflict *context* so that bindings on the same key only conflict when they truly clash. Built-in contexts are `UNIVERSAL`, `IN_GAME`, and `GUI` (`com.blamejared.controlling.api.KeyContexts`). Vanilla movement/attack/use binds default to `IN_GAME`; most others stay `UNIVERSAL`.
+
+A context also gates whether a bind may fire: `IN_GAME` only with no screen open, `GUI` only with one open. This applies to vanilla `isPressed()`/`getIsKeyPressed()` as well as to `isComboActive`, so a `GUI` bind does not fire in the world. The one exception is `getKeyCode()`, which stays context-blind so mod GUIs can still look up keys like sneak.
+
+Mods can set a binding's context, register custom contexts, and restrict what the user may put in a combo:
+
 ```java
 import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.api.KeyContexts;
-import java.util.Arrays;
-import org.lwjgl.input.Keyboard;
 
-// Default the binding to Ctrl + G. Bindings still on their old default are moved to the new one.
-ControllingApi.setDefaultComboKeys(myKeyBinding, Arrays.asList(Keyboard.KEY_LCONTROL));
+// Only conflicts with other GUI-context binds.
+ControllingApi.setKeyConflictContext(myGuiKeyBinding, KeyContexts.GUI);
 
-// Set the live binding to Shift + G in one call, so it is never briefly half applied.
-ControllingApi.setComboKeyBinding(myKeyBinding, Keyboard.KEY_G, Arrays.asList(Keyboard.KEY_LSHIFT));
+// Prevent users from attaching any combo keys to a modifier-tied bind.
+ControllingApi.setAllowsCombos(myModifierTiedBinding, false);
 
-// Only conflict with, and only fire alongside, other in-game binds.
-ControllingApi.setKeyConflictContext(myKeyBinding, KeyContexts.IN_GAME);
-
-// "LShift+G", the same string the controls screen shows.
-String label = ControllingApi.getDisplayName(myKeyBinding);
-
-// Live poll, valid in game and inside any GUI. isComboDown ignores context and more
-// specific binds; isComboActive is the "would it fire right now" question.
-if (ControllingApi.isComboActive(myKeyBinding)) {
-    // ...
-}
+// Or allow combos generally, but keep one key out of them: useful when the mod
+// reads that key itself. Blocking restricts the GUI only, so the mod can still
+// ship a default combo via setComboKeys.
+ControllingApi.setBlockedComboKeys(myBinding, Keyboard.KEY_LCONTROL, Keyboard.KEY_RCONTROL);
 ```
 
-Custom conflict contexts are registered through `com.blamejared.controlling.api.KeyContextRegistry`.
+To define a custom context, extend `KeyContext` and implement `isActive`, which says when your binds are live. `conflicts` defaults to clashing with every context, which is always safe; override it only to narrow, and only where `isActive` makes the two windows genuinely disjoint. An always-active context must not narrow it, since it overlaps everything by definition - that is just `UNIVERSAL`. The display name comes from `options.context.<id>` in your lang file, or pass an existing key via the two-argument constructor `KeyContext(String id, String translationKey)`.
+
+```java
+// Live only while this mod's terminal is open.
+public static final KeyContext AE2 = new KeyContext("ae2") {
+
+    @Override
+    public boolean isActive() {
+        return Minecraft.getMinecraft().currentScreen instanceof GuiTerminal;
+    }
+
+    @Override
+    public boolean conflicts(KeyContext other) {
+        // Disjoint from world-only binds. Still clashes with anything else that can be live in a GUI.
+        return other != KeyContexts.IN_GAME;
+    }
+};
+
+// During client init. Throws IllegalArgumentException on a reserved or duplicate id.
+KeyContextRegistry.register(AE2);
+```
