@@ -10,32 +10,69 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 
-import com.blamejared.controlling.keybinding.KeyModifier;
+import com.blamejared.controlling.api.ControllingApi;
+import com.blamejared.controlling.config.ControllingConfig;
+import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ComboState;
+import com.blamejared.controlling.keybinding.InputState;
+import com.blamejared.controlling.keybinding.KeyNames;
 
 import cpw.mods.fml.common.Loader;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntLists;
 
 public class GuiVisualKeyboard {
 
     private static final int PANEL_COLOR = 0xEE101010;
     private static final int PANEL_BORDER_COLOR = 0xFF777777;
-    private static final int KEY_NORMAL_COLOR = 0xFF555555;
-    private static final int KEY_HOVER_COLOR = 0xFF888888;
-    private static final int KEY_BOUND_COLOR = 0xFF236B23;
-    private static final int KEY_CONFLICT_COLOR = 0xFF8A2525;
-    private static final int KEY_SELECTED_COLOR = 0xFFD4A928;
-    private static final int KEY_DISABLED_COLOR = 0xFF303030;
     private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int MUTED_TEXT_COLOR = 0xA0A0A0;
 
+    /** Clamped so an odd driver count cannot blow the row out; the floor keeps LMB/RMB/MMB always reachable. */
+    private static final int MIN_MOUSE_BUTTONS = 3;
+    private static final int MAX_MOUSE_BUTTONS = 8;
+    /** Vertical gap between the last key row and the legend. */
+    private static final int LEGEND_TOP_GAP = 6;
+    /** Space below the legend for the hint line, only reserved when a binding is selected. */
+    private static final int HINT_BLOCK = 14;
+    private static final int FOOTER_BOTTOM_MARGIN = 5;
+    private static final int CLOSE_BUTTON_SIZE = 18;
+    /** Visual height of a glyph, one less than FONT_HEIGHT; vanilla centers text in a widget against this. */
+    private static final int GLYPH_TEXT_HEIGHT = 8;
+    private static final String[] LEGEND_KEYS = { "options.legendBound", "options.legendConflict",
+            "options.legendCombo", "options.legendSelected", "options.legendDisabled", "options.legendNoCombo" };
+    /** Reused buffer for the localized legend labels; drawn every frame the panel is open. */
+    private static final String[] LEGEND_LABELS = new String[LEGEND_KEYS.length];
+    private static final int LEGEND_SWATCH = 7;
+    private static final int LEGEND_SWATCH_GAP = 3;
+    private static final int LEGEND_ITEM_GAP = 8;
+
+    /** Refreshed once per draw so the nested button classes can read it without a config lookup per key. */
+    private static ColorPalette palette = ColorPalette.DEFAULT;
+
     private Page page = Page.MAIN;
     private final List<KeyButton> keys = new ArrayList<>();
+    private final List<KeyButton> mouseKeys = new ArrayList<>();
     private final List<RectButton> pageButtons = new ArrayList<>();
-    private final List<ModifierButton> modifierButtons = new ArrayList<>();
+    private RectButton clearButton;
+    /** Match count per main keycode, rebuilt once per frame by tallyMatches. */
+    private final Int2IntOpenHashMap matchCounts = new Int2IntOpenHashMap();
+    private RectButton closeButton;
+    private int pageButtonsLeft;
+    private boolean showHint;
+    private int legendTop;
+
+    private int laidOutWidth = -1;
+    private int laidOutHeight = -1;
+    private Page laidOutPage;
+    private boolean laidOutHint;
 
     private int panelLeft;
     private int panelTop;
@@ -48,46 +85,165 @@ public class GuiVisualKeyboard {
     private int keyHeight;
 
     public void draw(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
+        palette = ControllingConfig.palette;
         this.layout(screen);
 
         Gui.drawRect(this.panelLeft, this.panelTop, this.panelRight, this.panelBottom, PANEL_COLOR);
         drawBorder(this.panelLeft, this.panelTop, this.panelRight, this.panelBottom, PANEL_BORDER_COLOR);
 
-        String title = I18n.format("options.visualKeyboard");
-        mc.fontRenderer.drawStringWithShadow(title, this.panelLeft + 8, this.panelTop + 7, TEXT_COLOR);
-
-        if (screen.getSelectedKeyBinding() != null) {
-            String hint = I18n.format("options.visualKeyboardHint");
-            mc.fontRenderer.drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - 14, MUTED_TEXT_COLOR);
+        this.drawTitle(screen, mc);
+        if (this.closeButton != null) {
+            this.closeButton.draw(mc, mouseX, mouseY, false);
         }
+
+        if (this.showHint) {
+            String hint = StatCollector.translateToLocal("options.visualKeyboardHint");
+            mc.fontRenderer
+                    .drawStringWithShadow(hint, this.panelLeft + 8, this.panelBottom - HINT_BLOCK, MUTED_TEXT_COLOR);
+        }
+
+        this.drawLegend(mc);
 
         for (RectButton pageButton : this.pageButtons) {
             pageButton.draw(mc, mouseX, mouseY, pageButton.page == this.page);
         }
 
-        mc.fontRenderer.drawStringWithShadow(
-                I18n.format("options.visualKeyboardModifier"),
-                this.panelLeft + 8,
-                this.panelTop + 38,
-                MUTED_TEXT_COLOR);
-        for (ModifierButton modifierButton : this.modifierButtons) {
-            modifierButton.draw(mc, mouseX, mouseY, modifierButton.modifier == KeyModifier.NONE);
+        this.drawComboRow(screen, mc, mouseX, mouseY);
+
+        final IntList combo = screen.getVisualKeyboardCombo();
+        this.tallyMatches(mc, combo);
+        for (KeyButton key : this.keys) {
+            key.draw(screen, mc, combo, this.matchCounts.get(key.keyCode), mouseX, mouseY);
+        }
+        for (KeyButton key : this.mouseKeys) {
+            key.draw(screen, mc, combo, this.matchCounts.get(key.keyCode), mouseX, mouseY);
         }
 
-        for (KeyButton key : this.keys) {
-            key.draw(screen, mc, mouseX, mouseY);
-        }
-
-        KeyModifier modifier = KeyModifier.NONE;
-        for (KeyButton key : this.keys) {
-            if (key.contains(mouseX, mouseY)) {
-                List<String> matchingBindings = key.getMatchingBindings(mc, modifier);
-                if (!matchingBindings.isEmpty()) {
-                    screen.drawVisualKeyboardTooltip(matchingBindings, mouseX, mouseY);
-                }
-                return;
+        final KeyButton hovered = this.hit(mouseX, mouseY);
+        if (hovered != null) {
+            List<String> matchingBindings = hovered.getMatchingBindings(mc, screen.getVisualKeyboardCombo());
+            if (!matchingBindings.isEmpty()) {
+                screen.drawVisualKeyboardTooltip(matchingBindings, mouseX, mouseY);
             }
         }
+    }
+
+    /**
+     * Panel title, followed by the binding being edited so it is clear what a key press will rebind. The name is
+     * trimmed to the space before the page buttons rather than overlapping them.
+     */
+    private void drawTitle(GuiNewControls screen, Minecraft mc) {
+        final int left = this.panelLeft + 8;
+        final int top = this.panelTop + 7;
+        final String title = StatCollector.translateToLocal("options.visualKeyboard");
+        mc.fontRenderer.drawStringWithShadow(title, left, top, TEXT_COLOR);
+
+        final KeyBinding selected = screen.getSelectedKeyBinding();
+        if (selected == null) {
+            return;
+        }
+        final int nameLeft = left + mc.fontRenderer.getStringWidth(title + "  ");
+        final int available = this.pageButtonsLeft - 8 - nameLeft;
+        if (available <= 0) {
+            return;
+        }
+        final String name = mc.fontRenderer.trimStringToWidth(
+                StatCollector.translateToLocal(selected.getKeyDescription()),
+                Math.max(0, available));
+        mc.fontRenderer.drawStringWithShadow(name, nameLeft, top, palette.keySelected);
+    }
+
+    /**
+     * Key to the button colors, along the top of the panel footer. Items are dropped from the right when the panel is
+     * too narrow to hold them all, so the most important ones survive on small screens.
+     */
+    private void drawLegend(Minecraft mc) {
+        final int[] colors = palette.legendColors;
+        final String[] labels = LEGEND_LABELS;
+        for (int i = 0; i < LEGEND_KEYS.length; i++) {
+            labels[i] = StatCollector.translateToLocal(LEGEND_KEYS[i]);
+        }
+
+        final int available = this.panelRight - this.panelLeft - 16;
+        int shown = labels.length;
+        while (shown > 0 && legendWidth(mc, labels, shown) > available) {
+            shown--;
+        }
+
+        int left = this.panelLeft + 8;
+        final int top = this.legendTop;
+        for (int i = 0; i < shown; i++) {
+            Gui.drawRect(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, colors[i]);
+            // the blocked entry shows the border that actually marks a blocked key
+            final int swatchBorder = i == LEGEND_KEYS.length - 1 ? palette.comboBlockedBorder : PANEL_BORDER_COLOR;
+            drawBorder(left, top + 1, left + LEGEND_SWATCH, top + 1 + LEGEND_SWATCH, swatchBorder);
+            left += LEGEND_SWATCH + LEGEND_SWATCH_GAP;
+            mc.fontRenderer.drawStringWithShadow(labels[i], left, top, MUTED_TEXT_COLOR);
+            left += mc.fontRenderer.getStringWidth(labels[i]) + LEGEND_ITEM_GAP;
+        }
+    }
+
+    private static int legendWidth(Minecraft mc, String[] labels, int count) {
+        int total = 0;
+        for (int i = 0; i < count; i++) {
+            total += LEGEND_SWATCH + LEGEND_SWATCH_GAP + mc.fontRenderer.getStringWidth(labels[i]) + LEGEND_ITEM_GAP;
+        }
+        return total - LEGEND_ITEM_GAP;
+    }
+
+    // Header line: the combo being built, plus a Clear button once it is non-empty.
+    private void drawComboRow(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
+        if (!allowsCombosFor(screen)) {
+            mc.fontRenderer.drawStringWithShadow(
+                    StatCollector.translateToLocal("options.combosLocked"),
+                    this.panelLeft + 8,
+                    this.panelTop + 38,
+                    MUTED_TEXT_COLOR);
+            return;
+        }
+        final IntList combo = screen.getVisualKeyboardCombo();
+        final String label = combo.isEmpty() ? StatCollector.translateToLocal("options.visualKeyboardComboEmpty")
+                : StatCollector.translateToLocalFormatted("options.visualKeyboardCombo", KeyNames.joinCombo(combo));
+        mc.fontRenderer.drawStringWithShadow(label, this.panelLeft + 8, this.panelTop + 38, MUTED_TEXT_COLOR);
+        if (this.clearButton != null && !combo.isEmpty()) {
+            this.clearButton.draw(mc, mouseX, mouseY, false);
+        }
+    }
+
+    /**
+     * Counts, per main keycode, how many bindings match the combo being built. Done once per frame rather than once per
+     * key button: the per-button form walked every binding 80-odd times a frame, and the keycode getter inside that
+     * inner loop was the single hottest thing this panel did.
+     */
+    private void tallyMatches(Minecraft mc, IntList combo) {
+        this.matchCounts.clear();
+        for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
+            if (keyBinding.getKeyCategory().endsWith(".hidden")) {
+                continue;
+            }
+            final int mainKey = keyBinding.getKeyCode();
+            final IntList bindingCombo = keyBinding instanceof ComboKeyBinding comboKeyBinding
+                    ? comboKeyBinding.controlling$comboKeysRaw()
+                    : IntLists.EMPTY_LIST;
+            if (ComboState.sameKeySet(mainKey, combo, mainKey, bindingCombo)) {
+                this.matchCounts.addTo(mainKey, 1);
+            }
+        }
+    }
+
+    /** The key button under the cursor across both the keyboard and the mouse row, or null. */
+    private KeyButton hit(int mouseX, int mouseY) {
+        for (KeyButton key : this.keys) {
+            if (key.contains(mouseX, mouseY)) {
+                return key;
+            }
+        }
+        for (KeyButton key : this.mouseKeys) {
+            if (key.contains(mouseX, mouseY)) {
+                return key;
+            }
+        }
+        return null;
     }
 
     public boolean mouseClicked(GuiNewControls screen, int mouseX, int mouseY, int mouseButton) {
@@ -95,7 +251,22 @@ public class GuiVisualKeyboard {
             return false;
         }
 
+        // Right-click toggles a key in or out of the combo that will be attached to the next key picked.
+        if (mouseButton == 1) {
+            // Also works with nothing selected: the combo then filters which bindings the keys light up for.
+            final KeyButton key = this.hit(mouseX, mouseY);
+            if (key != null && allowsCombosFor(screen) && screen.acceptsComboKey(key.keyCode)) {
+                screen.toggleVisualKeyboardComboKey(key.keyCode);
+            }
+            return true;
+        }
+
         if (mouseButton != 0) {
+            return true;
+        }
+
+        if (this.closeButton != null && this.closeButton.contains(mouseX, mouseY)) {
+            screen.closeVisualKeyboard();
             return true;
         }
 
@@ -106,25 +277,23 @@ public class GuiVisualKeyboard {
             }
         }
 
-        for (ModifierButton modifierButton : this.modifierButtons) {
-            if (modifierButton.contains(mouseX, mouseY)) {
-                return true;
-            }
+        if (this.clearButton != null && !screen.getVisualKeyboardCombo().isEmpty()
+                && this.clearButton.contains(mouseX, mouseY)) {
+            screen.clearVisualKeyboardCombo();
+            return true;
         }
 
-        for (KeyButton key : this.keys) {
-            if (key.contains(mouseX, mouseY) && key.enabled) {
-                if (screen.getSelectedKeyBinding() == null) {
-                    List<KeyBinding> matchingBindings = key
-                            .getMatchingKeyBindings(Minecraft.getMinecraft(), KeyModifier.NONE);
-                    if (!matchingBindings.isEmpty()) {
-                        screen.showKeyBinding(matchingBindings.get(0));
-                    }
-                    return true;
+        final KeyButton key = this.hit(mouseX, mouseY);
+        if (key != null && key.enabled) {
+            if (screen.getSelectedKeyBinding() == null) {
+                List<KeyBinding> matchingBindings = key
+                        .getMatchingKeyBindings(Minecraft.getMinecraft(), screen.getVisualKeyboardCombo());
+                if (!matchingBindings.isEmpty()) {
+                    screen.showKeyBinding(matchingBindings.get(0));
                 }
-                screen.selectVisualKeyboardKey(key.keyCode);
                 return true;
             }
+            screen.selectVisualKeyboardKey(key.keyCode);
         }
 
         return true;
@@ -136,7 +305,28 @@ public class GuiVisualKeyboard {
                 && mouseY < this.panelBottom;
     }
 
+    private static boolean allowsCombosFor(GuiNewControls screen) {
+        return !(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)
+                || comboKeyBinding.controlling$allowsCombos();
+    }
+
+    /**
+     * Rebuilds the panel geometry. Everything here is derived from the screen size, the page and whether the hint row
+     * is shown, so it is skipped when none of those changed; draw runs every frame and this allocates every button.
+     */
     private void layout(GuiNewControls screen) {
+        // The hint only draws with a binding selected, so do not reserve its row otherwise.
+        this.showHint = screen.getSelectedKeyBinding() != null;
+        if (screen.width == this.laidOutWidth && screen.height == this.laidOutHeight
+                && this.page == this.laidOutPage
+                && this.showHint == this.laidOutHint) {
+            return;
+        }
+        this.laidOutWidth = screen.width;
+        this.laidOutHeight = screen.height;
+        this.laidOutPage = this.page;
+        this.laidOutHint = this.showHint;
+
         int maxWidth = Math.max(220, screen.width - 24);
         this.keyboardWidth = Math.min(560, maxWidth - 16);
         int panelWidth = Math.min(screen.width - 8, this.keyboardWidth + 16);
@@ -144,29 +334,47 @@ public class GuiVisualKeyboard {
         this.keyGap = this.keyboardWidth < 360 ? 2 : 4;
         this.keyHeight = Math.max(14, Math.min(24, (screen.height - 116) / 7));
 
-        int rows = this.page == Page.MAIN ? 6 : 4;
         int headerHeight = 57;
-        int footerHeight = 24;
-        int keyboardHeight = rows * this.keyHeight + (rows - 1) * this.keyGap;
-        int panelHeight = headerHeight + keyboardHeight + footerHeight;
+        final int legendHeight = LEGEND_TOP_GAP + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT
+                + FOOTER_BOTTOM_MARGIN;
+        int footerHeight = legendHeight + (this.showHint ? HINT_BLOCK : 0);
+        // keyboard rows, then the mouse row
+        int bodyHeight = this.keyboardHeight() + this.keyGap + this.keyHeight;
+        int panelHeight = headerHeight + bodyHeight + footerHeight;
+
+        // Center on the tallest the panel can ever get, not on the current page, so the header does not jump when
+        // switching to a shorter page or when the hint row appears. Only the bottom edge moves.
+        final int tallestBody = keyboardHeight(Page.MAIN, this.keyHeight, this.keyGap) + this.keyGap + this.keyHeight;
+        final int tallestPanel = headerHeight + tallestBody + legendHeight + HINT_BLOCK;
 
         this.panelLeft = (screen.width - panelWidth) / 2;
         this.panelRight = this.panelLeft + panelWidth;
-        this.panelTop = Math.max(18, (screen.height - panelHeight) / 2);
+        this.panelTop = Math.max(18, (screen.height - tallestPanel) / 2);
         this.panelBottom = this.panelTop + panelHeight;
         this.keyboardLeft = this.panelLeft + 8;
         this.keyboardTop = this.panelTop + headerHeight;
+        this.legendTop = this.panelBottom - footerHeight + LEGEND_TOP_GAP;
 
         this.layoutPageButtons();
-        this.layoutModifierButtons();
+        this.layoutComboRow();
         this.layoutKeys();
+        this.layoutMouseKeys();
     }
 
     private void layoutPageButtons() {
         this.pageButtons.clear();
         int buttonTop = this.panelTop + 6;
-        int buttonWidth = Math.max(42, Math.min(58, (this.panelRight - this.panelLeft - 24) / 3));
-        int buttonLeft = this.panelRight - 8 - buttonWidth * 3 - 8;
+        this.closeButton = new RectButton(
+                null,
+                this.panelRight - 8 - CLOSE_BUTTON_SIZE,
+                buttonTop,
+                CLOSE_BUTTON_SIZE,
+                18,
+                "X");
+        final int pagesRight = this.panelRight - 8 - CLOSE_BUTTON_SIZE - 4;
+        int buttonWidth = Math.max(42, Math.min(58, (pagesRight - this.panelLeft - 16) / 3));
+        int buttonLeft = pagesRight - buttonWidth * 3 - 8;
+        this.pageButtonsLeft = buttonLeft;
         this.pageButtons.add(
                 new RectButton(
                         Page.MAIN,
@@ -174,7 +382,7 @@ public class GuiVisualKeyboard {
                         buttonTop,
                         buttonWidth,
                         18,
-                        I18n.format("options.visualKeyboardMain")));
+                        StatCollector.translateToLocal("options.visualKeyboardMain")));
         this.pageButtons.add(
                 new RectButton(
                         Page.NUMPAD,
@@ -182,7 +390,7 @@ public class GuiVisualKeyboard {
                         buttonTop,
                         buttonWidth,
                         18,
-                        I18n.format("options.visualKeyboardNumpad")));
+                        StatCollector.translateToLocal("options.visualKeyboardNumpad")));
         this.pageButtons.add(
                 new RectButton(
                         Page.AUX,
@@ -190,21 +398,47 @@ public class GuiVisualKeyboard {
                         buttonTop,
                         buttonWidth,
                         18,
-                        I18n.format("options.visualKeyboardAux")));
+                        StatCollector.translateToLocal("options.visualKeyboardAux")));
     }
 
-    private void layoutModifierButtons() {
-        this.modifierButtons.clear();
-        int labelTop = this.panelTop + 33;
+    private void layoutComboRow() {
+        final int buttonWidth = 40;
+        this.clearButton = new RectButton(
+                null,
+                this.panelRight - 8 - buttonWidth,
+                this.panelTop + 33,
+                buttonWidth,
+                18,
+                StatCollector.translateToLocal("options.visualKeyboardClear"));
+    }
 
-        int buttonLeft = this.panelLeft + 82;
-        int availableWidth = this.panelRight - buttonLeft - 8;
-        int buttonWidth = Math.max(22, (availableWidth - 12) / 4);
-        for (KeyModifier modifier : KeyModifier.VALUES) {
-            this.modifierButtons.add(
-                    new ModifierButton(modifier, buttonLeft, labelTop, buttonWidth, 18, modifier.getDisplayName()));
-            buttonLeft += buttonWidth + 4;
+    // Mouse buttons live on their own row below the keyboard so mouse combos and mouse main keys are reachable here.
+    private void layoutMouseKeys() {
+        this.mouseKeys.clear();
+        final int count = Math.max(MIN_MOUSE_BUTTONS, Math.min(Mouse.getButtonCount(), MAX_MOUSE_BUTTONS));
+        final int top = this.keyboardTop + this.keyboardHeight() + this.keyGap;
+        final int buttonWidth = Math.max(24, Math.min(48, (this.keyboardWidth - this.keyGap * (count - 1)) / count));
+        int left = this.keyboardLeft;
+        for (int button = 0; button < count; button++) {
+            final int keyCode = ControllingApi.mouseButtonToKeyCode(button);
+            final KeyButton key = new KeyButton(keyCode, KeyNames.display(keyCode), 1.0D);
+            key.setBounds(left, top, buttonWidth, this.keyHeight);
+            this.mouseKeys.add(key);
+            left += buttonWidth + this.keyGap;
         }
+    }
+
+    private int keyboardHeight() {
+        return keyboardHeight(this.page, this.keyHeight, this.keyGap);
+    }
+
+    private static int keyboardHeight(Page page, int keyHeight, int keyGap) {
+        final int rows = switch (page) {
+            case MAIN -> 6;
+            case NUMPAD -> 5;
+            case AUX -> 4;
+        };
+        return rows * keyHeight + (rows - 1) * keyGap;
     }
 
     private void layoutKeys() {
@@ -361,6 +595,8 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_NUMPAD2, "2", 1.0D),
                 key(Keyboard.KEY_NUMPAD3, "3", 1.0D),
                 key(Keyboard.KEY_DECIMAL, ".", 1.0D));
+        y += this.keyHeight + this.keyGap;
+        this.addRow(y, unit, key(Keyboard.KEY_NUMPAD0, "0", 1.0D));
     }
 
     private void layoutAuxKeys() {
@@ -407,8 +643,10 @@ public class GuiVisualKeyboard {
         return new KeyButton(keyCode, this.getKeyLabel(keyCode, label), units);
     }
 
+    private static final boolean LWJGL3IFY_LOADED = Loader.isModLoaded("lwjgl3ify");
+
     private String getKeyLabel(int keyCode, String fallback) {
-        if (!Loader.isModLoaded("lwjgl3ify") || this.shouldUseFixedLabel(keyCode)) {
+        if (!LWJGL3IFY_LOADED || this.shouldUseFixedLabel(keyCode)) {
             return fallback;
         }
         String keyName = Keyboard.getKeyName(keyCode);
@@ -430,11 +668,19 @@ public class GuiVisualKeyboard {
         };
     }
 
+    /**
+     * Advances in exact units and rounds each key's left and right edge, rather than rounding widths and summing them.
+     * Rounding widths lets a fractional unit round up once per key, so a full row overshoots and eats the right gutter;
+     * rounding edges keeps the error under half a pixel and lands the last key on keyboardLeft + keyboardWidth.
+     */
     private void addRow(double y, double unitWidth, KeyButton... row) {
         double x = this.keyboardLeft;
+        final int top = (int) Math.round(y);
         for (KeyButton key : row) {
-            int width = Math.max(10, (int) Math.round(unitWidth * key.units + this.keyGap * (key.units - 1.0D)));
-            key.setBounds((int) Math.round(x), (int) Math.round(y), width, this.keyHeight);
+            final double width = unitWidth * key.units + this.keyGap * (key.units - 1.0D);
+            final int left = (int) Math.round(x);
+            final int right = (int) Math.round(x + width);
+            key.setBounds(left, top, Math.max(10, right - left), this.keyHeight);
             this.keys.add(key);
             x += width + this.keyGap;
         }
@@ -478,21 +724,11 @@ public class GuiVisualKeyboard {
         }
 
         protected void draw(Minecraft mc, int mouseX, int mouseY, boolean active) {
-            int color = active ? KEY_SELECTED_COLOR
-                    : this.contains(mouseX, mouseY) ? KEY_HOVER_COLOR : KEY_NORMAL_COLOR;
+            int color = active ? palette.keySelected
+                    : this.contains(mouseX, mouseY) ? palette.keyHover : palette.keyNormal;
             Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, color);
             drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, PANEL_BORDER_COLOR);
             drawCentered(mc, this.label, this.left, this.top, this.width, this.height, TEXT_COLOR);
-        }
-    }
-
-    private static class ModifierButton extends RectButton {
-
-        private final KeyModifier modifier;
-
-        private ModifierButton(KeyModifier modifier, int left, int top, int width, int height, String label) {
-            super(null, left, top, width, height, label);
-            this.modifier = modifier;
         }
     }
 
@@ -526,26 +762,37 @@ public class GuiVisualKeyboard {
                     && mouseY < this.top + this.height;
         }
 
-        private void draw(GuiNewControls screen, Minecraft mc, int mouseX, int mouseY) {
-            KeyModifier modifier = KeyModifier.NONE;
-            this.enabled = !modifier.matches(this.keyCode);
+        private void draw(GuiNewControls screen, Minecraft mc, IntList combo, int bindings, int mouseX, int mouseY) {
+            final boolean inCombo = screen.isVisualKeyboardComboKey(this.keyCode);
+            // A key held right now is part of the combo being captured, but it is not a toggle: show it with the
+            // selected border so it reads as transient rather than as something clicked on.
+            final boolean heldNow = !inCombo && InputState.isDown(this.keyCode);
+            // A combo member cannot also be the main key, so it is not selectable while toggled on.
+            this.enabled = this.allowsInputType(screen) && !inCombo;
+            // Only per-key blocks are painted. When the binding bars combos outright every key would qualify, and
+            // grinding the whole keyboard grey would wrongly imply the main key cannot be bound either; the header
+            // says "combos disabled" for that case.
+            final boolean comboBlocked = allowsCombosFor(screen) && !screen.acceptsComboKey(this.keyCode);
 
-            int bindings = this.getMatchingBindings(mc, modifier).size();
-            int color = KEY_NORMAL_COLOR;
-            if (!this.enabled) {
-                color = KEY_DISABLED_COLOR;
-            } else if (this.isSelected(screen, modifier)) {
-                color = KEY_SELECTED_COLOR;
+            int color = palette.keyNormal;
+            if (inCombo) {
+                color = palette.keyCombo;
+            } else if (!this.enabled) {
+                color = palette.keyDisabled;
+            } else if (this.isSelected(screen, combo)) {
+                color = palette.keySelected;
             } else if (bindings > 1) {
-                color = KEY_CONFLICT_COLOR;
+                color = palette.keyConflict;
             } else if (bindings == 1) {
-                color = KEY_BOUND_COLOR;
+                color = palette.keyBound;
             } else if (this.contains(mouseX, mouseY)) {
-                color = KEY_HOVER_COLOR;
+                color = palette.keyHover;
             }
 
             Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, color);
-            drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, PANEL_BORDER_COLOR);
+            final int border = inCombo || heldNow ? palette.keySelected
+                    : comboBlocked ? palette.comboBlockedBorder : PANEL_BORDER_COLOR;
+            drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, border);
             drawCentered(
                     mc,
                     this.label,
@@ -553,42 +800,67 @@ public class GuiVisualKeyboard {
                     this.top,
                     this.width,
                     this.height,
-                    this.enabled ? TEXT_COLOR : MUTED_TEXT_COLOR);
+                    (this.enabled || inCombo) && !comboBlocked ? ColorPalette.labelColor(color) : MUTED_TEXT_COLOR);
         }
 
-        private boolean isSelected(GuiNewControls screen, KeyModifier modifier) {
+        // Bindings may opt out of mouse or keyboard input; the mouse row and the keys honor the matching flag.
+        private boolean allowsInputType(GuiNewControls screen) {
+            if (!(screen.getSelectedKeyBinding() instanceof ComboKeyBinding comboKeyBinding)) {
+                return true;
+            }
+            return ControllingApi.isMouseKeyCode(this.keyCode) ? comboKeyBinding.controlling$allowsMouse()
+                    : comboKeyBinding.controlling$allowsKeyboard();
+        }
+
+        private boolean isSelected(GuiNewControls screen, IntList combo) {
             KeyBinding selected = screen.getSelectedKeyBinding();
             if (selected == null || selected.getKeyCode() != this.keyCode) {
                 return false;
             }
-            return modifier == KeyModifier.NONE;
+            return this.comboMatches(selected, combo);
         }
 
-        private List<String> getMatchingBindings(Minecraft mc, KeyModifier modifier) {
+        private List<String> getMatchingBindings(Minecraft mc, IntList combo) {
             List<String> bindings = new ArrayList<>();
-            for (KeyBinding keyBinding : this.getMatchingKeyBindings(mc, modifier)) {
-                bindings.add(I18n.format(keyBinding.getKeyDescription()));
+            for (KeyBinding keyBinding : this.getMatchingKeyBindings(mc, combo)) {
+                bindings.add(StatCollector.translateToLocal(keyBinding.getKeyDescription()));
             }
             return bindings;
         }
 
-        private List<KeyBinding> getMatchingKeyBindings(Minecraft mc, KeyModifier modifier) {
+        private List<KeyBinding> getMatchingKeyBindings(Minecraft mc, IntList combo) {
             List<KeyBinding> bindings = new ArrayList<>();
             for (KeyBinding keyBinding : mc.gameSettings.keyBindings) {
-                if (keyBinding.getKeyCode() != this.keyCode || keyBinding.getKeyCategory().endsWith(".hidden")) {
-                    continue;
-                }
-                if (modifier == KeyModifier.NONE) {
+                if (this.isMatch(keyBinding, combo)) {
                     bindings.add(keyBinding);
                 }
             }
             return bindings;
         }
+
+        private boolean isMatch(KeyBinding keyBinding, IntList combo) {
+            if (keyBinding.getKeyCode() != this.keyCode || keyBinding.getKeyCategory().endsWith(".hidden")) {
+                return false;
+            }
+            return this.comboMatches(keyBinding, combo);
+        }
+
+        // A binding lights up under this key only when its whole combo equals the one being built.
+        private boolean comboMatches(KeyBinding keyBinding, IntList combo) {
+            final IntList bindingCombo = keyBinding instanceof ComboKeyBinding comboKeyBinding
+                    ? comboKeyBinding.controlling$comboKeysRaw()
+                    : IntLists.EMPTY_LIST;
+            return ComboState.sameKeySet(this.keyCode, combo, this.keyCode, bindingCombo);
+        }
     }
 
+    /**
+     * Centers a label in a key. Uses the glyph height rather than FONT_HEIGHT, which counts the blank descender row and
+     * so lands the text a pixel above center; this is the same convention vanilla buttons use.
+     */
     private static void drawCentered(Minecraft mc, String text, int left, int top, int width, int height, int color) {
         int textX = left + width / 2 - mc.fontRenderer.getStringWidth(text) / 2;
-        int textY = top + (height - mc.fontRenderer.FONT_HEIGHT) / 2;
+        int textY = top + (height - GLYPH_TEXT_HEIGHT) / 2;
         mc.fontRenderer.drawStringWithShadow(text, textX, textY, color);
     }
 }
