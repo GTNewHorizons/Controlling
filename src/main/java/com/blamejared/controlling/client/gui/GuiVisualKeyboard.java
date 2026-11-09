@@ -369,7 +369,7 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_NUMPAD1, "1", 1.0D),
                 key(Keyboard.KEY_NUMPAD2, "2", 1.0D),
                 key(Keyboard.KEY_NUMPAD3, "3", 1.0D),
-                key(Keyboard.KEY_EQUALS, "=", 1.0D, 2.0D));
+                key(Keyboard.KEY_NUMPADENTER, "Enter", 1.0D, 2.0D));
         y += this.keyHeight + this.keyGap;
         this.addRow(y, unit, key(Keyboard.KEY_NUMPAD0, "0", 2.0D), key(Keyboard.KEY_DECIMAL, ".", 1.0D));
     }
