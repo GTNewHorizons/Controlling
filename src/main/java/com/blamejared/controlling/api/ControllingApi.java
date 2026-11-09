@@ -5,6 +5,7 @@ import java.util.List;
 import net.minecraft.client.settings.KeyBinding;
 
 import com.blamejared.controlling.keybinding.ComboKeyBinding;
+import com.blamejared.controlling.keybinding.ComboPolicy;
 
 /**
  * Public API surface for interacting with Controlling combo keybindings.
@@ -76,6 +77,65 @@ public final class ControllingApi {
     /** @return the keybinding's conflict context, never null. */
     public static KeyContext getKeyConflictContext(KeyBinding keyBinding) {
         return ((ComboKeyBinding) keyBinding).controlling$getKeyContext();
+    }
+
+    /**
+     * Controls whether the user may attach combo keys to this binding at all. Use false for modifier-tied binds, or any
+     * binding whose meaning would break if extra keys were required.
+     *
+     * <p>
+     * This restricts the controls screen and the visual keyboard only; the owning mod can still set a combo through
+     * {@link #setComboKeys(KeyBinding, List)}.
+     */
+    public static void setAllowsCombos(KeyBinding keyBinding, boolean allows) {
+        ((ComboKeyBinding) keyBinding).controlling$setAllowsCombos(allows);
+    }
+
+    /** @return whether the user may build a combo on this binding. */
+    public static boolean allowsCombos(KeyBinding keyBinding) {
+        return ((ComboKeyBinding) keyBinding).controlling$allowsCombos();
+    }
+
+    /**
+     * Bars specific keys from this binding's combo, leaving every other key usable. Use for a key the mod reads itself,
+     * such as a modifier that already means something for this binding.
+     *
+     * <p>
+     * Restricts the GUI only, as {@link #setAllowsCombos(KeyBinding, boolean)} does. Passing no keys clears the list.
+     */
+    public static void setBlockedComboKeys(KeyBinding keyBinding, int... keys) {
+        ((ComboKeyBinding) keyBinding).controlling$setBlockedComboKeys(keys);
+    }
+
+    /** @return true when {@code keyCode} may not be placed in this binding's combo by the user. */
+    public static boolean isComboKeyBlocked(KeyBinding keyBinding, int keyCode) {
+        final ComboKeyBinding comboKeyBinding = (ComboKeyBinding) keyBinding;
+        return !ComboPolicy.accepts(
+                keyCode,
+                comboKeyBinding.controlling$allowsCombos(),
+                comboKeyBinding.controlling$blockedComboKeys());
+    }
+
+    /** Controls whether the main key of this binding may be set to a mouse button. Use false to forbid mouse binds. */
+    public static void setAllowsMouse(KeyBinding keyBinding, boolean allows) {
+        ((ComboKeyBinding) keyBinding).controlling$setAllowsMouse(allows);
+    }
+
+    /** @return whether the main key may be bound to a mouse button. */
+    public static boolean allowsMouse(KeyBinding keyBinding) {
+        return ((ComboKeyBinding) keyBinding).controlling$allowsMouse();
+    }
+
+    /**
+     * Controls whether the main key of this binding may be set to a keyboard key. Use false to forbid keyboard binds.
+     */
+    public static void setAllowsKeyboard(KeyBinding keyBinding, boolean allows) {
+        ((ComboKeyBinding) keyBinding).controlling$setAllowsKeyboard(allows);
+    }
+
+    /** @return whether the main key may be bound to a keyboard key. */
+    public static boolean allowsKeyboard(KeyBinding keyBinding) {
+        return ((ComboKeyBinding) keyBinding).controlling$allowsKeyboard();
     }
 
     /** @return the extra combo keycodes for this bind, empty when it is a plain single-key bind. */
