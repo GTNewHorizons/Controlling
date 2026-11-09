@@ -138,6 +138,14 @@ public class GuiVisualKeyboard {
                 && mouseY < this.panelBottom;
     }
 
+    private int getRowsForPage(Page p) {
+        return switch (p) {
+            case MAIN -> 6;
+            case NUMPAD -> 5;
+            case AUX -> 4;
+        };
+    }
+
     private void layout(GuiNewControls screen) {
         int maxWidth = Math.max(220, screen.width - 24);
         this.keyboardWidth = Math.min(560, maxWidth - 16);
@@ -146,7 +154,7 @@ public class GuiVisualKeyboard {
         this.keyGap = this.keyboardWidth < 360 ? 2 : 4;
         this.keyHeight = Math.max(14, Math.min(24, (screen.height - 116) / 7));
 
-        int rows = this.page == Page.MAIN ? 6 : 4;
+        int rows = getRowsForPage(this.page);
         int headerHeight = 57;
         int footerHeight = 24;
         int keyboardHeight = rows * this.keyHeight + (rows - 1) * this.keyGap;
@@ -346,15 +354,14 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_NUMPAD7, "7", 1.0D),
                 key(Keyboard.KEY_NUMPAD8, "8", 1.0D),
                 key(Keyboard.KEY_NUMPAD9, "9", 1.0D),
-                key(Keyboard.KEY_ADD, "+", 1.0D));
+                key(Keyboard.KEY_ADD, "+", 1.0D, 2.0D));
         y += this.keyHeight + this.keyGap;
         this.addRow(
                 y,
                 unit,
                 key(Keyboard.KEY_NUMPAD4, "4", 1.0D),
                 key(Keyboard.KEY_NUMPAD5, "5", 1.0D),
-                key(Keyboard.KEY_NUMPAD6, "6", 1.0D),
-                key(Keyboard.KEY_NUMPADENTER, "Enter", 1.0D));
+                key(Keyboard.KEY_NUMPAD6, "6", 1.0D));
         y += this.keyHeight + this.keyGap;
         this.addRow(
                 y,
@@ -362,7 +369,9 @@ public class GuiVisualKeyboard {
                 key(Keyboard.KEY_NUMPAD1, "1", 1.0D),
                 key(Keyboard.KEY_NUMPAD2, "2", 1.0D),
                 key(Keyboard.KEY_NUMPAD3, "3", 1.0D),
-                key(Keyboard.KEY_DECIMAL, ".", 1.0D));
+                key(Keyboard.KEY_EQUALS, "=", 1.0D, 2.0D));
+        y += this.keyHeight + this.keyGap;
+        this.addRow(y, unit, key(Keyboard.KEY_NUMPAD0, "0", 2.0D), key(Keyboard.KEY_DECIMAL, ".", 1.0D));
     }
 
     private void layoutAuxKeys() {
@@ -409,6 +418,10 @@ public class GuiVisualKeyboard {
         return new KeyButton(keyCode, this.getKeyLabel(keyCode, label), units);
     }
 
+    private KeyButton key(int keyCode, String label, double units, double heightUnits) {
+        return new KeyButton(keyCode, this.getKeyLabel(keyCode, label), units, heightUnits);
+    }
+
     private String getKeyLabel(int keyCode, String fallback) {
         if (!Loader.isModLoaded("lwjgl3ify") || this.shouldUseFixedLabel(keyCode)) {
             return fallback;
@@ -436,7 +449,14 @@ public class GuiVisualKeyboard {
         double x = this.keyboardLeft;
         for (KeyButton key : row) {
             int width = Math.max(10, (int) Math.round(unitWidth * key.units + this.keyGap * (key.units - 1.0D)));
-            key.setBounds((int) Math.round(x), (int) Math.round(y), width, this.keyHeight);
+            int height = Math.max(
+                    10,
+                    (int) Math.round(this.keyHeight * key.heightUnits + this.keyGap * (key.heightUnits - 1.0D)));
+            key.setBounds(
+                    (int) Math.round(x),
+                    (int) Math.round(y),
+                    width,
+                    key.heightUnits == -1 ? this.keyHeight : height);
             this.keys.add(key);
             x += width + this.keyGap;
         }
@@ -503,6 +523,7 @@ public class GuiVisualKeyboard {
         private final int keyCode;
         private final String label;
         private final double units;
+        private final double heightUnits;
         private boolean enabled = true;
         private int left;
         private int top;
@@ -513,6 +534,14 @@ public class GuiVisualKeyboard {
             this.keyCode = keyCode;
             this.label = label;
             this.units = units;
+            this.heightUnits = -1;
+        }
+
+        private KeyButton(int keyCode, String label, double units, double heightUnits) {
+            this.keyCode = keyCode;
+            this.label = label;
+            this.units = units;
+            this.heightUnits = heightUnits;
         }
 
         private void setBounds(int left, int top, int width, int height) {
