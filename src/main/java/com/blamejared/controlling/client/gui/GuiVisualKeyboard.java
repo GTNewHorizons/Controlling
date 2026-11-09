@@ -452,11 +452,7 @@ public class GuiVisualKeyboard {
             int height = Math.max(
                     10,
                     (int) Math.round(this.keyHeight * key.heightUnits + this.keyGap * (key.heightUnits - 1.0D)));
-            key.setBounds(
-                    (int) Math.round(x),
-                    (int) Math.round(y),
-                    width,
-                    key.heightUnits == -1 ? this.keyHeight : height);
+            key.setBounds((int) Math.round(x), (int) Math.round(y), width, height);
             this.keys.add(key);
             x += width + this.keyGap;
         }
@@ -534,7 +530,7 @@ public class GuiVisualKeyboard {
             this.keyCode = keyCode;
             this.label = label;
             this.units = units;
-            this.heightUnits = -1;
+            this.heightUnits = 1.0D;
         }
 
         private KeyButton(int keyCode, String label, double units, double heightUnits) {
