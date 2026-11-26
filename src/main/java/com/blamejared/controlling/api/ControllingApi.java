@@ -72,4 +72,27 @@ public final class ControllingApi {
         }
         return true;
     }
+
+    /**
+     * Prevents combo modifiers from being set on a keybinding. When disabled, the current and default modifiers are
+     * reset to {@link ComboModifier#NONE} and later modifier changes (GUI, options file, API) are ignored.
+     *
+     * @return false when the keybinding does not support combos.
+     */
+    public static boolean setModifiersDisabled(KeyBinding keyBinding, boolean disabled) {
+        if (!(keyBinding instanceof ComboKeyBinding comboKeyBinding)) {
+            return false;
+        }
+        comboKeyBinding.controlling$setModifiersDisabled(disabled);
+        KeyBinding.resetKeyBindingArrayAndHash();
+        return true;
+    }
+
+    /**
+     * @return true when combo modifiers are disabled for the keybinding.
+     */
+    public static boolean areModifiersDisabled(KeyBinding keyBinding) {
+        return keyBinding instanceof ComboKeyBinding comboKeyBinding
+                && comboKeyBinding.controlling$areModifiersDisabled();
+    }
 }

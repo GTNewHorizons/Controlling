@@ -1,12 +1,17 @@
 package com.blamejared.controlling;
 
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.common.MinecraftForge;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.lwjgl.input.Keyboard;
 
+import com.blamejared.controlling.api.ControllingApi;
 import com.blamejared.controlling.events.ClientEventHandler;
 
+import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -27,5 +32,16 @@ public class Controlling {
         }
 
         MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
+
+        if (Boolean.TRUE.equals(Launch.blackboard.get("fml.deobfuscatedEnvironment"))) {
+            registerDebugKeyBindings();
+        }
+    }
+
+    // dev env only: binding with modifiers disabled for testing the API
+    private static void registerDebugKeyBindings() {
+        final KeyBinding noModifiers = new KeyBinding("Debug: No Modifiers", Keyboard.KEY_NONE, "Controlling Debug");
+        ClientRegistry.registerKeyBinding(noModifiers);
+        ControllingApi.setModifiersDisabled(noModifiers, true);
     }
 }

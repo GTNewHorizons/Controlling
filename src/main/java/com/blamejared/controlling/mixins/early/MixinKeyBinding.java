@@ -39,6 +39,8 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
     private KeyModifier controlling$keyModifier = KeyModifier.NONE;
     @Unique
     private KeyModifier controlling$defaultKeyModifier = KeyModifier.NONE;
+    @Unique
+    private boolean controlling$modifiersDisabled;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void controlling$onInit(String description, int keyCode, String category, CallbackInfo ci) {
@@ -99,12 +101,15 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
 
     @Override
     public void controlling$setKeyModifier(KeyModifier keyModifier) {
-        this.controlling$keyModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+        this.controlling$keyModifier = keyModifier == null || this.controlling$modifiersDisabled ? KeyModifier.NONE
+                : keyModifier;
     }
 
     @Override
     public void controlling$setDefaultKeyModifier(KeyModifier keyModifier) {
-        this.controlling$defaultKeyModifier = keyModifier == null ? KeyModifier.NONE : keyModifier;
+        this.controlling$defaultKeyModifier = keyModifier == null || this.controlling$modifiersDisabled
+                ? KeyModifier.NONE
+                : keyModifier;
     }
 
     @Override
@@ -168,6 +173,20 @@ public abstract class MixinKeyBinding implements ComboKeyBinding {
             return true;
         }
         return this.controlling$keyModifier.isActive();
+    }
+
+    @Override
+    public boolean controlling$areModifiersDisabled() {
+        return this.controlling$modifiersDisabled;
+    }
+
+    @Override
+    public void controlling$setModifiersDisabled(boolean disabled) {
+        this.controlling$modifiersDisabled = disabled;
+        if (disabled) {
+            this.controlling$keyModifier = KeyModifier.NONE;
+            this.controlling$defaultKeyModifier = KeyModifier.NONE;
+        }
     }
 
     @Unique
