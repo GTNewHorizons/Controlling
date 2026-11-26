@@ -75,7 +75,11 @@ public final class ControllingApi {
 
     /**
      * Prevents combo modifiers from being set on a keybinding. When disabled, the current and default modifiers are
-     * reset to {@link ComboModifier#NONE} and later modifier changes (GUI, options file, API) are ignored.
+     * reset to {@link ComboModifier#NONE} and later modifier changes (GUI, options file, API) are ignored. A modifier
+     * key on its own (e.g. Shift) can still be bound as the key itself.
+     * <p>
+     * Not persisted: call this every session, e.g. during init. Re-enabling restores the default modifier, and the
+     * current modifier too if the key code is still the default.
      *
      * @return false when the keybinding does not support combos.
      */

@@ -37,5 +37,7 @@ ControllingApi.setComboKeyBinding(myKeyBinding, ComboModifier.SHIFT, Keyboard.KE
 
 // Disallow modifiers on a keybinding. Any existing modifier (including one loaded from options.txt) is removed,
 // the controls list marks it with a gold "*", and the visual keyboard greys out its modifier buttons.
+// A modifier key alone (e.g. Shift) can still be bound as the key itself.
+// Not persisted: call it every session, e.g. during init. Passing false restores the default modifier.
 ControllingApi.setModifiersDisabled(myKeyBinding, true);
 ```

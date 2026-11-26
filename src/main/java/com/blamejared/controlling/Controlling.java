@@ -40,7 +40,7 @@ public class Controlling {
 
     // dev env only: binding with modifiers disabled for testing the API
     private static void registerDebugKeyBindings() {
-        final KeyBinding noModifiers = new KeyBinding("Debug: No Modifiers", Keyboard.KEY_NONE, "Controlling Debug");
+        final KeyBinding noModifiers = new KeyBinding("Debug - No Modifiers", Keyboard.KEY_NONE, "Controlling Debug");
         ClientRegistry.registerKeyBinding(noModifiers);
         ControllingApi.setModifiersDisabled(noModifiers, true);
     }
