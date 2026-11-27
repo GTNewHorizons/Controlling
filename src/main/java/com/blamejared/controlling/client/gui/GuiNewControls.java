@@ -528,6 +528,9 @@ public class GuiNewControls extends GuiControls {
     }
 
     private KeyModifier getSelectedModifierForBinding() {
+        if (this.areSelectedModifiersDisabled()) {
+            return KeyModifier.NONE;
+        }
         if (this.showVisualKeyboard) {
             return this.getVisualKeyboardModifier();
         }
@@ -588,7 +591,15 @@ public class GuiNewControls extends GuiControls {
         return this.buttonId;
     }
 
+    boolean areSelectedModifiersDisabled() {
+        return this.buttonId instanceof ComboKeyBinding comboKeyBinding
+                && comboKeyBinding.controlling$areModifiersDisabled();
+    }
+
     KeyModifier getVisualKeyboardModifier() {
+        if (this.areSelectedModifiersDisabled()) {
+            return KeyModifier.NONE;
+        }
         KeyModifier activeModifier = KeyModifier.getActiveModifier();
         return activeModifier == KeyModifier.NONE ? this.visualKeyboardModifier : activeModifier;
     }

@@ -25,4 +25,8 @@ public interface ComboKeyBinding {
     void controlling$setToDefault();
 
     boolean controlling$isModifierActive();
+
+    boolean controlling$areModifiersDisabled();
+
+    void controlling$setModifiersDisabled(boolean disabled);
 }

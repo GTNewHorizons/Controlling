@@ -71,12 +71,26 @@ public class GuiVisualKeyboard {
                 this.panelLeft + 8,
                 this.panelTop + 38,
                 MUTED_TEXT_COLOR);
+        final boolean modifiersDisabled = screen.areSelectedModifiersDisabled();
         for (ModifierButton modifierButton : this.modifierButtons) {
-            modifierButton.draw(mc, mouseX, mouseY, modifierButton.modifier == screen.getVisualKeyboardModifier());
+            if (modifiersDisabled && modifierButton.modifier != KeyModifier.NONE) {
+                modifierButton.drawDisabled(mc);
+            } else {
+                modifierButton.draw(mc, mouseX, mouseY, modifierButton.modifier == screen.getVisualKeyboardModifier());
+            }
         }
 
         for (KeyButton key : this.keys) {
             key.draw(screen, mc, mouseX, mouseY);
+        }
+
+        if (modifiersDisabled) {
+            for (ModifierButton modifierButton : this.modifierButtons) {
+                if (modifierButton.modifier != KeyModifier.NONE && modifierButton.contains(mouseX, mouseY)) {
+                    screen.drawKeyDescriptionTooltip(I18n.format("controls.modifiersDisabled"), mouseX, mouseY);
+                    return;
+                }
+            }
         }
 
         KeyModifier modifier = screen.getVisualKeyboardModifier();
@@ -109,7 +123,9 @@ public class GuiVisualKeyboard {
 
         for (ModifierButton modifierButton : this.modifierButtons) {
             if (modifierButton.contains(mouseX, mouseY)) {
-                screen.setVisualKeyboardModifier(modifierButton.modifier);
+                if (!screen.areSelectedModifiersDisabled()) {
+                    screen.setVisualKeyboardModifier(modifierButton.modifier);
+                }
                 return true;
             }
         }
@@ -462,7 +478,7 @@ public class GuiVisualKeyboard {
         protected final int top;
         protected final int width;
         protected final int height;
-        private final String label;
+        protected final String label;
 
         private RectButton(Page page, int left, int top, int width, int height, String label) {
             this.page = page;
@@ -495,6 +511,12 @@ public class GuiVisualKeyboard {
         private ModifierButton(KeyModifier modifier, int left, int top, int width, int height, String label) {
             super(null, left, top, width, height, label);
             this.modifier = modifier;
+        }
+
+        private void drawDisabled(Minecraft mc) {
+            Gui.drawRect(this.left, this.top, this.left + this.width, this.top + this.height, KEY_DISABLED_COLOR);
+            drawBorder(this.left, this.top, this.left + this.width, this.top + this.height, PANEL_BORDER_COLOR);
+            drawCentered(mc, this.label, this.left, this.top, this.width, this.height, MUTED_TEXT_COLOR);
         }
     }
 

@@ -26,6 +26,7 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
 
     private static final int YELLOW_HIGHLIGHT_COLOR = 0xFFDFD407;
     private static final int DARK_TEXT_HIGHLIGHT_COLOR = 0x404040;
+    private static final int MODIFIERS_DISABLED_MARKER_COLOR = 0xFFAA00;
 
     private final GuiNewControls controlsScreen;
     private final Minecraft mc;
@@ -250,6 +251,21 @@ public class GuiNewKeyBindingList extends GuiKeyBindingList {
                             break;
                         }
                     }
+                }
+            }
+
+            if (keybinding instanceof ComboKeyBinding comboKeyBinding
+                    && comboKeyBinding.controlling$areModifiersDisabled()) {
+                // marker in gap between description and key button
+                mc.fontRenderer.drawStringWithShadow(
+                        "*",
+                        x + 98,
+                        y + slotHeight / 2 - mc.fontRenderer.FONT_HEIGHT / 2,
+                        MODIFIERS_DISABLED_MARKER_COLOR);
+                if (mouseX >= x + 96 && mouseX < this.btnChangeKeyBinding.xPosition + this.btnChangeKeyBinding.width
+                        && mouseY >= y
+                        && mouseY < y + this.btnChangeKeyBinding.height) {
+                    hoveredKeyDescription = I18n.format("controls.modifiersDisabled");
                 }
             }
 
